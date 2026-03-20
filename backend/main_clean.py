@@ -351,11 +351,12 @@ def get_recommendations(request: RecommendationRequest, db: Session = Depends(ge
         print(f"[SUCCESS] Generated {len(result['recommendations'])} recommendations")
         
         # Save to database
+        import json
         db_record = models.SearchHistory(
             user_email=request.user_email,
             area=request.area,
-            analysis=result["analysis"],
-            recommendations=result["recommendations"]
+            analysis=json.dumps(result["analysis"]) if isinstance(result["analysis"], (dict, list)) else str(result["analysis"]),
+            recommendations=json.dumps(result["recommendations"]) if isinstance(result["recommendations"], (dict, list)) else str(result["recommendations"])
         )
         db.add(db_record)
         db.commit()
@@ -366,8 +367,8 @@ def get_recommendations(request: RecommendationRequest, db: Session = Depends(ge
         return {
             "id": db_record.id,
             "area": db_record.area,
-            "analysis": db_record.analysis,
-            "recommendations": db_record.recommendations,
+            "analysis": json.loads(db_record.analysis) if isinstance(db_record.analysis, str) else db_record.analysis,
+            "recommendations": json.loads(db_record.recommendations) if isinstance(db_record.recommendations, str) else db_record.recommendations,
             "logs": {
                 "reddit": [],
                 "web": []
