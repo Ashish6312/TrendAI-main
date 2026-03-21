@@ -125,18 +125,85 @@ function PaymentSuccessContent() {
   useEffect(() => {
     if (hasProcessed.current) return;
     
-    const savePaymentAndSubscription = async () => {
+    const processPaymentImmediately = async () => {
       if (!session?.user?.email || !paymentId) return;
 
       hasProcessed.current = true;
       
       try {
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-        console.log('Starting payment and subscription save process...');
+        console.log('🔔 Processing payment immediately...');
         
-        // Create subscription record first
-        const subscriptionData = {
+        // Call immediate processing endpoint
+        const processData = {
           user_email: session.user.email,
+          razorpay_payment_id: paymentId,
+          razorpay_order_id: searchParams.get('order_id') || `order_${paymentId}`,
+          amount: parseFloat(amount),
+          plan_name: planParam,
+          billing_cycle: billingCycle
+        };
+
+        console.log('Processing payment data:', processData);
+        const processResponse = await fetch(`${apiUrl}/api/process-payment`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(processData)
+        });
+
+        if (processResponse.ok) {
+          const result = await processResponse.json();
+          console.log('✅ Payment processed successfully:', result);
+          
+          // Update subscription plan immediately
+          setPlan(result.plan_name);
+          
+          // Add success notification
+          addNotification({
+            type: 'payment',
+            title: 'Payment Processed Successfully!',
+            message: `Your ${result.plan_display_name} subscription is now active`,
+            priority: 'high',
+            actionUrl: '/profile?tab=billing',
+            metadata: {
+              paymentId: result.payment_id,
+              planName: result.plan_display_name,
+              amount: parseFloat(amount)
+            }
+          });
+          
+          // Store success state for animation trigger
+          sessionStorage.setItem('payment_success_trigger', 'true');
+          sessionStorage.setItem('payment_id_trigger', paymentId);
+          
+          // Redirect to profile with animation trigger after 3 seconds
+          setTimeout(() => {
+            window.location.href = `/profile?payment_success=true&payment_id=${paymentId}&tab=billing`;
+          }, 3000);
+          
+        } else {
+          const errorText = await processResponse.text();
+          console.error('❌ Payment processing failed:', errorText);
+          
+          // Fallback to old method
+          await fallbackPaymentProcessing();
+        }
+
+      } catch (error) {
+        console.error('❌ Error processing payment:', error);
+        
+        // Fallback to old method
+        await fallbackPaymentProcessing();
+      }
+    };
+
+    const fallbackPaymentProcessing = async () => {
+      try {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+        
+        // Create subscription record
+        const subscriptionData = {
+          user_email: session?.user?.email,
           plan_name: currentPlan,
           plan_display_name: planParam,
           billing_cycle: billingCycle,
@@ -148,12 +215,9 @@ function PaymentSuccessContent() {
             prioritySupport: currentPlan === 'enterprise',
             exportToPdf: currentPlan !== 'free',
             apiAccess: currentPlan !== 'free'
-          },
-          razorpay_subscription_id: searchParams.get('subscription_id'),
-          razorpay_customer_id: searchParams.get('customer_id')
+          }
         };
 
-        console.log('Creating subscription:', subscriptionData);
         const subscriptionResponse = await fetch(`${apiUrl}/api/subscriptions`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -164,27 +228,22 @@ function PaymentSuccessContent() {
         if (subscriptionResponse.ok) {
           const subscription = await subscriptionResponse.json();
           subscriptionId = subscription.id;
-          console.log('Subscription created successfully:', subscription);
-        } else {
-          const errorText = await subscriptionResponse.text();
-          console.error('Subscription creation failed:', errorText);
         }
 
-        // Create payment record - allow null subscription_id for free plans
+        // Create payment record
         const paymentData = {
-          user_email: session.user.email,
-          subscription_id: subscriptionId, // This can be null for free plans
+          user_email: session?.user?.email,
+          subscription_id: subscriptionId,
           razorpay_payment_id: paymentId,
           razorpay_order_id: searchParams.get('order_id') || '',
           amount: parseFloat(amount),
           currency: currency,
           status: 'success',
-          payment_method: searchParams.get('method') || 'card',
+          payment_method: 'razorpay',
           plan_name: currentPlan,
           billing_cycle: billingCycle
         };
 
-        console.log('Creating payment record:', paymentData);
         const paymentResponse = await fetch(`${apiUrl}/api/payments`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -192,44 +251,24 @@ function PaymentSuccessContent() {
         });
 
         if (paymentResponse.ok) {
-          const payment = await paymentResponse.json();
-          console.log('Payment record created successfully:', payment);
+          console.log('✅ Fallback payment processing successful');
           
-          // Add success notification
           addNotification({
             type: 'payment',
             title: 'Payment Processed',
-            message: `Your ${planParam} subscription payment has been recorded successfully`,
+            message: `Your ${planParam} subscription has been activated`,
             priority: 'high',
-            actionUrl: '/profile?tab=billing',
-            metadata: {
-              paymentId,
-              planName: planParam,
-              amount: parseFloat(amount)
-            }
-          });
-        } else {
-          const errorText = await paymentResponse.text();
-          console.error('Payment record creation failed:', errorText);
-          
-          // Still show success but note the issue
-          addNotification({
-            type: 'alert',
-            title: 'Payment Successful',
-            message: `Your ${planParam} subscription is active, but there was an issue saving the transaction record`,
-            priority: 'medium',
             actionUrl: '/profile?tab=billing'
           });
         }
 
       } catch (error) {
-        console.error('Error saving payment/subscription:', error);
+        console.error('❌ Fallback processing failed:', error);
         
-        // Show error notification
         addNotification({
           type: 'alert',
           title: 'Payment Processing Issue',
-          message: 'Your payment was successful, but there was an issue saving the records. Please contact support if needed.',
+          message: 'Your payment was successful, but there was an issue saving the records. Please contact support.',
           priority: 'medium',
           actionUrl: '/profile?tab=billing'
         });
@@ -239,27 +278,8 @@ function PaymentSuccessContent() {
     // Set subscription plan based on payment
     setPlan(currentPlan);
     
-    // Store in session storage for persistence across page reloads
-    sessionStorage.setItem('recent_payment_plan', planParam);
-    
-    // Save to database
-    savePaymentAndSubscription();
-    
-    // Create notification for successful payment
-    if (session?.user?.email && paymentId) {
-      addNotification({
-        type: 'payment',
-        title: 'Payment Successful',
-        message: `Your ${planParam} subscription has been activated successfully`,
-        priority: 'high',
-        actionUrl: '/profile?tab=billing',
-        metadata: {
-          paymentId,
-          planName: planParam,
-          amount: parseFloat(amount)
-        }
-      });
-    }
+    // Process payment immediately
+    processPaymentImmediately();
 
     // Hide confetti after 5 seconds
     const timer = setTimeout(() => setShowConfetti(false), 5000);

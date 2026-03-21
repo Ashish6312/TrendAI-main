@@ -148,10 +148,39 @@ function ProfilePageContent() {
   const [payments, setPayments] = useState<any[]>([]);
   const [subscriptionDetails, setSubscriptionDetails] = useState<any>(null);
   
-  // Real-time payment detection with water animation
+  // Check for payment success from URL params (one-time animation trigger)
+  useEffect(() => {
+    const paymentSuccess = searchParams.get('payment_success');
+    const paymentId = searchParams.get('payment_id');
+    
+    if (paymentSuccess === 'true' && paymentId) {
+      console.log('🌊 Payment success detected from URL! Starting water animation...');
+      
+      // Start water animation only once after payment
+      startWaterAnimation();
+      
+      // Clear URL params to prevent re-triggering
+      const newUrl = window.location.pathname + window.location.search.replace(/[?&]payment_success=true/, '').replace(/[?&]payment_id=[^&]*/, '');
+      window.history.replaceState({}, '', newUrl);
+      
+      // Show success notification
+      addNotification({
+        type: 'system',
+        title: '💰 Payment Successful!',
+        message: 'Your payment has been processed successfully. Plan updated!',
+        priority: 'high'
+      });
+      
+      // Force refresh data after animation
+      setTimeout(() => {
+        window.location.reload();
+      }, 3000);
+    }
+  }, [searchParams]);
+
+  // Real-time payment detection WITHOUT animation (silent updates only)
   useEffect(() => {
     let pollInterval: NodeJS.Timeout;
-    let lastPaymentCount = payments.length;
     
     const checkForUpdates = async () => {
       if (!session?.user?.email) return;
@@ -164,76 +193,31 @@ function ProfilePageContent() {
           const data = await response.json();
           
           if (data.recent_payments && Array.isArray(data.recent_payments)) {
-            const newPaymentCount = data.recent_payments.length;
+            // Silent update - no animation
+            setPayments(data.recent_payments);
+            setSubscriptionDetails(data.subscription);
             
-            // Detect new payments
-            if (newPaymentCount > lastPaymentCount) {
-              console.log('🌊 New payment detected! Starting water animation...');
-              
-              // Enhanced plan mapping with all variations
-              if (data.subscription && data.subscription.plan_name) {
-                const planMapping: Record<string, any> = {
-                  'professional': 'professional',
-                  'pro': 'professional',
-                  'growth accelerator': 'professional',
-                  'growth architect': 'professional',
-                  'enterprise': 'enterprise',
-                  'territorial dominance': 'enterprise',
-                  'market dominator': 'enterprise',
-                  'free': 'free',
-                  'starter': 'free',
-                  'venture strategist': 'free'
-                };
-                const mappedPlan = planMapping[data.subscription.plan_name.toLowerCase()] || 
-                                 planMapping[data.subscription.plan_display_name?.toLowerCase()] || 'free';
-                console.log('🔄 Updating plan from payment detection:', mappedPlan);
+            // Enhanced plan mapping with all variations
+            if (data.subscription && data.subscription.plan_name) {
+              const planMapping: Record<string, any> = {
+                'professional': 'professional',
+                'pro': 'professional',
+                'growth accelerator': 'professional',
+                'growth architect': 'professional',
+                'enterprise': 'enterprise',
+                'territorial dominance': 'enterprise',
+                'market dominator': 'enterprise',
+                'free': 'free',
+                'starter': 'free',
+                'venture strategist': 'free'
+              };
+              const mappedPlan = planMapping[data.subscription.plan_name.toLowerCase()] || 
+                               planMapping[data.subscription.plan_display_name?.toLowerCase()] || 'free';
+              if (plan !== mappedPlan) {
+                console.log('🔄 Silently updating plan from subscription data:', mappedPlan);
                 setPlan(mappedPlan);
               }
-              
-              // Start water animation
-              startWaterAnimation();
-              
-              // Update data after animation starts
-              setTimeout(() => {
-                setPayments(data.recent_payments);
-                setSubscriptionDetails(data.subscription);
-                
-                addNotification({
-                  type: 'system',
-                  title: '💰 Payment Received!',
-                  message: 'Your payment has been processed successfully. Plan updated!',
-                  priority: 'high'
-                });
-              }, 500);
-            } else {
-              // Silent update if no new payments
-              setPayments(data.recent_payments);
-              setSubscriptionDetails(data.subscription);
-              
-              // Enhanced plan mapping with all variations
-              if (data.subscription && data.subscription.plan_name) {
-                const planMapping: Record<string, any> = {
-                  'professional': 'professional',
-                  'pro': 'professional',
-                  'growth accelerator': 'professional',
-                  'growth architect': 'professional',
-                  'enterprise': 'enterprise',
-                  'territorial dominance': 'enterprise',
-                  'market dominator': 'enterprise',
-                  'free': 'free',
-                  'starter': 'free',
-                  'venture strategist': 'free'
-                };
-                const mappedPlan = planMapping[data.subscription.plan_name.toLowerCase()] || 
-                                 planMapping[data.subscription.plan_display_name?.toLowerCase()] || 'free';
-                if (plan !== mappedPlan) {
-                  console.log('🔄 Updating plan from subscription data:', mappedPlan);
-                  setPlan(mappedPlan);
-                }
-              }
             }
-            
-            lastPaymentCount = newPaymentCount;
           }
         }
       } catch (error) {
@@ -245,14 +229,14 @@ function ProfilePageContent() {
       // Initial load
       checkForUpdates();
       
-      // Start real-time polling every 2 seconds for faster detection
-      pollInterval = setInterval(checkForUpdates, 2000);
+      // Start real-time polling every 30 seconds for silent updates
+      pollInterval = setInterval(checkForUpdates, 30000);
     }
     
     return () => {
       if (pollInterval) clearInterval(pollInterval);
     };
-  }, [session?.user?.email, payments.length, plan, setPlan]);
+  }, [session?.user?.email, plan, setPlan]);
 
   // Water animation from bottom-left to top-right
   const startWaterAnimation = () => {
@@ -1976,8 +1960,7 @@ function ProfilePageContent() {
                                     priority: 'high'
                                   });
                                   
-                                  // Trigger water animation
-                                  startWaterAnimation();
+                                  // NO ANIMATION - Just silent refresh
                                 } else {
                                   throw new Error('Failed to refresh plan');
                                 }
@@ -2255,20 +2238,15 @@ function ProfilePageContent() {
                                       setPlan(mappedPlan);
                                     }
                                     
-                                    // Show water animation on refresh
-                                    startWaterAnimation();
+                                    // NO ANIMATION - Just silent update
+                                    setPayments(profileData.recent_payments || []);
                                     
-                                    // Update data after animation starts
-                                    setTimeout(() => {
-                                      setPayments(profileData.recent_payments || []);
-                                      
-                                      addNotification({
-                                        type: 'system',
-                                        title: '🌊 Data Refreshed!',
-                                        message: `Found ${newCount} real transaction records. Plan updated!`,
-                                        priority: 'low'
-                                      });
-                                    }, 500);
+                                    addNotification({
+                                      type: 'system',
+                                      title: '🔄 Data Refreshed!',
+                                      message: `Found ${newCount} real transaction records. Plan updated!`,
+                                      priority: 'low'
+                                    });
                                   }
                                 } catch (error) {
                                   console.error('Failed to refresh transactions:', error);

@@ -1413,21 +1413,144 @@ def search_payments_by_email(partial_email: str, db: Session = Depends(get_db)):
 async def payment_webhook(request: Request):
     """Webhook endpoint for real-time payment notifications"""
     try:
-        # This endpoint can be called by payment processors to notify of new payments
         body = await request.json()
         logger.info(f"🔔 Payment webhook received: {body}")
         
-        # Here you would normally verify the webhook signature
-        # For now, we'll just log it and return success
+        # Extract payment information
+        payment_id = body.get('razorpay_payment_id')
+        order_id = body.get('razorpay_order_id')
+        signature = body.get('razorpay_signature')
+        user_email = body.get('user_email')
+        amount = body.get('amount')
+        plan_name = body.get('plan_name')
+        billing_cycle = body.get('billing_cycle', 'yearly')
         
-        return {
-            "status": "success",
-            "message": "Payment webhook processed",
-            "timestamp": datetime.now().isoformat()
-        }
+        if not all([payment_id, user_email, amount, plan_name]):
+            return {"status": "error", "message": "Missing required fields"}
+        
+        # Process payment immediately
+        db = next(get_db())
+        try:
+            # Create payment record
+            payment_data = PaymentCreate(
+                user_email=user_email,
+                amount=float(amount),
+                razorpay_payment_id=payment_id,
+                razorpay_order_id=order_id or f"order_{payment_id}",
+                razorpay_signature=signature,
+                status="success",
+                plan_name=plan_name,
+                billing_cycle=billing_cycle,
+                payment_method="razorpay"
+            )
+            
+            payment_record = create_payment_record(payment_data, db)
+            
+            # Create/update subscription immediately
+            subscription_data = SubscriptionCreate(
+                user_email=user_email,
+                plan_name=plan_name.lower(),
+                plan_display_name=plan_name,
+                billing_cycle=billing_cycle,
+                price=float(amount),
+                currency="INR",
+                max_analyses=-1 if plan_name.lower() in ['professional', 'enterprise', 'territorial dominance', 'growth architect'] else 5,
+                features={}
+            )
+            
+            subscription_record = create_subscription(subscription_data, db)
+            
+            logger.info(f"✅ Payment processed successfully: {payment_id}")
+            
+            return {
+                "status": "success",
+                "message": "Payment processed successfully",
+                "payment_id": payment_id,
+                "subscription_id": subscription_record.get('id') if isinstance(subscription_record, dict) else subscription_record.id,
+                "timestamp": datetime.now().isoformat()
+            }
+            
+        finally:
+            db.close()
+            
     except Exception as e:
         logger.error(f"Payment webhook error: {e}")
         return {"status": "error", "message": str(e)}
+
+@app.post("/api/process-payment")
+async def process_payment_immediately(request: Request, db: Session = Depends(get_db)):
+    """Process payment immediately after successful Razorpay transaction"""
+    try:
+        body = await request.json()
+        logger.info(f"🔔 Processing immediate payment: {body}")
+        
+        user_email = body.get('user_email')
+        payment_id = body.get('razorpay_payment_id')
+        order_id = body.get('razorpay_order_id')
+        amount = body.get('amount')
+        plan_name = body.get('plan_name')
+        billing_cycle = body.get('billing_cycle', 'yearly')
+        
+        if not all([user_email, payment_id, amount, plan_name]):
+            raise HTTPException(status_code=400, detail="Missing required payment information")
+        
+        # Create payment record immediately
+        payment_data = PaymentCreate(
+            user_email=user_email,
+            amount=float(amount),
+            razorpay_payment_id=payment_id,
+            razorpay_order_id=order_id or f"order_{payment_id}",
+            status="success",
+            plan_name=plan_name,
+            billing_cycle=billing_cycle,
+            payment_method="razorpay"
+        )
+        
+        payment_record = create_payment_record(payment_data, db)
+        
+        # Map plan names for subscription
+        plan_mapping = {
+            'territorial dominance': 'enterprise',
+            'growth architect': 'professional',
+            'growth accelerator': 'professional',
+            'market dominator': 'enterprise',
+            'venture strategist': 'free',
+            'professional': 'professional',
+            'enterprise': 'enterprise'
+        }
+        
+        mapped_plan = plan_mapping.get(plan_name.lower(), plan_name.lower())
+        
+        # Create/update subscription immediately
+        subscription_data = SubscriptionCreate(
+            user_email=user_email,
+            plan_name=mapped_plan,
+            plan_display_name=plan_name,
+            billing_cycle=billing_cycle,
+            price=float(amount),
+            currency="INR",
+            max_analyses=-1 if mapped_plan in ['professional', 'enterprise'] else 5,
+            features={}
+        )
+        
+        subscription_record = create_subscription(subscription_data, db)
+        
+        logger.info(f"✅ Payment and subscription processed: {payment_id} -> {mapped_plan}")
+        
+        return {
+            "status": "success",
+            "message": "Payment processed successfully",
+            "payment_id": payment_id,
+            "plan_name": mapped_plan,
+            "plan_display_name": plan_name,
+            "subscription_active": True,
+            "max_analyses": -1 if mapped_plan in ['professional', 'enterprise'] else 5,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Process payment error: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to process payment: {str(e)}")
 
 @app.get("/api/users/{email}/profile")
 def get_user_profile(email: str, db: Session = Depends(get_db)):
