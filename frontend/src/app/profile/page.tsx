@@ -1755,13 +1755,18 @@ function ProfilePageContent() {
                           <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-600 mb-4">
                             {plan === 'free' ? 'Upgrade your plan to see billing history' : 'Your payment records will appear here'}
                           </p>
+                          <p className="text-[8px] text-slate-400 dark:text-slate-600 mb-4">
+                            If you have made payments and they're not showing, try refreshing below.
+                          </p>
                           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
                             <button 
                               onClick={async () => {
                                 if (!session?.user?.email) return;
                                 try {
                                   const apiUrl = getApiUrl();
+                                  console.log('🔍 Testing API URL:', `${apiUrl}/api/users/${session.user.email}/profile`);
                                   const profileRes = await fetch(`${apiUrl}/api/users/${session.user.email}/profile`);
+                                  console.log('🔍 Refresh - Profile response status:', profileRes.status);
                                   if (profileRes.ok) {
                                     const profileData = await profileRes.json();
                                     console.log('🔍 Refresh - Profile data:', profileData);
@@ -1776,6 +1781,8 @@ function ProfilePageContent() {
                                     });
                                   } else {
                                     console.error('🔍 Refresh - Profile API error:', profileRes.status, profileRes.statusText);
+                                    const errorText = await profileRes.text();
+                                    console.error('🔍 Error details:', errorText);
                                   }
                                 } catch (error) {
                                   console.error('Failed to refresh transactions:', error);
