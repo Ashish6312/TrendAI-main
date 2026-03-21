@@ -1379,6 +1379,16 @@ def update_user_profile(email: str, user_update: UserUpdate, db: Session = Depen
 # Add Vercel handler at the end of the file
 handler = app
 
+@app.get("/api/deployment-test")
+def deployment_test():
+    """Test endpoint to verify deployment is working"""
+    return {
+        "status": "success",
+        "message": "New deployment is active",
+        "version": "2.2",
+        "timestamp": datetime.now().isoformat()
+    }
+
 @app.get("/api/users/{email}/location")
 def get_user_location(email: str, db: Session = Depends(get_db)):
     """Get user's saved location from profile"""
