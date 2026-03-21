@@ -12,7 +12,17 @@ from simple_recommendations import (
     generate_ai_business_plan, 
     generate_ai_roadmap
 )
-from integrated_business_intelligence import integrated_intelligence
+
+# Import integrated intelligence with error handling
+try:
+    from integrated_business_intelligence import integrated_intelligence
+    print("✅ Integrated business intelligence imported successfully")
+except ImportError as e:
+    print(f"⚠️ Integrated business intelligence import failed: {e}")
+    integrated_intelligence = None
+except Exception as e:
+    print(f"⚠️ Unexpected error importing integrated business intelligence: {e}")
+    integrated_intelligence = None
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -197,7 +207,21 @@ async def get_system_location(request: Request):
 
 @app.get("/")
 def read_root():
-    return {"message": "Welcome to the Business Recommendation API", "status": "healthy", "version": "2.0"}
+    try:
+        return {
+            "message": "Welcome to the Business Recommendation API", 
+            "status": "healthy", 
+            "version": "2.0",
+            "timestamp": datetime.now().isoformat(),
+            "integrated_intelligence": "available" if integrated_intelligence else "fallback_mode"
+        }
+    except Exception as e:
+        return {
+            "message": "API is running with limited functionality",
+            "status": "partial",
+            "error": str(e),
+            "timestamp": datetime.now().isoformat()
+        }
 
 @app.get("/health")
 def health_check():
@@ -431,8 +455,15 @@ def get_recommendations(request: RecommendationRequest, db: Session = Depends(ge
 
         print("[SUCCESS] No cache found. Calling fresh REAL-TIME intelligence engine...")
         # Generate dynamic recommendations DIRECTLY from intelligence module (Zero Hardcoding)
-        result = integrated_intelligence.generate_data_driven_recommendations(analysis_area, request.user_email, request.language, request.phase)
-        print(f"[SUCCESS] Generated {len(result['recommendations'])} real-time recommendations")
+        if integrated_intelligence:
+            result = integrated_intelligence.generate_data_driven_recommendations(analysis_area, request.user_email, request.language, request.phase)
+            print(f"[SUCCESS] Generated {len(result['recommendations'])} real-time recommendations")
+        else:
+            print("⚠️ Integrated intelligence not available, using fallback")
+            # Import fallback function
+            from simple_recommendations import generate_dynamic_recommendations
+            result = generate_dynamic_recommendations(analysis_area, request.user_email, request.language)
+            print(f"[FALLBACK] Generated {len(result['recommendations'])} fallback recommendations")
         
         # Save to database
         import json
@@ -736,13 +767,24 @@ def get_roadmap_guide(request: RoadmapGuideRequest):
     
     try:
         # Use enhanced phase-aware implementation guide
-        guide = integrated_intelligence.generate_implementation_guide(
-            request.step_title, 
-            request.step_description, 
-            request.business_type, 
-            request.location,
-            phase
-        )
+        if integrated_intelligence:
+            guide = integrated_intelligence.generate_implementation_guide(
+                request.step_title, 
+                request.step_description, 
+                request.business_type, 
+                request.location,
+                phase
+            )
+        else:
+            print("⚠️ Integrated intelligence not available, using fallback")
+            # Import fallback function
+            from simple_recommendations import generate_detailed_roadmap_step_guide
+            guide = generate_detailed_roadmap_step_guide(
+                request.step_title, 
+                request.step_description, 
+                request.business_type, 
+                request.location
+            )
         
         # Add metadata
         guide["generated_at"] = datetime.now().isoformat()
