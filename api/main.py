@@ -1,3 +1,4 @@
+print("--- TrendAI Backend Booting (v2.0) ---")
 from fastapi import FastAPI, Depends, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
