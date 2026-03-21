@@ -281,7 +281,7 @@ def read_root():
         return {
             "message": "TrendAI Business Intelligence API", 
             "status": "healthy", 
-            "version": "2.0",
+            "version": "2.1",  # Updated version to force deployment
             "timestamp": datetime.now().isoformat(),
             "system_status": {
                 "database": "connected" if db_available else "disconnected",
