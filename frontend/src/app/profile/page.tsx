@@ -148,65 +148,129 @@ function ProfilePageContent() {
   const [payments, setPayments] = useState<any[]>([]);
   const [subscriptionDetails, setSubscriptionDetails] = useState<any>(null);
   
-  // Force load payments on component mount for testing
+  // Real-time payment updates with floating animation
   useEffect(() => {
     const loadPayments = async () => {
       if (!session?.user?.email) return;
       
       try {
         const apiUrl = getApiUrl();
-        console.log('🔍 Loading payments for:', session.user.email);
-        console.log('🔍 API URL:', apiUrl);
-        
         const response = await fetch(`${apiUrl}/api/users/${session.user.email}/profile`);
-        console.log('🔍 Profile response status:', response.status);
         
         if (response.ok) {
           const data = await response.json();
-          console.log('🔍 Profile data:', data);
           
           if (data.recent_payments && Array.isArray(data.recent_payments)) {
-            console.log('🔍 Setting payments:', data.recent_payments);
+            // Check if payments have changed
+            const newPaymentCount = data.recent_payments.length;
+            const oldPaymentCount = payments.length;
+            
             setPayments(data.recent_payments);
             setSubscriptionDetails(data.subscription);
-          } else {
-            console.log('🔍 No payments found in response');
-            setPayments([]);
-          }
-        } else if (response.status === 404) {
-          console.log('🔍 User not found, creating sample payment...');
-          // Try to create sample payment data
-          try {
-            const createResponse = await fetch(`${apiUrl}/api/debug/create-sample-payment/${session.user.email}`, {
-              method: 'POST'
-            });
-            if (createResponse.ok) {
-              console.log('🔍 Sample payment created, retrying profile fetch...');
-              // Retry the profile fetch
-              const retryResponse = await fetch(`${apiUrl}/api/users/${session.user.email}/profile`);
-              if (retryResponse.ok) {
-                const retryData = await retryResponse.json();
-                setPayments(retryData.recent_payments || []);
-                setSubscriptionDetails(retryData.subscription);
-              }
+            
+            // Show floating animation if new payments detected
+            if (newPaymentCount > oldPaymentCount && oldPaymentCount > 0) {
+              showFloatingUpdateAnimation();
             }
-          } catch (createError) {
-            console.error('🔍 Failed to create sample payment:', createError);
           }
-        } else {
-          console.error('🔍 Profile API error:', response.status, response.statusText);
-          setPayments([]);
         }
       } catch (error) {
-        console.error('🔍 Payment loading error:', error);
-        setPayments([]);
+        console.error('Payment loading error:', error);
       }
     };
     
     if (session?.user?.email) {
       loadPayments();
+      
+      // Set up real-time polling every 10 seconds
+      const interval = setInterval(loadPayments, 10000);
+      return () => clearInterval(interval);
     }
   }, [session?.user?.email]);
+
+  // Floating water animation for updates
+  const showFloatingUpdateAnimation = () => {
+    // Create floating particles
+    const particles = [];
+    for (let i = 0; i < 20; i++) {
+      const particle = document.createElement('div');
+      particle.className = 'floating-particle';
+      particle.style.cssText = `
+        position: fixed;
+        width: 8px;
+        height: 8px;
+        background: linear-gradient(45deg, ${theme.primary}, ${theme.secondary});
+        border-radius: 50%;
+        pointer-events: none;
+        z-index: 9999;
+        left: ${Math.random() * window.innerWidth}px;
+        top: ${window.innerHeight + 10}px;
+        animation: floatUp 3s ease-out forwards;
+        opacity: 0.8;
+        box-shadow: 0 0 10px ${theme.primary}40;
+      `;
+      
+      document.body.appendChild(particle);
+      particles.push(particle);
+      
+      // Remove particle after animation
+      setTimeout(() => {
+        if (particle.parentNode) {
+          particle.parentNode.removeChild(particle);
+        }
+      }, 3000);
+    }
+    
+    // Add CSS animation if not exists
+    if (!document.getElementById('floating-animation-styles')) {
+      const style = document.createElement('style');
+      style.id = 'floating-animation-styles';
+      style.textContent = `
+        @keyframes floatUp {
+          0% {
+            transform: translateY(0) rotate(0deg);
+            opacity: 0.8;
+          }
+          50% {
+            opacity: 1;
+          }
+          100% {
+            transform: translateY(-${window.innerHeight + 100}px) rotate(360deg);
+            opacity: 0;
+          }
+        }
+        
+        @keyframes ripple {
+          0% {
+            transform: scale(0);
+            opacity: 1;
+          }
+          100% {
+            transform: scale(4);
+            opacity: 0;
+          }
+        }
+        
+        .update-ripple {
+          position: fixed;
+          border: 2px solid ${theme.primary};
+          border-radius: 50%;
+          animation: ripple 1s ease-out;
+          pointer-events: none;
+          z-index: 9998;
+        }
+      `;
+      document.head.appendChild(style);
+    }
+    
+    // Show notification with animation
+    addNotification({
+      type: 'system',
+      title: '💫 Payment Updated!',
+      message: 'Your payment history has been automatically refreshed',
+      priority: 'high'
+    });
+  };
   
   // Get location-based pricing
   const locationPricing = getPricingForCountry(userLocation?.country || 'Global');
@@ -1809,42 +1873,99 @@ function ProfilePageContent() {
                                 </tr>
                               </thead>
                               <tbody className="divide-y divide-slate-100 dark:divide-white/5">
-                                {(showAllPayments ? payments : payments.slice(0, 3)).map((payment: any) => (
-                                  <tr key={payment.id} className="group hover:bg-slate-50 dark:hover:bg-white/5 transition-colors">
-                                    <td className="py-4 font-mono text-xs text-slate-600 dark:text-slate-300 italic">{payment.razorpay_payment_id?.slice(0, 12)}...</td>
-                                    <td className="py-4 text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-tighter">{new Date(payment.payment_date).toLocaleDateString()}</td>
+                                {(showAllPayments ? payments : payments.slice(0, 3)).map((payment: any, index: number) => (
+                                  <motion.tr 
+                                    key={payment.id} 
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: index * 0.1 }}
+                                    className="group hover:bg-slate-50 dark:hover:bg-white/5 transition-all duration-300"
+                                    whileHover={{ scale: 1.01 }}
+                                  >
+                                    <td className="py-4 font-mono text-xs text-slate-600 dark:text-slate-300 italic">
+                                      <motion.span
+                                        initial={{ opacity: 0 }}
+                                        animate={{ opacity: 1 }}
+                                        transition={{ delay: index * 0.1 + 0.2 }}
+                                      >
+                                        {payment.razorpay_payment_id?.slice(0, 12)}...
+                                      </motion.span>
+                                    </td>
+                                    <td className="py-4 text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-tighter">
+                                      <motion.span
+                                        initial={{ opacity: 0 }}
+                                        animate={{ opacity: 1 }}
+                                        transition={{ delay: index * 0.1 + 0.3 }}
+                                      >
+                                        {new Date(payment.payment_date).toLocaleDateString()}
+                                      </motion.span>
+                                    </td>
                                     <td className="py-4">
-                                      <div className="flex items-center gap-2">
+                                      <motion.div 
+                                        className="flex items-center gap-2"
+                                        initial={{ opacity: 0, x: -20 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        transition={{ delay: index * 0.1 + 0.4 }}
+                                      >
                                         <span className="text-xs font-black text-slate-900 dark:text-white italic">{getProfessionalPlanName(payment.plan_name)}</span>
-                                        <span className="text-[8px] font-black uppercase tracking-tighter text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700/50 rounded-md px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800/50">{payment.billing_cycle}</span>
-                                      </div>
+                                        <motion.span 
+                                          className="text-[8px] font-black uppercase tracking-tighter text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700/50 rounded-md px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800/50"
+                                          whileHover={{ scale: 1.1 }}
+                                        >
+                                          {payment.billing_cycle}
+                                        </motion.span>
+                                      </motion.div>
                                     </td>
                                     <td className="py-4 text-xs font-black text-slate-900 dark:text-white tracking-tight italic">
-                                      <span className="text-blue-600 dark:text-blue-400 font-black mr-1">{payment.currency === 'INR' ? '₹' : '$'}</span>
-                                      {parseFloat(payment.amount).toLocaleString('en-IN', { minimumFractionDigits: 0 })}
+                                      <motion.div
+                                        initial={{ opacity: 0, scale: 0.8 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        transition={{ delay: index * 0.1 + 0.5 }}
+                                        className="flex items-center gap-1"
+                                      >
+                                        <span className="text-blue-600 dark:text-blue-400 font-black">{payment.currency === 'INR' ? '₹' : '$'}</span>
+                                        <motion.span
+                                          initial={{ opacity: 0 }}
+                                          animate={{ opacity: 1 }}
+                                          transition={{ delay: index * 0.1 + 0.6 }}
+                                        >
+                                          {parseFloat(payment.amount).toLocaleString('en-IN', { minimumFractionDigits: 0 })}
+                                        </motion.span>
+                                      </motion.div>
                                     </td>
                                     <td className="py-4">
-                                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-tighter ${
-                                        payment.status === 'success' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 
-                                        'bg-red-500/10 text-red-400 border border-red-500/20'
-                                      }`}>
+                                      <motion.span 
+                                        className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-tighter ${
+                                          payment.status === 'success' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 
+                                          'bg-red-500/10 text-red-400 border border-red-500/20'
+                                        }`}
+                                        initial={{ opacity: 0, scale: 0.8 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        transition={{ delay: index * 0.1 + 0.7 }}
+                                        whileHover={{ scale: 1.1 }}
+                                      >
                                         {payment.status}
-                                      </span>
+                                      </motion.span>
                                     </td>
                                     <td className="py-4 text-right">
-                                      <button 
+                                      <motion.button 
                                         onClick={() => {
                                           setSelectedPayment(payment);
                                           setIsInvoiceModalOpen(true);
                                         }}
                                         className="p-2 rounded-lg bg-slate-100 dark:bg-white/5 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-white/10 transition-all flex items-center gap-2 shadow-sm italic"
                                         title="View Professional Invoice"
+                                        initial={{ opacity: 0, x: 20 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        transition={{ delay: index * 0.1 + 0.8 }}
+                                        whileHover={{ scale: 1.05 }}
+                                        whileTap={{ scale: 0.95 }}
                                       >
                                         <FileText size={14} />
                                         <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Receipt</span>
-                                      </button>
+                                      </motion.button>
                                     </td>
-                                  </tr>
+                                  </motion.tr>
                                 ))}
                               </tbody>
                             </table>
@@ -1876,19 +1997,43 @@ function ProfilePageContent() {
                             If you have made payments and they're not showing, try refreshing below.
                           </p>
                           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-                            <button 
+                            <motion.button 
                               onClick={async () => {
                                 if (!session?.user?.email) return;
+                                
+                                // Show ripple animation
+                                const button = event.currentTarget;
+                                const rect = button.getBoundingClientRect();
+                                const ripple = document.createElement('div');
+                                ripple.className = 'update-ripple';
+                                ripple.style.cssText = `
+                                  left: ${rect.left + rect.width/2 - 10}px;
+                                  top: ${rect.top + rect.height/2 - 10}px;
+                                  width: 20px;
+                                  height: 20px;
+                                `;
+                                document.body.appendChild(ripple);
+                                setTimeout(() => ripple.remove(), 1000);
+                                
                                 try {
                                   const apiUrl = getApiUrl();
                                   const profileRes = await fetch(`${apiUrl}/api/users/${session.user.email}/profile`);
                                   if (profileRes.ok) {
                                     const profileData = await profileRes.json();
+                                    const oldCount = payments.length;
+                                    const newCount = profileData.recent_payments?.length || 0;
+                                    
                                     setPayments(profileData.recent_payments || []);
+                                    
+                                    // Show floating animation if payments updated
+                                    if (newCount !== oldCount) {
+                                      showFloatingUpdateAnimation();
+                                    }
+                                    
                                     addNotification({
                                       type: 'system',
-                                      title: 'Transactions Refreshed',
-                                      message: `Found ${profileData.recent_payments?.length || 0} transaction records`,
+                                      title: '🔄 Refreshed Successfully',
+                                      message: `Found ${newCount} transaction records`,
                                       priority: 'low'
                                     });
                                   }
@@ -1896,11 +2041,25 @@ function ProfilePageContent() {
                                   console.error('Failed to refresh transactions:', error);
                                 }
                               }}
-                              className="px-4 py-2 bg-slate-200 dark:bg-white/10 rounded-lg text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-all flex items-center gap-2"
+                              whileHover={{ scale: 1.05 }}
+                              whileTap={{ scale: 0.95 }}
+                              className="px-4 py-2 bg-slate-200 dark:bg-white/10 rounded-lg text-xs font-black uppercase tracking-widest text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-all flex items-center gap-2 relative overflow-hidden"
                             >
-                              <RefreshCw size={12} />
+                              <motion.div
+                                animate={{ rotate: 360 }}
+                                transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                              >
+                                <RefreshCw size={12} />
+                              </motion.div>
                               Refresh Transactions
-                            </button>
+                              
+                              {/* Animated background */}
+                              <motion.div
+                                className="absolute inset-0 bg-gradient-to-r opacity-0 hover:opacity-20"
+                                style={{ background: `linear-gradient(90deg, ${theme.primary}, ${theme.secondary})` }}
+                                whileHover={{ opacity: 0.2 }}
+                              />
+                            </motion.button>
                             
                             {plan === 'free' && (
                               <Link 
