@@ -1257,14 +1257,27 @@ def create_payment_record(payment: PaymentCreate, db: Session = Depends(get_db))
     import traceback
     
     try:
+        logger.info(f"🔔 Payment creation request received: {payment.user_email}")
+        
         email_normalized = payment.user_email.lower().strip()
-        print(f"DEBUG: Creating payment record for {email_normalized} - Amount: {payment.amount}")
+        logger.info(f"DEBUG: Creating payment record for {email_normalized} - Amount: {payment.amount}")
+        
+        # Validate required fields
+        if not payment.razorpay_payment_id:
+            raise HTTPException(status_code=400, detail="razorpay_payment_id is required")
+        if not payment.razorpay_order_id:
+            raise HTTPException(status_code=400, detail="razorpay_order_id is required")
+        if not payment.plan_name:
+            raise HTTPException(status_code=400, detail="plan_name is required")
+        if not payment.billing_cycle:
+            raise HTTPException(status_code=400, detail="billing_cycle is required")
         
         # Get User ID with better error handling
         try:
+            logger.info(f"🔍 Looking for user: {email_normalized}")
             user_rec = db.query(models.User).filter(func.lower(models.User.email) == email_normalized).first()
             if not user_rec:
-                print(f"DEBUG: User {email_normalized} not found, creating user record")
+                logger.info(f"DEBUG: User {email_normalized} not found, creating user record")
                 # Create user if doesn't exist
                 user_rec = models.User(
                     email=email_normalized,
@@ -1274,24 +1287,28 @@ def create_payment_record(payment: PaymentCreate, db: Session = Depends(get_db))
                 db.add(user_rec)
                 db.commit()
                 db.refresh(user_rec)
+                logger.info(f"✅ Created new user: {user_rec.id}")
             
             u_id = user_rec.id
+            logger.info(f"✅ User ID found/created: {u_id}")
         except Exception as e:
-            print(f"ERROR: Failed to get/create user: {e}")
-            print(f"ERROR: Traceback: {traceback.format_exc()}")
-            u_id = None
+            logger.error(f"ERROR: Failed to get/create user: {e}")
+            logger.error(f"ERROR: Traceback: {traceback.format_exc()}")
+            raise HTTPException(status_code=500, detail=f"User creation failed: {str(e)}")
 
         try:
             # Check if payment already exists
+            logger.info(f"🔍 Checking for existing payment: {payment.razorpay_payment_id}")
             existing_payment = db.query(models.PaymentHistory).filter(
                 models.PaymentHistory.razorpay_payment_id == payment.razorpay_payment_id
             ).first()
             
             if existing_payment:
-                print(f"INFO: Payment {payment.razorpay_payment_id} already exists, returning existing")
+                logger.info(f"INFO: Payment {payment.razorpay_payment_id} already exists, returning existing")
                 return existing_payment
             
             # Create new payment record
+            logger.info(f"💳 Creating new payment record...")
             db_payment = models.PaymentHistory(
                 user_id=u_id,
                 user_email=email_normalized,
@@ -1309,14 +1326,14 @@ def create_payment_record(payment: PaymentCreate, db: Session = Depends(get_db))
             db.commit()
             db.refresh(db_payment)
             
-            print(f"SUCCESS: Payment record created with ID: {db_payment.id}")
+            logger.info(f"SUCCESS: Payment record created with ID: {db_payment.id}")
             return db_payment
             
         except Exception as e:
             db.rollback()
             error_msg = str(e).lower()
-            print(f"ERROR: Failed to create payment record: {e}")
-            print(f"ERROR: Traceback: {traceback.format_exc()}")
+            logger.error(f"ERROR: Failed to create payment record: {e}")
+            logger.error(f"ERROR: Traceback: {traceback.format_exc()}")
             
             # Check for duplicate key errors
             if any(term in error_msg for term in ["duplicate key", "unique constraint", "already exists"]):
@@ -1324,7 +1341,7 @@ def create_payment_record(payment: PaymentCreate, db: Session = Depends(get_db))
                     models.PaymentHistory.razorpay_payment_id == payment.razorpay_payment_id
                 ).first()
                 if existing:
-                    print(f"INFO: Returning existing payment record for {payment.razorpay_payment_id}")
+                    logger.info(f"INFO: Returning existing payment record for {payment.razorpay_payment_id}")
                     return existing
             
             # Return a more detailed error
@@ -1338,9 +1355,12 @@ def create_payment_record(payment: PaymentCreate, db: Session = Depends(get_db))
                     "traceback": traceback.format_exc()
                 }
             )
+    except HTTPException:
+        # Re-raise HTTP exceptions as-is
+        raise
     except Exception as e:
-        print(f"CRITICAL ERROR in create_payment_record: {e}")
-        print(f"CRITICAL ERROR Traceback: {traceback.format_exc()}")
+        logger.error(f"CRITICAL ERROR in create_payment_record: {e}")
+        logger.error(f"CRITICAL ERROR Traceback: {traceback.format_exc()}")
         raise HTTPException(
             status_code=500,
             detail={

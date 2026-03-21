@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useNotifications } from "@/context/NotificationContext";
 import { useSubscription, SubscriptionPlan } from "@/context/SubscriptionContext";
+import { useAnimation } from "@/context/AnimationContext";
 import { useSession } from "next-auth/react";
 
 interface PaymentSuccessModalProps {
@@ -27,6 +28,7 @@ export default function PaymentSuccessModal({ isOpen, onClose, paymentDetails }:
   const { data: session } = useSession();
   const { addNotification } = useNotifications();
   const { setPlan } = useSubscription();
+  const { triggerPaymentAnimation } = useAnimation();
   const [wasSynced, setWasSynced] = useState(false);
   
   const currentDetails = React.useMemo(() => ({
@@ -42,6 +44,10 @@ export default function PaymentSuccessModal({ isOpen, onClose, paymentDetails }:
   useEffect(() => {
     if (isOpen && session?.user?.email && !wasSynced) {
       document.body.style.overflow = 'hidden';
+      
+      // Trigger the global animation immediately when modal opens
+      console.log('🌊 Payment success modal opened - triggering global animation');
+      triggerPaymentAnimation();
       
       const planMapping: Record<string, SubscriptionPlan> = {
         'Starter': 'free',
