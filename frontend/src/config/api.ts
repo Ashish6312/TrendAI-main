@@ -1,4 +1,5 @@
 // API Configuration - Centralized API URL management
+// Version: 1.1 - Fixed subscription theme errors
 export const API_CONFIG = {
   // Always use Render backend in production
   baseURL: 'https://trendai-api.onrender.com',
