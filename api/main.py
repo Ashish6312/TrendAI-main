@@ -9,6 +9,7 @@ import os
 import logging
 import traceback
 import json
+from typing import Dict, List, Any, Optional
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -141,17 +142,17 @@ class UserSignIn(BaseModel):
 
 class UserSync(BaseModel):
     email: str
-    name: str | None = None
-    image_url: str | None = None
+    name: Optional[str] = None
+    image_url: Optional[str] = None
 
 class LoginSession(BaseModel):
     user_email: str
     session_token: str
     provider: str = "google"
-    ip_address: str | None = None
-    user_agent: str | None = None
-    device_info: dict | None = None
-    location_info: dict | None = None
+    ip_address: Optional[str] = None
+    user_agent: Optional[str] = None
+    device_info: Optional[Dict] = None
+    location_info: Optional[Dict] = None
     login_method: str = "oauth"
 
 class RecommendationRequest(BaseModel):
@@ -188,35 +189,46 @@ class SubscriptionCreate(BaseModel):
     currency: str = "USD"
     max_analyses: int = 5
     features: dict
-    razorpay_subscription_id: str | None = None
-    razorpay_customer_id: str | None = None
+    razorpay_subscription_id: Optional[str] = None
+    razorpay_customer_id: Optional[str] = None
 
 class SubscriptionUpdate(BaseModel):
-    status: str | None = None
-    subscription_end: str | None = None
-    max_analyses: int | None = None
-    features: dict | None = None
+    status: Optional[str] = None
+    subscription_end: Optional[str] = None
+    max_analyses: Optional[int] = None
+    features: Optional[dict] = None
 
 class LocationResponse(BaseModel):
     country: str
     city: str
     currency: str
     country_code: str
-    ip: str | None = None
+    ip: Optional[str] = None
 
 class PaymentCreate(BaseModel):
     user_email: str
-    subscription_id: int | None = None
+    subscription_id: Optional[int] = None
     amount: float
     razorpay_payment_id: str
     razorpay_order_id: str
-    razorpay_signature: str | None = None
+    razorpay_signature: Optional[str] = None
     status: str = "success"
-    payment_method: str | None = None
+    payment_method: Optional[str] = None
     plan_name: str
     billing_cycle: str
 
 
+
+# Root endpoint for health checks and deployment verification
+@app.get("/")
+async def root():
+    return {"status": "online", "message": "TrendAI Business Intelligence API is active", "version": "2.0"}
+
+# Handle favicon.ico to avoid 500 errors
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    from fastapi.responses import Response
+    return Response(status_code=204)
 
 # Simple global cache for location data (IP -> data)
 LOCATION_CACHE = {}
@@ -281,7 +293,7 @@ def read_root():
         return {
             "message": "TrendAI Business Intelligence API", 
             "status": "healthy", 
-            "version": "2.2",  # Updated version to force deployment
+            "version": "2.0",
             "timestamp": datetime.now().isoformat(),
             "system_status": {
                 "database": "connected" if db_available else "disconnected",
@@ -426,11 +438,6 @@ def sign_in(user_data: UserSignIn, db: Session = Depends(get_db)):
         "image_url": db_user.image_url
     }
 
-@app.get("/api/users/sync")
-def get_sync_status():
-    """Get sync endpoint status - for frontend compatibility"""
-    return {"status": "ok", "message": "Sync endpoint available", "method": "POST"}
-
 @app.post("/api/users/sync")
 def sync_user(user_data: UserSync, db: Session = Depends(get_db)):
     """Sync user from NextAuth, creating if not exists"""
@@ -461,11 +468,6 @@ def sync_user(user_data: UserSync, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(db_user)
     return {"status": "ok", "user_id": db_user.id}
-
-@app.get("/api/users/login-session")
-def get_login_session_status():
-    """Get login session endpoint status - for frontend compatibility"""
-    return {"status": "ok", "message": "Login session endpoint available", "method": "POST"}
 
 @app.post("/api/users/login-session")
 def create_login_session(session: LoginSession, db: Session = Depends(get_db)):
@@ -1096,6 +1098,35 @@ def create_subscription(subscription: SubscriptionCreate, db: Session = Depends(
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
 
+@app.get("/api/system/location")
+def get_system_location(request: Request):
+    """Detect location from IP address"""
+    try:
+        # For development, we'll use a public API to get the IP's location
+        # In production, this can use CloudFront-Viewer-City or GEOLITE
+        import requests
+        res = requests.get("https://ipapi.co/json/", timeout=5)
+        if res.status_code == 200:
+            data = res.json()
+            return {
+                "country": data.get("country_name", "Unknown"),
+                "city": data.get("city", "Unknown"),
+                "country_code": data.get("country_code", "XX"),
+                "currency": data.get("currency", "$"),
+                "ip": data.get("ip", "0.0.0.0")
+            }
+    except Exception as e:
+        print(f"Location detection failed: {e}")
+    
+    # Fallback
+    return {
+        "country": "India",
+        "city": "Unknown",
+        "country_code": "IN",
+        "currency": "INR",
+        "ip": "0.0.0.0"
+    }
+
 @app.get("/api/subscriptions/{user_email}")
 @app.get("/api/subscription/{user_email}") # Support both singular and plural
 def get_user_subscription(user_email: str, db: Session = Depends(get_db)):
@@ -1312,14 +1343,14 @@ def get_user_sessions(email: str, limit: int = 10, db: Session = Depends(get_db)
 
 # Add missing PUT endpoint for user updates
 class UserUpdate(BaseModel):
-    name: str | None = None
-    bio: str | None = None
-    phone: str | None = None
-    image_url: str | None = None
-    company: str | None = None
-    location: str | None = None
-    website: str | None = None
-    industry: str | None = None
+    name: Optional[str] = None
+    bio: Optional[str] = None
+    phone: Optional[str] = None
+    image_url: Optional[str] = None
+    company: Optional[str] = None
+    location: Optional[str] = None
+    website: Optional[str] = None
+    industry: Optional[str] = None
 
 @app.put("/api/users/{email}")
 def update_user_profile(email: str, user_update: UserUpdate, db: Session = Depends(get_db)):
@@ -1378,16 +1409,6 @@ def update_user_profile(email: str, user_update: UserUpdate, db: Session = Depen
 
 # Add Vercel handler at the end of the file
 handler = app
-
-@app.get("/api/deployment-test")
-def deployment_test():
-    """Test endpoint to verify deployment is working"""
-    return {
-        "status": "success",
-        "message": "New deployment is active",
-        "version": "2.2",
-        "timestamp": datetime.now().isoformat()
-    }
 
 @app.get("/api/users/{email}/location")
 def get_user_location(email: str, db: Session = Depends(get_db)):
