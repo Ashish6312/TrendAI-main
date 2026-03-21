@@ -154,7 +154,7 @@ function ProfilePageContent() {
     const paymentId = searchParams.get('payment_id');
     
     if (paymentSuccess === 'true' && paymentId) {
-      console.log('🌊 Payment success detected from URL! Starting water animation...');
+      console.log('🌊 Payment success detected from URL! Starting one-time water animation...');
       
       // Start water animation only once after payment
       startWaterAnimation();
@@ -193,7 +193,7 @@ function ProfilePageContent() {
           const data = await response.json();
           
           if (data.recent_payments && Array.isArray(data.recent_payments)) {
-            // Silent update - no animation
+            // SILENT UPDATE ONLY - NO ANIMATION
             setPayments(data.recent_payments);
             setSubscriptionDetails(data.subscription);
             

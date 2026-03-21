@@ -1681,17 +1681,33 @@ def get_user_profile(email: str, db: Session = Depends(get_db)):
         logger.info(f"🔧 Creating subscription from payment: {latest_payment.plan_name}")
         
         try:
-            # Map payment plan names to subscription plan names
+            # Enhanced plan mapping to handle all variations
             plan_mapping = {
                 'professional': 'professional',
                 'pro': 'professional',
+                'growth accelerator': 'professional',
+                'growth architect': 'professional',
                 'enterprise': 'enterprise',
                 'territorial dominance': 'enterprise',
-                'growth architect': 'professional',
-                'free': 'free'
+                'market dominator': 'enterprise',
+                'free': 'free',
+                'starter': 'free',
+                'venture strategist': 'free'
             }
             
-            mapped_plan = plan_mapping.get(latest_payment.plan_name.lower(), 'free')
+            # Check both plan_name and any display name variations
+            payment_plan_lower = latest_payment.plan_name.lower()
+            mapped_plan = plan_mapping.get(payment_plan_lower, 'professional')  # Default to professional if not found
+            
+            # Special handling for common payment plan names
+            if 'territorial' in payment_plan_lower or 'dominance' in payment_plan_lower:
+                mapped_plan = 'enterprise'
+            elif 'growth' in payment_plan_lower or 'architect' in payment_plan_lower or 'accelerator' in payment_plan_lower:
+                mapped_plan = 'professional'
+            elif 'pro' in payment_plan_lower and payment_plan_lower != 'professional':
+                mapped_plan = 'professional'
+            
+            logger.info(f"🔧 Mapping payment plan '{latest_payment.plan_name}' to subscription plan '{mapped_plan}'")
             
             # Create subscription record
             new_subscription = models.UserSubscription(
@@ -1713,7 +1729,7 @@ def get_user_profile(email: str, db: Session = Depends(get_db)):
             db.refresh(new_subscription)
             
             subscription = new_subscription
-            logger.info(f"✅ Created subscription: {subscription.plan_name} for {email_normalized}")
+            logger.info(f"✅ Created subscription: {subscription.plan_name} (display: {subscription.plan_display_name}) for {email_normalized}")
             
         except Exception as e:
             logger.error(f"Failed to create subscription from payment: {e}")
@@ -1737,10 +1753,20 @@ def get_user_profile(email: str, db: Session = Depends(get_db)):
             'venture strategist': 'free'
         }
         
-        expected_plan = plan_mapping.get(latest_payment.plan_name.lower(), 'free')
+        # Check both plan_name and any display name variations
+        payment_plan_lower = latest_payment.plan_name.lower()
+        expected_plan = plan_mapping.get(payment_plan_lower, 'professional')  # Default to professional if not found
+        
+        # Special handling for common payment plan names
+        if 'territorial' in payment_plan_lower or 'dominance' in payment_plan_lower:
+            expected_plan = 'enterprise'
+        elif 'growth' in payment_plan_lower or 'architect' in payment_plan_lower or 'accelerator' in payment_plan_lower:
+            expected_plan = 'professional'
+        elif 'pro' in payment_plan_lower and payment_plan_lower != 'professional':
+            expected_plan = 'professional'
         
         if subscription.plan_name != expected_plan:
-            logger.info(f"🔧 Updating subscription plan from {subscription.plan_name} to {expected_plan}")
+            logger.info(f"🔧 Updating subscription plan from {subscription.plan_name} to {expected_plan} based on payment: {latest_payment.plan_name}")
             
             try:
                 subscription.plan_name = expected_plan
@@ -1862,7 +1888,7 @@ def refresh_user_plan(email: str, db: Session = Depends(get_db)):
             models.UserSubscription.status == "active"
         ).first()
         
-        # Enhanced plan mapping
+        # Enhanced plan mapping with fuzzy matching
         plan_mapping = {
             'professional': 'professional',
             'pro': 'professional',
@@ -1877,8 +1903,19 @@ def refresh_user_plan(email: str, db: Session = Depends(get_db)):
         }
         
         if latest_payment:
-            # Determine correct plan from payment
-            payment_plan = plan_mapping.get(latest_payment.plan_name.lower(), 'free')
+            # Determine correct plan from payment with fuzzy matching
+            payment_plan_lower = latest_payment.plan_name.lower()
+            payment_plan = plan_mapping.get(payment_plan_lower, 'professional')  # Default to professional
+            
+            # Special handling for common payment plan names
+            if 'territorial' in payment_plan_lower or 'dominance' in payment_plan_lower:
+                payment_plan = 'enterprise'
+            elif 'growth' in payment_plan_lower or 'architect' in payment_plan_lower or 'accelerator' in payment_plan_lower:
+                payment_plan = 'professional'
+            elif 'pro' in payment_plan_lower and payment_plan_lower != 'professional':
+                payment_plan = 'professional'
+            
+            logger.info(f"🔧 Mapping payment plan '{latest_payment.plan_name}' to '{payment_plan}'")
             
             if subscription:
                 # Update existing subscription
@@ -1926,7 +1963,8 @@ def refresh_user_plan(email: str, db: Session = Depends(get_db)):
             "plan_display_name": subscription.plan_display_name if subscription else 'Free',
             "max_analyses": subscription.max_analyses if subscription else 5,
             "has_payment": bool(latest_payment),
-            "payment_amount": latest_payment.amount if latest_payment else 0
+            "payment_amount": latest_payment.amount if latest_payment else 0,
+            "payment_plan_name": latest_payment.plan_name if latest_payment else None
         }
         
     except Exception as e:

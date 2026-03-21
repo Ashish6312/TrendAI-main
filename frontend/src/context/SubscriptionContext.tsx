@@ -152,37 +152,40 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
         const data = await response.json();
         console.log('🔍 Force refresh - Subscription data:', data);
         
-        // Enhanced mapping for plan names
+        // Enhanced mapping for plan names with fuzzy matching
         const rawPlanName = data.plan_name?.toLowerCase() || '';
         const rawDisplayName = data.plan_display_name?.toLowerCase() || '';
         
         let planToSet: SubscriptionPlan = 'free';
         
-        // Check for enterprise plans
+        // Check for enterprise plans with fuzzy matching
         if (rawPlanName === 'enterprise' || 
             rawDisplayName === 'territorial dominance' || 
             rawDisplayName === 'market dominator' ||
             rawDisplayName.includes('enterprise') ||
             rawDisplayName.includes('territorial') ||
+            rawDisplayName.includes('dominance') ||
             rawDisplayName.includes('dominator')) {
           planToSet = 'enterprise';
         }
-        // Check for professional plans  
+        // Check for professional plans with fuzzy matching
         else if (rawPlanName === 'professional' || 
                  rawPlanName === 'pro' || 
                  rawDisplayName === 'growth architect' || 
                  rawDisplayName === 'growth accelerator' ||
                  rawDisplayName.includes('professional') ||
                  rawDisplayName.includes('growth') ||
-                 rawDisplayName.includes('architect')) {
+                 rawDisplayName.includes('architect') ||
+                 rawDisplayName.includes('accelerator') ||
+                 rawDisplayName.includes('pro')) {
           planToSet = 'professional';
         }
-        // Default to free
+        // Default to free for anything else
         else {
           planToSet = 'free';
         }
 
-        console.log('🔄 Force refresh - Plan mapped to:', planToSet);
+        console.log('🔄 Force refresh - Plan mapped to:', planToSet, 'from:', rawPlanName, rawDisplayName);
         setPlanState(planToSet);
         localStorage.setItem(`subscription_${email}`, planToSet);
         
