@@ -1636,6 +1636,26 @@ def test_payments_endpoint(user_email: str, db: Session = Depends(get_db)):
         ]
     }
 
+@app.post("/api/payment-webhook")
+async def payment_webhook(request: Request):
+    """Webhook endpoint for real-time payment notifications"""
+    try:
+        # This endpoint can be called by payment processors to notify of new payments
+        body = await request.json()
+        logger.info(f"🔔 Payment webhook received: {body}")
+        
+        # Here you would normally verify the webhook signature
+        # For now, we'll just log it and return success
+        
+        return {
+            "status": "success",
+            "message": "Payment webhook processed",
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        logger.error(f"Payment webhook error: {e}")
+        return {"status": "error", "message": str(e)}
+
 @app.get("/api/users/{email}/profile")
 def get_user_profile(email: str, db: Session = Depends(get_db)):
     """Get user profile information - SIMPLIFIED VERSION"""
