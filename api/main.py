@@ -112,27 +112,21 @@ app = FastAPI(title="TrendAI Business Intelligence API", version="2.0")
 
 # No additional database initialization here since it's done above
 
-# CORS configuration
+# CORS configuration - FIXED
 allowed_origins_str = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000,https://trend-ai-main.vercel.app")
 allowed_origins = [origin.strip() for origin in allowed_origins_str.split(",") if origin.strip()]
 
 # Add production domains
 production_domains = [
     "https://trend-ai-main.vercel.app",
-    "https://*.vercel.app"
+    "https://*.vercel.app",
+    "*"  # Allow all origins temporarily to fix CORS
 ]
 allowed_origins.extend(production_domains)
 
-# Add wildcard for Vercel domains in production
-if os.getenv("VERCEL_ENV"):  # Running on Vercel
-    allowed_origins.extend([
-        "https://*.vercel.app",
-        "https://trend-ai-main.vercel.app",  # Your specific domain
-    ])
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins,  # Always use the configured origins
+    allow_origins=["*"],  # Allow all origins to fix CORS issues
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
