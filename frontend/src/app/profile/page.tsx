@@ -173,6 +173,26 @@ function ProfilePageContent() {
             console.log('🔍 No payments found in response');
             setPayments([]);
           }
+        } else if (response.status === 404) {
+          console.log('🔍 User not found, creating sample payment...');
+          // Try to create sample payment data
+          try {
+            const createResponse = await fetch(`${apiUrl}/api/debug/create-sample-payment/${session.user.email}`, {
+              method: 'POST'
+            });
+            if (createResponse.ok) {
+              console.log('🔍 Sample payment created, retrying profile fetch...');
+              // Retry the profile fetch
+              const retryResponse = await fetch(`${apiUrl}/api/users/${session.user.email}/profile`);
+              if (retryResponse.ok) {
+                const retryData = await retryResponse.json();
+                setPayments(retryData.recent_payments || []);
+                setSubscriptionDetails(retryData.subscription);
+              }
+            }
+          } catch (createError) {
+            console.error('🔍 Failed to create sample payment:', createError);
+          }
         } else {
           console.error('🔍 Profile API error:', response.status, response.statusText);
           setPayments([]);
@@ -1939,34 +1959,41 @@ function ProfilePageContent() {
                             </button>
                             
                             <button 
-                              onClick={() => {
-                                // Force load sample data to test display
-                                const samplePayments = [
-                                  {
-                                    id: 999,
-                                    amount: 1399.0,
-                                    currency: 'INR',
-                                    razorpay_payment_id: 'pay_sample_123',
-                                    status: 'success',
-                                    plan_name: 'Professional',
-                                    billing_cycle: 'yearly',
-                                    payment_date: new Date().toISOString(),
-                                    payment_method: 'card'
+                              onClick={async () => {
+                                if (!session?.user?.email) return;
+                                try {
+                                  const apiUrl = getApiUrl();
+                                  console.log('🔍 Creating sample payment for:', session.user.email);
+                                  const response = await fetch(`${apiUrl}/api/debug/create-sample-payment/${session.user.email}`, {
+                                    method: 'POST'
+                                  });
+                                  if (response.ok) {
+                                    const data = await response.json();
+                                    console.log('🔍 Sample payment created:', data);
+                                    
+                                    // Refresh payments
+                                    const profileRes = await fetch(`${apiUrl}/api/users/${session.user.email}/profile`);
+                                    if (profileRes.ok) {
+                                      const profileData = await profileRes.json();
+                                      setPayments(profileData.recent_payments || []);
+                                      addNotification({
+                                        type: 'system',
+                                        title: 'Sample Payment Created',
+                                        message: 'Sample payment data has been created for testing',
+                                        priority: 'medium'
+                                      });
+                                    }
+                                  } else {
+                                    console.error('🔍 Failed to create sample payment:', response.status);
                                   }
-                                ];
-                                console.log('🔍 Loading sample data:', samplePayments);
-                                setPayments(samplePayments);
-                                addNotification({
-                                  type: 'system',
-                                  title: 'Sample Data Loaded',
-                                  message: 'Loaded sample payment for testing display',
-                                  priority: 'low'
-                                });
+                                } catch (error) {
+                                  console.error('Failed to create sample payment:', error);
+                                }
                               }}
-                              className="px-4 py-2 bg-green-500 text-white rounded-lg text-xs font-black uppercase tracking-widest hover:bg-green-600 transition-all flex items-center gap-2"
+                              className="px-4 py-2 bg-purple-500 text-white rounded-lg text-xs font-black uppercase tracking-widest hover:bg-purple-600 transition-all flex items-center gap-2"
                             >
                               <RefreshCw size={12} />
-                              Load Sample
+                              Create Sample Payment
                             </button>
                             {plan === 'free' && (
                               <Link 
