@@ -49,7 +49,7 @@ export default function ProfilePage() {
 function ProfilePageContent() {
   const { data: session, status } = useSession();
   const router = useRouter();
-  const { plan, theme, planFeatures } = useSubscription();
+  const { plan, theme, planFeatures, setPlan } = useSubscription();
   const { userLocation, addNotification, refreshLocation } = useNotifications();
   const { t } = useLanguage();
   
@@ -2212,7 +2212,7 @@ function ProfilePageContent() {
                           </p>
                           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
                             <motion.button 
-                              onClick={async () => {
+                              onClick={async (event) => {
                                 if (!session?.user?.email) return;
                                 
                                 // Show ripple animation at click position
