@@ -1400,6 +1400,61 @@ def debug_users(db: Session = Depends(get_db)):
     except Exception as e:
         return {"error": str(e)}
 
+@app.post("/api/fix-payment-email/{current_email}")
+def fix_payment_email(current_email: str, db: Session = Depends(get_db)):
+    """Fix payment email mismatch by linking payments to current user email"""
+    try:
+        from sqlalchemy import func
+        
+        current_email_normalized = current_email.lower().strip()
+        logger.info(f"🔧 Fixing payment email for: {current_email_normalized}")
+        
+        # Check if user exists
+        user = db.query(models.User).filter(func.lower(models.User.email) == current_email_normalized).first()
+        if not user:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        # Get user's subscription to find the correct user_id
+        subscription = db.query(models.UserSubscription).filter(
+            func.lower(models.UserSubscription.user_email) == current_email_normalized,
+            models.UserSubscription.status == "active"
+        ).first()
+        
+        if not subscription:
+            raise HTTPException(status_code=404, detail="No active subscription found")
+        
+        logger.info(f"🔧 Found subscription: {subscription.plan_name} for user_id: {subscription.user_id}")
+        
+        # Find payments for this user_id but with different email
+        payments_to_fix = db.query(models.PaymentHistory).filter(
+            models.PaymentHistory.user_id == subscription.user_id,
+            func.lower(models.PaymentHistory.user_email) != current_email_normalized
+        ).all()
+        
+        logger.info(f"🔧 Found {len(payments_to_fix)} payments to fix")
+        
+        # Update payment emails to match current email
+        fixed_count = 0
+        for payment in payments_to_fix:
+            old_email = payment.user_email
+            payment.user_email = current_email_normalized
+            fixed_count += 1
+            logger.info(f"🔧 Fixed payment {payment.id}: {old_email} -> {current_email_normalized}")
+        
+        db.commit()
+        
+        return {
+            "message": f"Fixed {fixed_count} payment records",
+            "fixed_payments": fixed_count,
+            "current_email": current_email_normalized,
+            "user_id": subscription.user_id
+        }
+        
+    except Exception as e:
+        logger.error(f"Fix payment email error: {e}")
+        db.rollback()
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/api/debug/all-payments")
 def debug_all_payments(db: Session = Depends(get_db)):
     """Debug endpoint to see all payments with emails"""
