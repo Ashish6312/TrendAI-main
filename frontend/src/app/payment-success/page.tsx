@@ -260,6 +260,18 @@ function PaymentSuccessContent() {
             priority: 'high',
             actionUrl: '/profile?tab=billing'
           });
+        } else {
+          console.error('❌ Fallback payment processing failed:', paymentResponse.status, paymentResponse.statusText);
+          const errorData = await paymentResponse.json().catch(() => ({}));
+          console.error('Payment processing error details:', errorData);
+          
+          addNotification({
+            type: 'alert',
+            title: 'Payment Processing Issue',
+            message: 'Your payment was successful, but there was an issue saving the records. Please contact support.',
+            priority: 'medium',
+            actionUrl: '/profile?tab=billing'
+          });
         }
 
       } catch (error) {

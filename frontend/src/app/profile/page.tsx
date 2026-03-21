@@ -229,8 +229,8 @@ function ProfilePageContent() {
       // Initial load
       checkForUpdates();
       
-      // Start real-time polling every 30 seconds for silent updates
-      pollInterval = setInterval(checkForUpdates, 30000);
+      // Reduced polling frequency to every 60 seconds for silent updates
+      pollInterval = setInterval(checkForUpdates, 60000);
     }
     
     return () => {
@@ -493,7 +493,7 @@ function ProfilePageContent() {
 
     const interval = setInterval(() => {
       fetchProfileSilent(); // Silent refresh
-    }, 30000); // Refresh every 30 seconds
+    }, 60000); // Reduced to refresh every 60 seconds
 
     return () => clearInterval(interval);
   }, [session?.user?.email]);

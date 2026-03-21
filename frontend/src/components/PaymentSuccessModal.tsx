@@ -115,21 +115,33 @@ export default function PaymentSuccessModal({ isOpen, onClose, paymentDetails }:
           }
           
           // 4. Sync Payment Record
-          await fetch(`${apiUrl}/api/payments`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              user_email: userEmail,
-              subscription_id: subId,
-              razorpay_payment_id: paymentId,
-              razorpay_order_id: paymentDetails?.order_id || `ord_${Date.now()}`,
-              amount: parseFloat(amount),
-              currency: currency,
-              status: 'success',
-              plan_name: planParam,
-              billing_cycle: billingCycle
-            })
-          });
+          try {
+            const paymentResponse = await fetch(`${apiUrl}/api/payments`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                user_email: userEmail,
+                subscription_id: subId,
+                razorpay_payment_id: paymentId,
+                razorpay_order_id: paymentDetails?.order_id || `ord_${Date.now()}`,
+                amount: parseFloat(amount),
+                currency: currency,
+                status: 'success',
+                plan_name: planParam,
+                billing_cycle: billingCycle
+              })
+            });
+            
+            if (!paymentResponse.ok) {
+              console.error('Payment sync failed:', paymentResponse.status, paymentResponse.statusText);
+              const errorData = await paymentResponse.json().catch(() => ({}));
+              console.error('Payment sync error details:', errorData);
+            } else {
+              console.log('✅ Payment record synced successfully');
+            }
+          } catch (error) {
+            console.error('Payment sync error:', error);
+          }
           
           addNotification({
             type: 'payment',
