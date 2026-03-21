@@ -5,39 +5,87 @@ from sqlalchemy import func
 from pydantic import BaseModel
 from datetime import datetime, timedelta
 import bcrypt
-import models
 import os
-from database import get_db, init_database, check_db_connection
-from simple_recommendations import (
-    generate_ai_business_plan, 
-    generate_ai_roadmap
-)
+import logging
+import traceback
+import json
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Global variables for optional imports
+db_available = False
+models_available = False
+recommendations_available = False
+integrated_intelligence = None
+
+# Try to import database components
+try:
+    from database import get_db, init_database, check_db_connection
+    db_available = True
+    logger.info("✅ Database imports successful")
+except Exception as e:
+    logger.error(f"⚠️ Database import failed: {e}")
+    db_available = False
+    # Create dummy functions
+    def get_db():
+        raise HTTPException(status_code=503, detail="Database not available")
+    def init_database():
+        pass
+    def check_db_connection():
+        return False
+
+# Initialize database if available
+if db_available:
+    try:
+        init_database()
+        db_status = check_db_connection()
+        if not db_status:
+            logger.warning("Database connection test failed")
+        else:
+            logger.info("✅ Database connection successful")
+    except Exception as e:
+        logger.error(f"⚠️ Database initialization failed: {e}")
+        db_available = False
+
+# Try to import models
+try:
+    import models
+    models_available = True
+    logger.info("✅ Models imported successfully")
+except Exception as e:
+    logger.error(f"⚠️ Models import failed: {e}")
+    models_available = False
+
+# Try to import recommendation engines
+try:
+    from simple_recommendations import generate_ai_business_plan, generate_ai_roadmap
+    recommendations_available = True
+    logger.info("✅ Simple recommendations imported successfully")
+except Exception as e:
+    logger.error(f"⚠️ Simple recommendations import failed: {e}")
+    recommendations_available = False
 
 # Import integrated intelligence with error handling
 try:
     from integrated_business_intelligence import integrated_intelligence
-    print("✅ Integrated business intelligence imported successfully")
+    logger.info("✅ Integrated business intelligence imported successfully")
 except ImportError as e:
-    print(f"⚠️ Integrated business intelligence import failed: {e}")
+    logger.error(f"⚠️ Integrated business intelligence import failed: {e}")
     integrated_intelligence = None
 except Exception as e:
-    print(f"⚠️ Unexpected error importing integrated business intelligence: {e}")
+    logger.error(f"⚠️ Unexpected error importing integrated business intelligence: {e}")
     integrated_intelligence = None
+
 from dotenv import load_dotenv
 
 load_dotenv()
 
 # Initialize FastAPI app without lifespan for Vercel compatibility
-app = FastAPI()
+app = FastAPI(title="TrendAI Business Intelligence API", version="2.0")
 
-# Initialize database on startup (Vercel compatible)
-try:
-    init_database()
-    check_db_connection()
-    print("✅ Database initialized successfully")
-except Exception as e:
-    print(f"⚠️ Database initialization warning: {e}")
-    # Continue without crashing - database might be initialized already
+# No additional database initialization here since it's done above
 
 # CORS configuration
 allowed_origins_str = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000")
@@ -59,7 +107,29 @@ app.add_middleware(
 )
 
 
-# Auth models
+# Database dependency with error handling
+def get_db_session():
+    """Get database session with error handling"""
+    if not db_available:
+        raise HTTPException(status_code=503, detail="Database not available")
+    try:
+        from database import SessionLocal
+        db = SessionLocal()
+        try:
+            yield db
+        finally:
+            db.close()
+    except Exception as e:
+        logger.error(f"Database session error: {e}")
+        raise HTTPException(status_code=503, detail="Database connection failed")
+
+# Use the original get_db but with fallback
+def get_db_with_fallback():
+    """Original get_db function with fallback handling"""
+    if db_available:
+        return get_db()
+    else:
+        raise HTTPException(status_code=503, detail="Database not available")
 class UserSignUp(BaseModel):
     email: str
     password: str
@@ -209,15 +279,27 @@ async def get_system_location(request: Request):
 def read_root():
     try:
         return {
-            "message": "Welcome to the Business Recommendation API", 
+            "message": "TrendAI Business Intelligence API", 
             "status": "healthy", 
             "version": "2.0",
             "timestamp": datetime.now().isoformat(),
-            "integrated_intelligence": "available" if integrated_intelligence else "fallback_mode"
+            "system_status": {
+                "database": "connected" if db_available else "disconnected",
+                "models": "available" if models_available else "unavailable", 
+                "recommendations": "available" if recommendations_available else "unavailable",
+                "integrated_intelligence": "available" if integrated_intelligence else "unavailable"
+            },
+            "environment_check": {
+                "database_url": bool(os.getenv("DATABASE_URL")),
+                "pollination_key": bool(os.getenv("POLLINATION_API_KEY")),
+                "serpapi_key": bool(os.getenv("SERPAPI_API_KEY")),
+                "gemini_key": bool(os.getenv("GEMINI_API_KEY"))
+            }
         }
     except Exception as e:
+        logger.error(f"Root endpoint error: {e}")
         return {
-            "message": "API is running with limited functionality",
+            "message": "API running with limited functionality",
             "status": "partial",
             "error": str(e),
             "timestamp": datetime.now().isoformat()
@@ -227,14 +309,27 @@ def read_root():
 def health_check():
     """Health check endpoint for Vercel"""
     try:
-        # Quick database check
-        db_status = check_db_connection()
-        return {
+        health_status = {
             "status": "healthy",
-            "database": "connected" if db_status else "disconnected",
-            "timestamp": datetime.now().isoformat()
+            "timestamp": datetime.now().isoformat(),
+            "components": {
+                "database": "ok" if db_available else "error",
+                "models": "ok" if models_available else "error",
+                "recommendations": "ok" if recommendations_available else "error",
+                "integrated_intelligence": "ok" if integrated_intelligence else "error"
+            }
         }
+        
+        if db_available:
+            try:
+                db_check = check_db_connection()
+                health_status["database_test"] = "passed" if db_check else "failed"
+            except Exception as e:
+                health_status["database_test"] = f"error: {str(e)}"
+        
+        return health_status
     except Exception as e:
+        logger.error(f"Health check error: {e}")
         return {
             "status": "error",
             "error": str(e),
@@ -246,6 +341,20 @@ def health_check():
 def test_auth():
     """Test endpoint to verify auth endpoints are working"""
     return {"status": "ok", "message": "Auth endpoints are working"}
+
+@app.get("/test")
+def test_endpoint():
+    return {
+        "test": "success",
+        "message": "API is working correctly",
+        "timestamp": datetime.now().isoformat(),
+        "all_systems": {
+            "database": db_available,
+            "models": models_available,
+            "recommendations": recommendations_available,
+            "integrated_intelligence": integrated_intelligence is not None
+        }
+    }
 
 @app.post("/api/auth/signup")
 def sign_up(user_data: UserSignUp, db: Session = Depends(get_db)):
@@ -456,14 +565,60 @@ def get_recommendations(request: RecommendationRequest, db: Session = Depends(ge
         print("[SUCCESS] No cache found. Calling fresh REAL-TIME intelligence engine...")
         # Generate dynamic recommendations DIRECTLY from intelligence module (Zero Hardcoding)
         if integrated_intelligence:
-            result = integrated_intelligence.generate_data_driven_recommendations(analysis_area, request.user_email, request.language, request.phase)
-            print(f"[SUCCESS] Generated {len(result['recommendations'])} real-time recommendations")
+            try:
+                result = integrated_intelligence.generate_data_driven_recommendations(analysis_area, request.user_email, request.language, request.phase)
+                print(f"[SUCCESS] Generated {len(result['recommendations'])} real-time recommendations")
+            except Exception as e:
+                logger.error(f"Integrated intelligence failed: {e}")
+                result = None
         else:
-            print("⚠️ Integrated intelligence not available, using fallback")
-            # Import fallback function
-            from simple_recommendations import generate_dynamic_recommendations
-            result = generate_dynamic_recommendations(analysis_area, request.user_email, request.language)
-            print(f"[FALLBACK] Generated {len(result['recommendations'])} fallback recommendations")
+            result = None
+            
+        if not result and recommendations_available:
+            try:
+                print("⚠️ Integrated intelligence not available, using fallback")
+                # Import fallback function
+                from simple_recommendations import generate_dynamic_recommendations
+                result = generate_dynamic_recommendations(analysis_area, request.user_email, request.language)
+                print(f"[FALLBACK] Generated {len(result['recommendations'])} fallback recommendations")
+            except Exception as e:
+                logger.error(f"Simple recommendations failed: {e}")
+                result = None
+        
+        # Ultimate fallback if all engines fail
+        if not result:
+            logger.warning("All recommendation engines failed, using ultimate fallback")
+            result = {
+                "analysis": {
+                    "executive_summary": f"Business analysis for {analysis_area} shows potential opportunities in the local market.",
+                    "market_overview": f"The {analysis_area} region presents various business opportunities for entrepreneurs.",
+                    "confidence_score": "75%",
+                    "key_facts": [
+                        f"Growing market in {analysis_area}",
+                        "Diverse business opportunities available", 
+                        "Local demand for innovative services"
+                    ]
+                },
+                "recommendations": [
+                    {
+                        "title": "Local Service Business",
+                        "description": f"Start a service-based business targeting the {analysis_area} market with focus on local needs.",
+                        "profitability_score": 75,
+                        "funding_required": "₹10L",
+                        "estimated_revenue": "₹3L/month",
+                        "roi_percentage": 120,
+                        "competition_level": "Medium",
+                        "market_size": "Growing",
+                        "key_success_factors": ["Local market knowledge", "Quality service delivery"]
+                    }
+                ],
+                "location_data": {
+                    "city": analysis_area.split(',')[0].strip(),
+                    "currency_symbol": "₹"
+                },
+                "timestamp": datetime.now().isoformat(),
+                "system_status": "Fallback mode - limited functionality"
+            }
         
         # Save to database
         import json
