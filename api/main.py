@@ -426,6 +426,11 @@ def sign_in(user_data: UserSignIn, db: Session = Depends(get_db)):
         "image_url": db_user.image_url
     }
 
+@app.get("/api/users/sync")
+def get_sync_status():
+    """Get sync endpoint status - for frontend compatibility"""
+    return {"status": "ok", "message": "Sync endpoint available", "method": "POST"}
+
 @app.post("/api/users/sync")
 def sync_user(user_data: UserSync, db: Session = Depends(get_db)):
     """Sync user from NextAuth, creating if not exists"""
@@ -456,6 +461,11 @@ def sync_user(user_data: UserSync, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(db_user)
     return {"status": "ok", "user_id": db_user.id}
+
+@app.get("/api/users/login-session")
+def get_login_session_status():
+    """Get login session endpoint status - for frontend compatibility"""
+    return {"status": "ok", "message": "Login session endpoint available", "method": "POST"}
 
 @app.post("/api/users/login-session")
 def create_login_session(session: LoginSession, db: Session = Depends(get_db)):
