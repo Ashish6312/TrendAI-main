@@ -194,9 +194,11 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     
     // Update CSS custom properties for theme
     const theme = themes[newPlan];
-    document.documentElement.style.setProperty('--subscription-primary', theme.primary);
-    document.documentElement.style.setProperty('--subscription-secondary', theme.secondary);
-    document.documentElement.style.setProperty('--subscription-accent', theme.accent);
+    if (theme) {
+      document.documentElement.style.setProperty('--subscription-primary', theme.primary);
+      document.documentElement.style.setProperty('--subscription-secondary', theme.secondary);
+      document.documentElement.style.setProperty('--subscription-accent', theme.accent);
+    }
     
     // Add plan-specific body class for global styling
     document.body.className = document.body.className.replace(/plan-\w+/g, '');
@@ -206,13 +208,15 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   // Apply theme on mount and plan change
   useEffect(() => {
     const theme = themes[plan];
-    document.documentElement.style.setProperty('--subscription-primary', theme.primary);
-    document.documentElement.style.setProperty('--subscription-secondary', theme.secondary);
-    document.documentElement.style.setProperty('--subscription-accent', theme.accent);
-    
-    // Add plan-specific body class
-    document.body.className = document.body.className.replace(/plan-\w+/g, '');
-    document.body.classList.add(`plan-${plan}`);
+    if (theme) {
+      document.documentElement.style.setProperty('--subscription-primary', theme.primary);
+      document.documentElement.style.setProperty('--subscription-secondary', theme.secondary);
+      document.documentElement.style.setProperty('--subscription-accent', theme.accent);
+      
+      // Add plan-specific body class
+      document.body.className = document.body.className.replace(/plan-\w+/g, '');
+      document.body.classList.add(`plan-${plan}`);
+    }
   }, [plan]);
 
   const isSubscribed = plan !== 'free';
@@ -248,10 +252,10 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   return (
     <SubscriptionContext.Provider value={{
       plan,
-      theme: themes[plan],
+      theme: themes[plan] || themes.free, // Fallback to free theme if plan is invalid
       setPlan,
       isSubscribed,
-      planFeatures: planFeatures[plan],
+      planFeatures: planFeatures[plan] || planFeatures.free, // Fallback to free features
       canAccessFeature,
       getRemainingAnalyses,
       hasReachedAnalysisLimit,
