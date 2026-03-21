@@ -1794,20 +1794,6 @@ function ProfilePageContent() {
                         </div>
                       </div>
 
-                      {/* Debug info - Remove this in production */}
-                      {process.env.NODE_ENV === 'development' && (
-                        <div className="mb-4 p-3 bg-yellow-100 dark:bg-yellow-900/20 rounded-lg border border-yellow-300 dark:border-yellow-700">
-                          <p className="text-xs font-bold text-yellow-800 dark:text-yellow-200">
-                            Debug: Payments array length: {payments.length}
-                          </p>
-                          {payments.length > 0 && (
-                            <p className="text-xs text-yellow-700 dark:text-yellow-300 mt-1">
-                              Latest payment: {payments[0]?.plan_name} - ₹{payments[0]?.amount} - {payments[0]?.status}
-                            </p>
-                          )}
-                        </div>
-                      )}
-
                       {payments.length > 0 ? (
                         <div className="space-y-4">
                           <div className="overflow-x-auto -mx-6 px-6">
@@ -1895,14 +1881,9 @@ function ProfilePageContent() {
                                 if (!session?.user?.email) return;
                                 try {
                                   const apiUrl = getApiUrl();
-                                  console.log('🔍 Refreshing payments for:', session.user.email);
                                   const profileRes = await fetch(`${apiUrl}/api/users/${session.user.email}/profile`);
-                                  console.log('🔍 Refresh - Profile response status:', profileRes.status);
                                   if (profileRes.ok) {
                                     const profileData = await profileRes.json();
-                                    console.log('🔍 Refresh - Profile data:', profileData);
-                                    console.log('🔍 Refresh - Recent payments:', profileData.recent_payments);
-                                    
                                     setPayments(profileData.recent_payments || []);
                                     addNotification({
                                       type: 'system',
@@ -1910,10 +1891,6 @@ function ProfilePageContent() {
                                       message: `Found ${profileData.recent_payments?.length || 0} transaction records`,
                                       priority: 'low'
                                     });
-                                  } else {
-                                    console.error('🔍 Refresh - Profile API error:', profileRes.status, profileRes.statusText);
-                                    const errorText = await profileRes.text();
-                                    console.error('🔍 Error details:', errorText);
                                   }
                                 } catch (error) {
                                   console.error('Failed to refresh transactions:', error);
@@ -1924,131 +1901,6 @@ function ProfilePageContent() {
                               <RefreshCw size={12} />
                               Refresh Transactions
                             </button>
-                            
-                            {/* Fix Payment Email Button - Always visible for users with subscription but no payments */}
-                            {subscriptionDetails && payments.length === 0 && (
-                              <button 
-                                onClick={async () => {
-                                  if (!session?.user?.email) return;
-                                  try {
-                                    const apiUrl = getApiUrl();
-                                    console.log('🔧 Fixing payment email for:', session.user.email);
-                                    const fixRes = await fetch(`${apiUrl}/api/fix-payment-email/${session.user.email}`, {
-                                      method: 'POST'
-                                    });
-                                    console.log('🔧 Fix response status:', fixRes.status);
-                                    if (fixRes.ok) {
-                                      const fixData = await fixRes.json();
-                                      console.log('🔧 Fix results:', fixData);
-                                      
-                                      addNotification({
-                                        type: 'system',
-                                        title: 'Payment Records Fixed!',
-                                        message: `Fixed ${fixData.fixed_payments} payment records. Refreshing...`,
-                                        priority: 'high'
-                                      });
-                                      
-                                      // Refresh payments after fix
-                                      setTimeout(async () => {
-                                        const profileRes = await fetch(`${apiUrl}/api/users/${session.user.email}/profile`);
-                                        if (profileRes.ok) {
-                                          const profileData = await profileRes.json();
-                                          setPayments(profileData.recent_payments || []);
-                                        }
-                                      }, 1000);
-                                      
-                                    } else {
-                                      console.error('🔧 Fix failed:', fixRes.status);
-                                      addNotification({
-                                        type: 'system',
-                                        title: 'Fix Failed',
-                                        message: 'Could not fix payment records. Please contact support.',
-                                        priority: 'medium'
-                                      });
-                                    }
-                                  } catch (error) {
-                                    console.error('Failed to fix payment email:', error);
-                                  }
-                                }}
-                                className="px-4 py-2 bg-green-500 text-white rounded-lg text-xs font-black uppercase tracking-widest hover:bg-green-600 transition-all flex items-center gap-2 animate-pulse"
-                              >
-                                <RefreshCw size={12} />
-                                Fix My Payment Records
-                              </button>
-                            )}
-                            
-                            {/* Development-only buttons */}
-                            {process.env.NODE_ENV === 'development' && (
-                              <>
-                                <button 
-                                  onClick={async () => {
-                                    if (!session?.user?.email) return;
-                                    try {
-                                      const apiUrl = getApiUrl();
-                                      const username = session.user.email.split('@')[0];
-                                      console.log('🔍 Searching payments for username:', username);
-                                      const searchRes = await fetch(`${apiUrl}/api/payments/search/${username}`);
-                                      console.log('🔍 Search response status:', searchRes.status);
-                                      if (searchRes.ok) {
-                                        const searchData = await searchRes.json();
-                                        console.log('🔍 Search results:', searchData);
-                                        
-                                        if (searchData.payments && searchData.payments.length > 0) {
-                                          setPayments(searchData.payments);
-                                          addNotification({
-                                            type: 'system',
-                                            title: 'Payments Found!',
-                                            message: `Found ${searchData.payments.length} payments by searching username`,
-                                            priority: 'high'
-                                          });
-                                        } else {
-                                          addNotification({
-                                            type: 'system',
-                                            title: 'No Payments Found',
-                                            message: 'No payments found even with username search',
-                                            priority: 'medium'
-                                          });
-                                        }
-                                      }
-                                    } catch (error) {
-                                      console.error('Failed to search payments:', error);
-                                    }
-                                  }}
-                                  className="px-4 py-2 bg-orange-500 text-white rounded-lg text-xs font-black uppercase tracking-widest hover:bg-orange-600 transition-all flex items-center gap-2"
-                                >
-                                  <RefreshCw size={12} />
-                                  Search by Username
-                                </button>
-                                
-                                <button 
-                                  onClick={async () => {
-                                    if (!session?.user?.email) return;
-                                    try {
-                                      const apiUrl = getApiUrl();
-                                      console.log('🔍 Getting all payments from database');
-                                      const allRes = await fetch(`${apiUrl}/api/debug/all-payments`);
-                                      if (allRes.ok) {
-                                        const allData = await allRes.json();
-                                        console.log('🔍 All payments in database:', allData);
-                                        
-                                        addNotification({
-                                          type: 'system',
-                                          title: 'Database Check',
-                                          message: `Found ${allData.payments_count} total payments in database. Check console for details.`,
-                                          priority: 'medium'
-                                        });
-                                      }
-                                    } catch (error) {
-                                      console.error('Failed to get all payments:', error);
-                                    }
-                                  }}
-                                  className="px-4 py-2 bg-red-500 text-white rounded-lg text-xs font-black uppercase tracking-widest hover:bg-red-600 transition-all flex items-center gap-2"
-                                >
-                                  <RefreshCw size={12} />
-                                  Check All DB Payments
-                                </button>
-                              </>
-                            )}
                             
                             {plan === 'free' && (
                               <Link 
