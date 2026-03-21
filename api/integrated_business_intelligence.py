@@ -11,7 +11,7 @@ import random
 import traceback
 from typing import Dict, List, Any, Optional
 from datetime import datetime
-from ddgs import DDGS
+from duckduckgo_search import DDGS
 
 class IntegratedBusinessIntelligence:
     def __init__(self):
