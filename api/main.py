@@ -4,7 +4,6 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 from pydantic import BaseModel
 from datetime import datetime, timedelta
-from contextlib import asynccontextmanager
 import bcrypt
 import models
 import os
@@ -18,15 +17,17 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    # Startup
+# Initialize FastAPI app without lifespan for Vercel compatibility
+app = FastAPI()
+
+# Initialize database on startup (Vercel compatible)
+try:
     init_database()
     check_db_connection()
-    yield
-    # Shutdown (if needed)
-
-app = FastAPI(lifespan=lifespan)
+    print("✅ Database initialized successfully")
+except Exception as e:
+    print(f"⚠️ Database initialization warning: {e}")
+    # Continue without crashing - database might be initialized already
 
 # CORS configuration
 allowed_origins_str = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000")
@@ -36,7 +37,7 @@ allowed_origins = [origin.strip() for origin in allowed_origins_str.split(",") i
 if os.getenv("VERCEL_ENV"):  # Running on Vercel
     allowed_origins.extend([
         "https://*.vercel.app",
-        "https://trend-ai-sand.vercel.app",  # Your specific domain
+        "https://trend-ai-main.vercel.app",  # Your specific domain
     ])
 
 app.add_middleware(
@@ -196,7 +197,25 @@ async def get_system_location(request: Request):
 
 @app.get("/")
 def read_root():
-    return {"message": "Welcome to the Business Recommendation API"}
+    return {"message": "Welcome to the Business Recommendation API", "status": "healthy", "version": "2.0"}
+
+@app.get("/health")
+def health_check():
+    """Health check endpoint for Vercel"""
+    try:
+        # Quick database check
+        db_status = check_db_connection()
+        return {
+            "status": "healthy",
+            "database": "connected" if db_status else "disconnected",
+            "timestamp": datetime.now().isoformat()
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "error": str(e),
+            "timestamp": datetime.now().isoformat()
+        }
 
 # Authentication endpoints
 @app.get("/api/auth/test")
@@ -1179,9 +1198,8 @@ def update_user_profile(email: str, user_update: UserUpdate, db: Session = Depen
         print(f"Failed to update user profile: {e}")
         raise HTTPException(status_code=500, detail="Failed to update profile")
 
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+# Add Vercel handler at the end of the file
+handler = app
 
 @app.get("/api/users/{email}/location")
 def get_user_location(email: str, db: Session = Depends(get_db)):

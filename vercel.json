@@ -20,7 +20,9 @@
       "dest": "frontend/$1"
     }
   ],
-  "env": {
-    "PYTHON_VERSION": "3.11"
+  "functions": {
+    "api/main.py": {
+      "maxDuration": 30
+    }
   }
 }
