@@ -1925,6 +1925,58 @@ function ProfilePageContent() {
                               Refresh Transactions
                             </button>
                             
+                            {/* Fix Payment Email Button - Always visible for users with subscription but no payments */}
+                            {subscriptionDetails && payments.length === 0 && (
+                              <button 
+                                onClick={async () => {
+                                  if (!session?.user?.email) return;
+                                  try {
+                                    const apiUrl = getApiUrl();
+                                    console.log('🔧 Fixing payment email for:', session.user.email);
+                                    const fixRes = await fetch(`${apiUrl}/api/fix-payment-email/${session.user.email}`, {
+                                      method: 'POST'
+                                    });
+                                    console.log('🔧 Fix response status:', fixRes.status);
+                                    if (fixRes.ok) {
+                                      const fixData = await fixRes.json();
+                                      console.log('🔧 Fix results:', fixData);
+                                      
+                                      addNotification({
+                                        type: 'system',
+                                        title: 'Payment Records Fixed!',
+                                        message: `Fixed ${fixData.fixed_payments} payment records. Refreshing...`,
+                                        priority: 'high'
+                                      });
+                                      
+                                      // Refresh payments after fix
+                                      setTimeout(async () => {
+                                        const profileRes = await fetch(`${apiUrl}/api/users/${session.user.email}/profile`);
+                                        if (profileRes.ok) {
+                                          const profileData = await profileRes.json();
+                                          setPayments(profileData.recent_payments || []);
+                                        }
+                                      }, 1000);
+                                      
+                                    } else {
+                                      console.error('🔧 Fix failed:', fixRes.status);
+                                      addNotification({
+                                        type: 'system',
+                                        title: 'Fix Failed',
+                                        message: 'Could not fix payment records. Please contact support.',
+                                        priority: 'medium'
+                                      });
+                                    }
+                                  } catch (error) {
+                                    console.error('Failed to fix payment email:', error);
+                                  }
+                                }}
+                                className="px-4 py-2 bg-green-500 text-white rounded-lg text-xs font-black uppercase tracking-widest hover:bg-green-600 transition-all flex items-center gap-2 animate-pulse"
+                              >
+                                <RefreshCw size={12} />
+                                Fix My Payment Records
+                              </button>
+                            )}
+                            
                             {/* Development-only buttons */}
                             {process.env.NODE_ENV === 'development' && (
                               <>
@@ -1994,79 +2046,6 @@ function ProfilePageContent() {
                                 >
                                   <RefreshCw size={12} />
                                   Check All DB Payments
-                                </button>
-
-                                <button 
-                                  onClick={async () => {
-                                    if (!session?.user?.email) return;
-                                    try {
-                                      const apiUrl = getApiUrl();
-                                      console.log('🔍 Testing direct payments API:', `${apiUrl}/api/test-payments/${session.user.email}`);
-                                      const testRes = await fetch(`${apiUrl}/api/test-payments/${session.user.email}`);
-                                      console.log('🔍 Test API response status:', testRes.status);
-                                      if (testRes.ok) {
-                                        const testData = await testRes.json();
-                                        console.log('🔍 Test API data:', testData);
-                                        
-                                        // Force update payments with test data
-                                        if (testData.payments && testData.payments.length > 0) {
-                                          setPayments(testData.payments);
-                                          addNotification({
-                                            type: 'system',
-                                            title: 'Test Data Loaded',
-                                            message: `Loaded ${testData.payments.length} payments from test endpoint`,
-                                            priority: 'medium'
-                                          });
-                                        }
-                                      } else {
-                                        console.error('🔍 Test API error:', testRes.status, testRes.statusText);
-                                      }
-                                    } catch (error) {
-                                      console.error('Failed to test payments API:', error);
-                                    }
-                                  }}
-                                  className="px-4 py-2 bg-blue-500 text-white rounded-lg text-xs font-black uppercase tracking-widest hover:bg-blue-600 transition-all flex items-center gap-2"
-                                >
-                                  <RefreshCw size={12} />
-                                  Test API Direct
-                                </button>
-                                
-                                <button 
-                                  onClick={async () => {
-                                    if (!session?.user?.email) return;
-                                    try {
-                                      const apiUrl = getApiUrl();
-                                      console.log('🔍 Creating sample payment for:', session.user.email);
-                                      const response = await fetch(`${apiUrl}/api/debug/create-sample-payment/${session.user.email}`, {
-                                        method: 'POST'
-                                      });
-                                      if (response.ok) {
-                                        const data = await response.json();
-                                        console.log('🔍 Sample payment created:', data);
-                                        
-                                        // Refresh payments
-                                        const profileRes = await fetch(`${apiUrl}/api/users/${session.user.email}/profile`);
-                                        if (profileRes.ok) {
-                                          const profileData = await profileRes.json();
-                                          setPayments(profileData.recent_payments || []);
-                                          addNotification({
-                                            type: 'system',
-                                            title: 'Sample Payment Created',
-                                            message: 'Sample payment data has been created for testing',
-                                            priority: 'medium'
-                                          });
-                                        }
-                                      } else {
-                                        console.error('🔍 Failed to create sample payment:', response.status);
-                                      }
-                                    } catch (error) {
-                                      console.error('Failed to create sample payment:', error);
-                                    }
-                                  }}
-                                  className="px-4 py-2 bg-purple-500 text-white rounded-lg text-xs font-black uppercase tracking-widest hover:bg-purple-600 transition-all flex items-center gap-2"
-                                >
-                                  <RefreshCw size={12} />
-                                  Create Sample Payment
                                 </button>
                               </>
                             )}
