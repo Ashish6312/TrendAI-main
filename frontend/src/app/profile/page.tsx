@@ -1793,6 +1793,75 @@ function ProfilePageContent() {
                               <RefreshCw size={12} />
                               Refresh Transactions
                             </button>
+                            
+                            <button 
+                              onClick={async () => {
+                                if (!session?.user?.email) return;
+                                try {
+                                  const apiUrl = getApiUrl();
+                                  console.log('🔍 Testing direct payments API:', `${apiUrl}/api/test-payments/${session.user.email}`);
+                                  const testRes = await fetch(`${apiUrl}/api/test-payments/${session.user.email}`);
+                                  console.log('🔍 Test API response status:', testRes.status);
+                                  if (testRes.ok) {
+                                    const testData = await testRes.json();
+                                    console.log('🔍 Test API data:', testData);
+                                    
+                                    // Force update payments with test data
+                                    if (testData.payments && testData.payments.length > 0) {
+                                      setPayments(testData.payments);
+                                      addNotification({
+                                        type: 'success',
+                                        title: 'Test Data Loaded',
+                                        message: `Loaded ${testData.payments.length} payments from test endpoint`,
+                                        priority: 'medium'
+                                      });
+                                    }
+                                  } else {
+                                    console.error('🔍 Test API error:', testRes.status, testRes.statusText);
+                                  }
+                                } catch (error) {
+                                  console.error('Failed to test payments API:', error);
+                                }
+                              }}
+                              className="px-4 py-2 bg-blue-500 text-white rounded-lg text-xs font-black uppercase tracking-widest hover:bg-blue-600 transition-all flex items-center gap-2"
+                            >
+                              <RefreshCw size={12} />
+                              Test API Direct
+                            </button>
+                            
+                            <button 
+                              onClick={() => {
+                                // Force load sample data to test display
+                                const samplePayments = [
+                                  {
+                                    id: 999,
+                                    amount: 1399.0,
+                                    currency: 'INR',
+                                    razorpay_payment_id: 'pay_sample_123',
+                                    status: 'success',
+                                    plan_name: 'Professional',
+                                    billing_cycle: 'yearly',
+                                    payment_date: new Date().toISOString(),
+                                    payment_method: 'card'
+                                  }
+                                ];
+                                console.log('🔍 Loading sample data:', samplePayments);
+                                setPayments(samplePayments);
+                                addNotification({
+                                  type: 'info',
+                                  title: 'Sample Data Loaded',
+                                  message: 'Loaded sample payment for testing display',
+                                  priority: 'low'
+                                });
+                              }}
+                              className="px-4 py-2 bg-green-500 text-white rounded-lg text-xs font-black uppercase tracking-widest hover:bg-green-600 transition-all flex items-center gap-2"
+                            >
+                              <RefreshCw size={12} />
+                              Load Sample
+                            </button>
+                              <RefreshCw size={12} />
+                              Refresh Transactions
+                            </button>
                             {plan === 'free' && (
                               <Link 
                                 href="/acquisition-tiers"

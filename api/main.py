@@ -1291,6 +1291,35 @@ def get_user_info(email: str, db: Session = Depends(get_db)):
         "created_at": user.created_at
     }
 
+@app.get("/api/test-payments/{user_email}")
+def test_payments_endpoint(user_email: str, db: Session = Depends(get_db)):
+    """Test endpoint to verify payment data is accessible"""
+    from sqlalchemy import func
+    
+    email_normalized = user_email.lower().strip()
+    
+    # Get payments directly
+    payments = db.query(models.PaymentHistory).filter(
+        func.lower(models.PaymentHistory.user_email) == email_normalized
+    ).order_by(models.PaymentHistory.created_at.desc()).limit(10).all()
+    
+    return {
+        "user_email": email_normalized,
+        "payments_count": len(payments),
+        "payments": [
+            {
+                "id": p.id,
+                "amount": p.amount,
+                "currency": p.currency,
+                "status": p.status,
+                "plan_name": p.plan_name,
+                "payment_date": p.created_at.isoformat(),
+                "razorpay_payment_id": p.razorpay_payment_id
+            }
+            for p in payments
+        ]
+    }
+
 @app.get("/api/users/{email}/profile")
 def get_user_profile(email: str, db: Session = Depends(get_db)):
     """Get user profile information"""
