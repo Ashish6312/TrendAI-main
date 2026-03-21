@@ -1933,6 +1933,74 @@ function ProfilePageContent() {
                                     if (!session?.user?.email) return;
                                     try {
                                       const apiUrl = getApiUrl();
+                                      const username = session.user.email.split('@')[0];
+                                      console.log('🔍 Searching payments for username:', username);
+                                      const searchRes = await fetch(`${apiUrl}/api/payments/search/${username}`);
+                                      console.log('🔍 Search response status:', searchRes.status);
+                                      if (searchRes.ok) {
+                                        const searchData = await searchRes.json();
+                                        console.log('🔍 Search results:', searchData);
+                                        
+                                        if (searchData.payments && searchData.payments.length > 0) {
+                                          setPayments(searchData.payments);
+                                          addNotification({
+                                            type: 'system',
+                                            title: 'Payments Found!',
+                                            message: `Found ${searchData.payments.length} payments by searching username`,
+                                            priority: 'high'
+                                          });
+                                        } else {
+                                          addNotification({
+                                            type: 'system',
+                                            title: 'No Payments Found',
+                                            message: 'No payments found even with username search',
+                                            priority: 'medium'
+                                          });
+                                        }
+                                      }
+                                    } catch (error) {
+                                      console.error('Failed to search payments:', error);
+                                    }
+                                  }}
+                                  className="px-4 py-2 bg-orange-500 text-white rounded-lg text-xs font-black uppercase tracking-widest hover:bg-orange-600 transition-all flex items-center gap-2"
+                                >
+                                  <RefreshCw size={12} />
+                                  Search by Username
+                                </button>
+                                
+                                <button 
+                                  onClick={async () => {
+                                    if (!session?.user?.email) return;
+                                    try {
+                                      const apiUrl = getApiUrl();
+                                      console.log('🔍 Getting all payments from database');
+                                      const allRes = await fetch(`${apiUrl}/api/debug/all-payments`);
+                                      if (allRes.ok) {
+                                        const allData = await allRes.json();
+                                        console.log('🔍 All payments in database:', allData);
+                                        
+                                        addNotification({
+                                          type: 'system',
+                                          title: 'Database Check',
+                                          message: `Found ${allData.payments_count} total payments in database. Check console for details.`,
+                                          priority: 'medium'
+                                        });
+                                      }
+                                    } catch (error) {
+                                      console.error('Failed to get all payments:', error);
+                                    }
+                                  }}
+                                  className="px-4 py-2 bg-red-500 text-white rounded-lg text-xs font-black uppercase tracking-widest hover:bg-red-600 transition-all flex items-center gap-2"
+                                >
+                                  <RefreshCw size={12} />
+                                  Check All DB Payments
+                                </button>
+
+                                <button 
+                                  onClick={async () => {
+                                    if (!session?.user?.email) return;
+                                    try {
+                                      const apiUrl = getApiUrl();
                                       console.log('🔍 Testing direct payments API:', `${apiUrl}/api/test-payments/${session.user.email}`);
                                       const testRes = await fetch(`${apiUrl}/api/test-payments/${session.user.email}`);
                                       console.log('🔍 Test API response status:', testRes.status);
