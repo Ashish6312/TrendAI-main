@@ -126,7 +126,7 @@ const handler = NextAuth({
       // Simplified sign-in callback - remove heavy operations
       if (user.email) {
         // Only do basic user sync, don't wait for it to complete
-        const apiUrl = 'https://trendai-api.onrender.com';
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://trendai-api.onrender.com';
         
         // Fire and forget - don't await this to speed up login
         fetch(`${apiUrl}/api/users/sync`, {

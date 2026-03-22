@@ -160,7 +160,7 @@ export default function AuthPage() {
   ];
 
   const stats = [
-    { value: "$2M+", label: t('price_stat_capital') },
+    { value: "₹20Cr+", label: t('price_stat_capital') },
     { value: "94%", label: t('price_stat_market') },
     { value: "48h", label: t('price_stat_precision') }
   ];

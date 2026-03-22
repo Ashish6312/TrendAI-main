@@ -51,7 +51,7 @@ class UserSubscription(Base):
     plan_display_name = Column(String)  # Market Explorer, Growth Accelerator, Market Dominator
     billing_cycle = Column(String)  # monthly, yearly
     price = Column(Float)  # Changed to Float for easier JSON serialization
-    currency = Column(String, default="USD")
+    currency = Column(String, default="INR")
     status = Column(String, default="active")  # active, cancelled, expired, pending
     max_analyses = Column(Integer, default=5)  # -1 for unlimited
     features = Column(JSON)  # Store available features
@@ -72,7 +72,7 @@ class PaymentHistory(Base):
     razorpay_payment_id = Column(String, unique=True, index=True)
     razorpay_order_id = Column(String, index=True)
     amount = Column(Float)
-    currency = Column(String, default="USD")
+    currency = Column(String, default="INR")
     status = Column(String)  # success, failed, pending, refunded
     payment_method = Column(String, nullable=True)  # card, netbanking, wallet, upi
     plan_name = Column(String)

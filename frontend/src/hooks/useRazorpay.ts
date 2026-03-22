@@ -106,7 +106,7 @@ export const useRazorpay = () => {
                 currency: options.currency || 'INR',
                 billing: options.billingCycle
               });
-              window.location.href = `/dashboard?${params.toString()}`;
+              window.location.href = `/payment-success?${params.toString()}`;
             } else {
               throw new Error('Payment verification failed');
             }

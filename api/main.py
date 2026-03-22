@@ -18,19 +18,10 @@ from typing import Dict, List, Any, Optional
 # Initialize FastAPI app EARLY for health checks
 app = FastAPI(title="TrendAI Business Intelligence API", version="2.0")
 
-@app.get("/")
-async def root():
-    return {"status": "online", "message": "TrendAI API Shell Active", "version": "2.0"}
-
-@app.get("/api/health")
-async def health():
-    return {"status": "ok", "timestamp": str(datetime.now())}
-
-# Handle favicon.ico
-@app.get("/favicon.ico", include_in_schema=False)
-async def favicon_simple():
-    from fastapi.responses import Response
-    return Response(status_code=204)
+# API metadata
+@app.get("/api/info")
+async def api_info():
+    return {"title": "TrendAI API", "version": "2.0", "status": "operational"}
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -224,9 +215,9 @@ class SubscriptionCreate(BaseModel):
     plan_display_name: str
     billing_cycle: str
     price: float
-    currency: str = "USD"
+    currency: str = "INR"
     max_analyses: int = 5
-    features: dict
+    features: Dict
     razorpay_subscription_id: Optional[str] = None
     razorpay_customer_id: Optional[str] = None
 
@@ -389,15 +380,7 @@ async def cors_middleware(request: Request, call_next):
     return response
 
 # Root endpoint for health checks and deployment verification
-@app.get("/")
-async def root():
-    return {"status": "online", "message": "TrendAI Business Intelligence API is active", "version": "2.0"}
-
-# Handle favicon.ico to avoid 500 errors
-@app.get("/favicon.ico", include_in_schema=False)
-async def favicon():
-    from fastapi.responses import Response
-    return Response(status_code=204)
+# Essential System Handlers consolidated below
 
 # Simple global cache for location data (IP -> data)
 LOCATION_CACHE = {}
@@ -456,35 +439,26 @@ async def get_system_location(request: Request):
     }
     return fallback_data
 
-@app.get("/")
-def read_root():
+@app.get("/", tags=["System"])
+def system_root():
+    """Consolidated health and status check"""
     try:
         return {
             "message": "TrendAI Business Intelligence API", 
             "status": "healthy", 
             "version": "2.0",
             "timestamp": datetime.now().isoformat(),
+            "location_context": "India/INR Preferred",
             "system_status": {
                 "database": "connected" if db_available else "disconnected",
                 "models": "available" if models_available else "unavailable", 
                 "recommendations": "available" if recommendations_available else "unavailable",
                 "integrated_intelligence": "available" if get_intelligence() else "unavailable"
-            },
-            "environment_check": {
-                "database_url": bool(os.getenv("DATABASE_URL")),
-                "pollination_key": bool(os.getenv("POLLINATION_API_KEY")),
-                "serpapi_key": bool(os.getenv("SERPAPI_API_KEY")),
-                "gemini_key": bool(os.getenv("GEMINI_API_KEY"))
             }
         }
     except Exception as e:
         logger.error(f"Root endpoint error: {e}")
-        return {
-            "message": "API running with limited functionality",
-            "status": "partial",
-            "error": str(e),
-            "timestamp": datetime.now().isoformat()
-        }
+        return {"status": "partial", "error": str(e)}
 
 @app.get("/health")
 def health_check():
@@ -828,7 +802,6 @@ def get_recommendations(request: RecommendationRequest, db: Session = Depends(ge
             }
         
         # Save to database
-        import json
         db_record = models.SearchHistory(
             user_email=request.user_email,
             area=analysis_area,
@@ -941,8 +914,8 @@ def get_business_plan(request: BusinessPlanRequest, db: Session = Depends(get_db
     # 3. Final Fallback if everything fails
     if not business_plan:
         area_lower = area.lower()
-        is_india = 'india' in area_lower or any(city in area_lower for city in ['mumbai', 'delhi', 'bangalore', 'bhopal', 'pune'])
-        curr = "₹" if is_india else "$"
+        is_india = True  # Force India-only mapping as requested
+        curr = "₹"
         
         business_plan = {
             "business_overview": f"A strategic initiative to launch {title} in {area} for 2026.",
@@ -997,8 +970,8 @@ def get_roadmap(request: RoadmapRequest, db: Session = Depends(get_db)):
     
     # Determine if this is an Indian location for currency formatting
     area_lower = request.area.lower()
-    is_indian_city = 'india' in area_lower or any(city in area_lower for city in ['mumbai', 'delhi', 'bangalore', 'chennai', 'bhopal', 'berasia', 'pune', 'kolkata'])
-    currency = "₹" if is_indian_city else "$"
+    is_indian_city = True # Force INR for all roadmaps as requested
+    currency = "₹"
     
     print(f"--- Generating roadmap for: {request.title} in {request.area}")
     
@@ -1229,8 +1202,6 @@ def get_roadmap_guide(request: RoadmapGuideRequest):
 @app.post("/api/subscriptions")
 def create_subscription(subscription: SubscriptionCreate, db: Session = Depends(get_db)):
     """Create or update user subscription with enhanced error handling"""
-    from sqlalchemy import func
-    
     email_normalized = subscription.user_email.lower().strip()
     print(f"DEBUG: Creating subscription for {email_normalized} - Plan: {subscription.plan_name}")
     
@@ -1302,14 +1273,7 @@ def create_subscription(subscription: SubscriptionCreate, db: Session = Depends(
         
         print(f"SUCCESS: Created subscription: {db_subscription.id} for {email_normalized}")
         
-        return {
-            "id": db_subscription.id,
-            "user_id": db_subscription.user_id,
-            "user_email": db_subscription.user_email,
-            "plan_name": db_subscription.plan_name,
-            "plan_display_name": db_subscription.plan_display_name,
-            "status": db_subscription.status
-        }
+        return db_subscription
         
     except Exception as e:
         db.rollback()
@@ -1328,34 +1292,7 @@ def create_subscription(subscription: SubscriptionCreate, db: Session = Depends(
             }
         )
 
-@app.get("/api/system/location")
-def get_system_location(request: Request):
-    """Detect location from IP address"""
-    try:
-        # For development, we'll use a public API to get the IP's location
-        # In production, this can use CloudFront-Viewer-City or GEOLITE
-        import requests
-        res = requests.get("https://ipapi.co/json/", timeout=5)
-        if res.status_code == 200:
-            data = res.json()
-            return {
-                "country": data.get("country_name", "Unknown"),
-                "city": data.get("city", "Unknown"),
-                "country_code": data.get("country_code", "XX"),
-                "currency": data.get("currency", "$"),
-                "ip": data.get("ip", "0.0.0.0")
-            }
-    except Exception as e:
-        print(f"Location detection failed: {e}")
-    
-    # Fallback
-    return {
-        "country": "India",
-        "city": "Unknown",
-        "country_code": "IN",
-        "currency": "INR",
-        "ip": "0.0.0.0"
-    }
+# System location already defined as async proxy above
 
 @app.get("/api/subscriptions/{user_email}")
 @app.get("/api/subscription/{user_email}") # Support both singular and plural
@@ -1714,8 +1651,9 @@ async def payment_webhook(request: Request):
         if not all([payment_id, user_email, amount, plan_name]):
             return {"status": "error", "message": "Missing required fields"}
         
-        # Process payment immediately
-        db = next(get_db())
+        # Process payment immediately using direct session
+        from database import SessionLocal
+        db = SessionLocal()
         try:
             # Create payment record
             payment_data = PaymentCreate(
@@ -1767,9 +1705,6 @@ async def payment_webhook(request: Request):
 @app.post("/api/process-payment")
 async def process_payment_immediately(request: Request, db: Session = Depends(get_db)):
     """Process payment immediately after successful Razorpay transaction"""
-    from sqlalchemy import func
-    import traceback
-    
     try:
         body = await request.json()
         logger.info(f"🔔 Processing immediate payment: {body}")
@@ -1835,8 +1770,6 @@ async def process_payment_immediately(request: Request, db: Session = Depends(ge
 @app.get("/api/users/{email}/profile")
 def get_user_profile(email: str, db: Session = Depends(get_db)):
     """Get user profile information with robust subscription synchronization"""
-    from sqlalchemy import func
-    
     email_normalized = email.lower().strip()
     logger.info(f"🔍 Profile request for: {email_normalized}")
 
@@ -1883,8 +1816,6 @@ def get_user_profile(email: str, db: Session = Depends(get_db)):
 @app.get("/api/debug-user-data/{email}")
 def debug_user_data(email: str, db: Session = Depends(get_db)):
     """Debug endpoint to see user's complete data"""
-    from sqlalchemy import func
-    
     email_normalized = email.lower().strip()
     
     try:
@@ -2081,7 +2012,7 @@ def update_user_profile(email: str, user_update: UserUpdate, db: Session = Depen
             "industry": user.industry,
             "auth_provider": user.auth_provider,
             "login_count": user.login_count,
-            "last_login": user.last_login,
+            "last_login": user.last_login if user.last_login else None,
             "created_at": user.created_at,
             "message": "Profile updated successfully"
         }
@@ -2090,8 +2021,7 @@ def update_user_profile(email: str, user_update: UserUpdate, db: Session = Depen
         print(f"Failed to update user profile: {e}")
         raise HTTPException(status_code=500, detail="Failed to update profile")
 
-# Add Vercel handler at the end of the file
-handler = app
+# Vercel handler for cloud deployments
 
 @app.get("/api/users/{email}/location")
 def get_user_location(email: str, db: Session = Depends(get_db)):

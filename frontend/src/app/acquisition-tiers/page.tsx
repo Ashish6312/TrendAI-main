@@ -217,7 +217,7 @@ export default function AcquisitionTiers() {
             {/* Precision Stats - Compact Layout */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-0 max-w-4xl mx-auto w-full items-center divide-y md:divide-y-0 md:divide-x divide-slate-200 dark:divide-white/5">
               {[
-                { label: t('price_stat_capital'), value: "$2.3B+", color: "text-emerald-600 dark:text-emerald-400", sub: "Global Flow" },
+                { label: t('price_stat_capital'), value: "₹2,300Cr+", color: "text-emerald-600 dark:text-emerald-400", sub: "India Flow" },
                 { label: t('price_stat_market'), value: "94%", color: "text-blue-600 dark:text-blue-400", sub: "AI Accuracy" },
                 { label: t('price_stat_precision'), value: "99.9%", color: "text-purple-600 dark:text-purple-400", sub: "Reliability" }
               ].map((stat, i) => (
@@ -435,7 +435,7 @@ export default function AcquisitionTiers() {
               {
                 icon: <TrendingUp size={40} />,
                 title: "Capital Capture Engine",
-                description: "Our neural algorithms identified $23.4B in high-conviction market opportunities last fiscal quarter alone.",
+                description: "Our neural algorithms identified ₹2,340Cr in high-conviction market opportunities last fiscal quarter alone.",
                 color: "emerald"
               },
               {
