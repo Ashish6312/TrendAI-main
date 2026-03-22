@@ -561,8 +561,10 @@ def sign_up(user_data: UserSignUp, db: Session = Depends(get_db)):
         raise
     except Exception as e:
         logger.error(f"❌ Critical error during signup: {str(e)}")
+        import traceback
+        logger.error(traceback.format_exc())
         db.rollback()
-        raise HTTPException(status_code=500, detail="Internal server error during signup")
+        raise HTTPException(status_code=500, detail=f"DEBUG signup error: {str(e)}")
 
 @app.post("/api/auth/signin")
 def sign_in(user_data: UserSignIn, db: Session = Depends(get_db)):
@@ -605,8 +607,10 @@ def sign_in(user_data: UserSignIn, db: Session = Depends(get_db)):
         raise
     except Exception as e:
         logger.error(f"❌ Critical error during signin: {str(e)}")
+        import traceback
+        logger.error(traceback.format_exc())
         db.rollback()
-        raise HTTPException(status_code=500, detail="Internal server error during signin")
+        raise HTTPException(status_code=500, detail=f"DEBUG signin error: {str(e)}")
 
 @app.post("/api/users/sync")
 def sync_user(user_data: UserSync, db: Session = Depends(get_db)):
