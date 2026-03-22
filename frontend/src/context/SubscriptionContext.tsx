@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
+import { getApiUrl } from "@/config/api";
 
 export type SubscriptionPlan = 'free' | 'professional' | 'enterprise';
 
@@ -199,7 +200,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     const loadUserPlan = async () => {
       if (session?.user?.email) {
         const email = session.user.email.toLowerCase().trim();
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+        const apiUrl = getApiUrl();
 
         // 1. Check local cache FIRST for instant UI response
         const cachedPlan = localStorage.getItem(`subscription_${email}`);

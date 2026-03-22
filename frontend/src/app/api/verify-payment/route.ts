@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const key_secret = process.env.RAZORPAY_KEY_SECRET || 'MTXrunE7FBVskO1VQhgfGlCD';
+    const key_secret = process.env.RAZORPAY_KEY_SECRET || '';
     
     const hmac = crypto.createHmac('sha256', key_secret);
     hmac.update(razorpay_order_id + '|' + razorpay_payment_id);

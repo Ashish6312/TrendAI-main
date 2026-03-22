@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import Razorpay from 'razorpay';
 
 const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID || 'rzp_test_SR7UPIYjktIlo6',
-  key_secret: process.env.RAZORPAY_KEY_SECRET || 'MTXrunE7FBVskO1VQhgfGlCD',
+  key_id: process.env.RAZORPAY_KEY_ID || '',
+  key_secret: process.env.RAZORPAY_KEY_SECRET || '',
 });
 
 export async function POST(request: NextRequest) {
@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
       orderId: order.id,
       amount: order.amount,
       currency: order.currency,
-      key: process.env.RAZORPAY_KEY_ID || 'rzp_test_SR7UPIYjktIlo6',
+      key: process.env.RAZORPAY_KEY_ID || '',
     });
   } catch (error) {
     console.error('Error creating Razorpay order:', error);

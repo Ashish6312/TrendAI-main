@@ -113,14 +113,6 @@ def get_intelligence():
 # Remove module-level import that was previously here
 # integrated_intelligence = ... (now accessed via get_intelligence())
 
-# Standard FastAPI app initialization
-import models
-
-# Initialize FastAPI app without lifespan for Vercel compatibility
-app = FastAPI(title="TrendAI Business Intelligence API", version="2.0")
-
-# No additional database initialization here since it's done above
-
 # CORS configuration - FIXED
 allowed_origins_str = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000,https://trend-ai-main.vercel.app")
 allowed_origins = [origin.strip() for origin in allowed_origins_str.split(",") if origin.strip()]
