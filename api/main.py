@@ -118,27 +118,30 @@ def get_intelligence():
 # Remove module-level import that was previously here
 # integrated_intelligence = ... (now accessed via get_intelligence())
 
-# CORS configuration - FIXED
-allowed_origins_str = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000,https://trend-ai-main.vercel.app")
-allowed_origins = [origin.strip() for origin in allowed_origins_str.split(",") if origin.strip()]
-
-# Add production domains
-production_domains = [
-    "https://trend-ai-main.vercel.app",
-    "https://*.vercel.app",
-    "*"  # Allow all origins temporarily to fix CORS
+# CORS Security Fix: allow_credentials=True is incompatible with wildcard "*"
+frontend_url = os.getenv("FRONTEND_URL", "https://trend-ai-main.vercel.app")
+allowed_origins_env = os.getenv("ALLOWED_ORIGINS", "")
+allowed_origins_list = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    frontend_url,
+    "https://trend-ai-main.vercel.app"
 ]
-allowed_origins.extend(production_domains)
+
+# Add additional origins from ALLOWED_ORIGINS env var
+if allowed_origins_env:
+    for origin in allowed_origins_env.split(","):
+        clean_origin = origin.strip()
+        if clean_origin and clean_origin not in allowed_origins_list:
+            allowed_origins_list.append(clean_origin)
+
+# Add Vercel branch preview domains if available
+if os.getenv("VERCEL_URL"):
+    allowed_origins_list.append(f"https://{os.getenv('VERCEL_URL')}")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000", 
-        "https://trend-ai-main.vercel.app",
-        "https://*.vercel.app",
-        "*"  # Allow all origins to fix CORS issues
-    ],
+    allow_origins=allowed_origins_list,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=["*"],
