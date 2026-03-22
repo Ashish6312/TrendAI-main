@@ -40,7 +40,24 @@ export default function AuthPage() {
         console.error('Session check failed:', error);
       }
     };
+    
+    // Check backend health
+    const checkBackend = async () => {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://trendai-api.onrender.com';
+      try {
+        const res = await fetch(`${apiUrl}/api/health`, { signal: AbortSignal.timeout(5000) });
+        if (res.ok) {
+          console.log('✅ Backend connectivity test: PASSED');
+        } else {
+          console.warn(`⚠️ Backend connectivity test: FAILED (${res.status})`);
+        }
+      } catch (e) {
+        console.error('❌ Backend connectivity test: ERROR', e);
+      }
+    };
+
     const timeoutId = setTimeout(checkSession, 500);
+    checkBackend();
     return () => clearTimeout(timeoutId);
   }, [router]);
 
