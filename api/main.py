@@ -105,6 +105,37 @@ except Exception as e:
 
 # Import integrated intelligence lazily
 _cached_intelligence = None
+
+# Global In-Memory Cache for optimization (as requested)
+_SUBSCRIPTION_CACHE = {}
+_USER_CACHE = {}
+_CACHE_TTL = 300 # 5 minutes
+
+def get_cached_subscription(email: str, db: Session):
+    """Get subscription from cache or DB with smart cache population"""
+    import time
+    email = email.lower().strip()
+    now = time.time()
+    
+    # Check cache
+    if email in _SUBSCRIPTION_CACHE:
+        data, expiry = _SUBSCRIPTION_CACHE[email]
+        if now < expiry:
+            logger.info(f"⚡ Cache hit (Subscription): {email}")
+            return data
+            
+    # Cache miss or expired
+    sub = get_synced_subscription(db, email)
+    _SUBSCRIPTION_CACHE[email] = (sub, now + _CACHE_TTL)
+    return sub
+
+def invalidate_user_cache(email: str):
+    """Clear cache for a specific user after updates"""
+    email = email.lower().strip()
+    _SUBSCRIPTION_CACHE.pop(email, None)
+    _USER_CACHE.pop(email, None)
+    logger.info(f"🧹 Cache invalidated for: {email}")
+
 def get_intelligence():
     global _cached_intelligence
     if _cached_intelligence is None:
@@ -1437,6 +1468,10 @@ def create_payment_record(payment: PaymentCreate, db: Session = Depends(get_db))
             
             # Create new payment record
             logger.info(f"💳 Creating new payment record...")
+            
+            # Normalize plan name for database consistency
+            normalized_plan = normalize_plan_name(payment.plan_name)
+            
             db_payment = models.PaymentHistory(
                 user_id=u_id,
                 user_email=email_normalized,
@@ -1447,7 +1482,7 @@ def create_payment_record(payment: PaymentCreate, db: Session = Depends(get_db))
                 razorpay_order_id=payment.razorpay_order_id,
                 status=payment.status,
                 payment_method=payment.payment_method or "razorpay",
-                plan_name=payment.plan_name,
+                plan_name=normalized_plan, # Use normalized name here!
                 billing_cycle=payment.billing_cycle
             )
             db.add(db_payment)
@@ -1455,6 +1490,10 @@ def create_payment_record(payment: PaymentCreate, db: Session = Depends(get_db))
             db.refresh(db_payment)
             
             logger.info(f"SUCCESS: Payment record created with ID: {db_payment.id}")
+            
+            # CLEAR CACHE after new payment to ensure immediate sync
+            invalidate_user_cache(email_normalized)
+            
             return db_payment
             
         except Exception as e:
@@ -1926,6 +1965,11 @@ def refresh_user_plan(email: str, db: Session = Depends(get_db)):
         db.rollback()
         logger.error(f"Failed to refresh user plan: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to refresh plan: {str(e)}")
+
+@app.get("/api/subscriptions/{user_email}")
+def get_user_subscription(user_email: str, db: Session = Depends(get_db)):
+    """Get refined user subscription status with caching"""
+    return get_cached_subscription(user_email, db)
 
 @app.post("/api/fix-subscription/{email}")
 def fix_user_subscription(email: str, db: Session = Depends(get_db)):
