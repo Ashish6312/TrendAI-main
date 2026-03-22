@@ -385,50 +385,94 @@ def generate_ai_recommendations(area: str, location_info: Dict[str, Any], langua
         return None
 
 def generate_ai_business_plan(business_title: str, area: str, language: str = "English") -> Dict[str, Any]:
-    # Determine currency and market context
+    """Generate a highly detailed 6-month business plan with real-time market context"""
+    print(f"📈 Generating real-time AI business plan for: {business_title} in {area}")
+    
+    # Fetch REAL-TIME context first
+    market_context = get_real_time_market_data(area)
+    reddit_context = get_reddit_market_data(area)
+    
+    # Determine currency and location characteristics
     area_lower = area.lower()
-    is_indian_city = 'india' in area_lower or any(city in area_lower for city in ['mumbai', 'delhi', 'bangalore', 'chennai', 'bhopal', 'berasia', 'pune', 'kolkata'])
+    is_indian_city = 'india' in area_lower or any(city in area_lower for city in ['mumbai', 'delhi', 'bangalore', 'chennai', 'bhopal', 'berasia', 'pune', 'kolkata', 'indore'])
     currency = "₹" if is_indian_city else "$"
-    market_context = f"Current market trends and opportunities in {area} for {business_title}"
     
     prompt = f"""
-    Create a professional 6-month business plan for: {business_title} in {area}.
-    Language: {language}
-    Market Context: {market_context}
+    Act as a Senior Venture Strategist. Create a professional, hyper-realistic 6-month business plan for:
+    BUSINESS: {business_title}
+    LOCATION: {area}
+    TARGET YEAR: 2026
+    LANGUAGE: {language}
     
-    FORMATTING: Use '{currency}'. For India, use L/Cr (Lakhs/Crores). No 'K' for large sums.
+    REAL-TIME MARKET CONTEXT (NEWS/TRENDS):
+    {market_context}
     
-    Return EXACTLY this JSON:
+    LOCAL COMMUNITY INSIGHTS (REDDIT):
+    {reddit_context}
+    
+    SPECIAL INSTRUCTIONS FOR 2026 REALISM:
+    - FINANCIALS: Use '{currency}'. For India, use Lakhs (L) and Crores (Cr). Realistic small business scale ({currency}5L-{currency}30L investment).
+    - 2026 TECHNOLOGY: Mention specific AI tools, automation, or updated digital regulations relevant to {area}.
+    - LOCALITY: Use specific landmarks, state policies (e.g., MP Industrial Policy for Bhopal), and local consumer habits.
+    - NO GENERIC FILLER: Avoid phrases like "Lean startup methodology". Give TACTICAL actions like "Procure raw materials from Arera Hills wholesale market".
+    
+    RESPONSE JSON FORMAT (No markdown):
     {{
-        "business_overview": "Detailed overview...",
-        "market_analysis": "Market gaps in {area}...",
-        "success_score": 85,
-        "risk_level": "Low",
+        "business_overview": "High-fidelity strategic vision (3 sentences).",
+        "market_analysis": "Deep dive into state of {area} for {business_title} in 2026. Use the Real-time context provided.",
+        "success_score": 88,
+        "risk_level": "Medium",
         "market_gap": "High",
         "financial_projections": {{
-            "month_1": {{"revenue": "{currency} amt", "expenses": "{currency} amt", "profit": "{currency} amt"}},
-            "month_2": {{"revenue": "{currency} amt", "expenses": "{currency} amt", "profit": "{currency} amt"}},
-            "month_3": {{"revenue": "{currency} amt", "expenses": "{currency} amt", "profit": "{currency} amt"}},
-            "month_4": {{"revenue": "{currency} amt", "expenses": "{currency} amt", "profit": "{currency} amt"}},
-            "month_5": {{"revenue": "{currency} amt", "expenses": "{currency} amt", "profit": "{currency} amt"}},
-            "month_6": {{"revenue": "{currency} amt", "expenses": "{currency} amt", "profit": "{currency} amt"}}
+            "month_1": {{"revenue": "{currency} amount", "expenses": "{currency} amount", "profit": "{currency} amount"}},
+            "month_2": {{"revenue": "{currency} amount", "expenses": "{currency} amount", "profit": "{currency} amount"}},
+            "month_3": {{"revenue": "{currency} amount", "expenses": "{currency} amount", "profit": "{currency} amount"}},
+            "month_4": {{"revenue": "{currency} amount", "expenses": "{currency} amount", "profit": "{currency} amount"}},
+            "month_5": {{"revenue": "{currency} amount", "expenses": "{currency} amount", "profit": "{currency} amount"}},
+            "month_6": {{"revenue": "{currency} amount", "expenses": "{currency} amount", "profit": "{currency} amount"}}
         }},
-        "marketing_strategy": "Plan...",
-        "operational_plan": "Plan...",
-        "risk_analysis": "Analysis...",
-        "monthly_milestones": ["...", "...", "...", "...", "...", "..."],
-        "success_metrics": ["...", "..."],
-        "resource_requirements": "Requirements...",
-        "exit_strategy": "Strategy..."
+        "marketing_strategy": "Direct acquisition tactics (Hyper-local).",
+        "operational_plan": "Supply chain and staffing plan.",
+        "risk_analysis": "Top 3 local risks and mitigation.",
+        "monthly_milestones": ["Tactical Phase 1", "Tactical Phase 2", "Tactical Phase 3", "Tactical Phase 4", "Tactical Phase 5", "Tactical Phase 6"],
+        "success_metrics": ["Metric 1", "Metric 2", "Metric 3"],
+        "resource_requirements": "Specific equipment and skilled roles needed.",
+        "exit_strategy": "Scalability and exit path."
     }}
     """
+    
     try:
-        response = requests.post(f"https://text.pollinations.ai/", json={"messages": [{"role": "user", "content": prompt}]}, timeout=35)
+        # Using Pollinations as a reliable fallback/main engine for this free-access route
+        api_key = os.getenv("POLLINATION_API_KEY")
+        if api_key:
+            response = requests.post(
+                "https://text.pollinations.ai/openai/chat/completions",
+                headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+                json={
+                    "model": "gpt-4o",
+                    "messages": [
+                        {"role": "system", "content": "You are a professional business consultant AI."},
+                        {"role": "user", "content": prompt}
+                    ]
+                },
+                timeout=45
+            )
+            if response.status_code == 200:
+                content = response.json()['choices'][0]['message']['content']
+                if "```json" in content: content = content.split("```json")[1].split("```")[0].strip()
+                elif "```" in content: content = content.split("```")[1].split("```")[0].strip()
+                return json.loads(content)
+        
+        # Immediate prompt-only fallback if no key
+        response = requests.post(f"https://text.pollinations.ai/", json={"messages": [{"role": "user", "content": prompt}]}, timeout=45)
         content = response.text
         if "```json" in content: content = content.split("```json")[1].split("```")[0].strip()
         elif "```" in content: content = content.split("```")[1].split("```")[0].strip()
-        return json.loads(content)
-    except: return None
+        data = json.loads(content)
+        return data
+    except Exception as e:
+        print(f"❌ AI Business Plan failed: {e}")
+        return None
 
 def generate_ai_roadmap(title: str, area: str, language: str = "English") -> Dict[str, Any]:
     """Generate a strategic roadmap with timeline, taskforce, and execution tips using AI"""

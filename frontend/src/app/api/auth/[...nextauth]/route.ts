@@ -26,15 +26,17 @@ const handler = NextAuth({
           throw new Error("Email and password are required");
         }
 
-        const apiUrl = 'https://trendai-api.onrender.com';
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://trendai-api.onrender.com';
         
         try {
           if (credentials.isSignUp === "true") {
             // Sign up flow
             if (!credentials.name) {
+              console.error('❌ SIGNUP ERROR: Name missing in credentials');
               throw new Error("Name is required for sign up");
             }
 
+            console.log(`🚀 SIGNUP ATTEMPT: ${credentials.email} via ${apiUrl}`);
             const signUpResponse = await fetch(`${apiUrl}/api/auth/signup`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -48,17 +50,20 @@ const handler = NextAuth({
             });
             
             if (!signUpResponse.ok) {
-              const error = await signUpResponse.json();
-              throw new Error(error.detail || "Sign up failed");
+              const errorText = await signUpResponse.text();
+              let errorMessage = "Sign up failed";
+              try {
+                const errorObj = JSON.parse(errorText);
+                errorMessage = errorObj.detail || errorMessage;
+              } catch (e) {
+                errorMessage = errorText || errorMessage;
+              }
+              console.error(`❌ SIGNUP FAILED (${signUpResponse.status}):`, errorMessage);
+              throw new Error(errorMessage);
             }
 
             const user = await signUpResponse.json();
-            console.log('✅ SIGNUP SUCCESS:', {
-              idLen: user.id?.toString().length,
-              emailLen: user.email?.length,
-              nameLen: user.name?.length,
-              imageLen: user.image_url?.length
-            });
+            console.log('✅ SIGNUP SUCCESS:', { email: user.email, id: user.id });
             return {
               id: user.id.toString(),
               email: user.email,
@@ -67,6 +72,7 @@ const handler = NextAuth({
             };
           } else {
             // Sign in flow
+            console.log(`🚀 SIGNIN ATTEMPT: ${credentials.email} via ${apiUrl}`);
             const signInResponse = await fetch(`${apiUrl}/api/auth/signin`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -79,17 +85,20 @@ const handler = NextAuth({
             });
 
             if (!signInResponse.ok) {
-              const error = await signInResponse.json();
-              throw new Error(error.detail || "Invalid credentials");
+              const errorText = await signInResponse.text();
+              let errorMessage = "Invalid email or password";
+              try {
+                const errorObj = JSON.parse(errorText);
+                errorMessage = errorObj.detail || errorMessage;
+              } catch (e) {
+                errorMessage = errorText || errorMessage;
+              }
+              console.error(`❌ SIGNIN FAILED (${signInResponse.status}):`, errorMessage);
+              throw new Error(errorMessage);
             }
 
             const user = await signInResponse.json();
-            console.log('✅ SIGNIN SUCCESS:', {
-              idLen: user.id?.toString().length,
-              emailLen: user.email?.length,
-              nameLen: user.name?.length,
-              imageLen: user.image_url?.length
-            });
+            console.log('✅ SIGNIN SUCCESS:', { email: user.email, id: user.id });
             return {
               id: user.id.toString(),
               email: user.email,
@@ -98,7 +107,10 @@ const handler = NextAuth({
             };
           }
         } catch (error: any) {
-          console.error("Auth error:", error.message);
+          console.error("Critical Auth error catch:", error.name, error.message);
+          if (error.name === 'AbortError' || error.name === 'TimeoutError') {
+            throw new Error("Backend connection timed out. Is the API running?");
+          }
           throw new Error(error.message || "Authentication failed");
         }
       }

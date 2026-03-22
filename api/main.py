@@ -262,18 +262,104 @@ def normalize_plan_name(plan_name: str) -> str:
     p = plan_name.lower().strip()
     
     # Enterprise mapping
-    if any(x in p for x in ['enterprise', 'territorial', 'dominance', 'dominator']):
+    if any(x in p for x in ['enterprise', 'territorial', 'dominance', 'dominator', 'market dominator']):
         return "enterprise"
         
     # Professional mapping
-    if any(x in p for x in ['pro', 'growth', 'architect', 'accelerator']):
+    if any(x in p for x in ['pro', 'growth', 'architect', 'accelerator', 'market explorer', 'growth accelerator']):
         return "professional"
         
     # Free/Starter mapping
-    if any(x in p for x in ['free', 'starter', 'venture', 'strategist', 'explorer']):
+    if any(x in p for x in ['free', 'starter', 'venture', 'strategist', 'explorer', 'venture strategist']):
         return "free"
         
     return "free"
+
+def get_synced_subscription(db: Session, email: str):
+    """Robust helper to get or reconcile subscription based on payment history and expiry"""
+    from datetime import datetime, timedelta
+    from sqlalchemy import func
+    
+    email_normalized = email.lower().strip()
+    now = datetime.now()
+    
+    # 1. Get latest successful payment
+    latest_payment = db.query(models.PaymentHistory).filter(
+        func.lower(models.PaymentHistory.user_email) == email_normalized,
+        models.PaymentHistory.status == "success"
+    ).order_by(models.PaymentHistory.created_at.desc()).first()
+    
+    # 2. Get current supposedly active subscription
+    subscription = db.query(models.UserSubscription).filter(
+        func.lower(models.UserSubscription.user_email) == email_normalized,
+        models.UserSubscription.status == "active"
+    ).first()
+    
+    # 3. If no payment history, ensure no active premium sub exists
+    if not latest_payment:
+        if subscription and subscription.plan_name != "free":
+            subscription.status = "expired"
+            db.commit()
+            return None
+        return subscription
+
+    # 4. We have a payment. Let's validate the subscription against it.
+    mapped_plan = normalize_plan_name(latest_payment.plan_name)
+    duration = timedelta(days=365) if latest_payment.billing_cycle == 'yearly' else timedelta(days=30)
+    
+    # We use payment date + duration as the hard truth for expiry
+    # If the payment was made long ago, it's expired
+    expiry_date = latest_payment.created_at + duration
+    
+    if expiry_date.replace(tzinfo=None) < now.replace(tzinfo=None):
+        # Latest payment is already expired
+        if subscription:
+            subscription.status = "expired"
+            db.commit()
+        return None
+        
+    # 5. Payment is still valid. Ensure subscription exists and matches.
+    if not subscription:
+        # User has a valid payment but NO active subscription record
+        # Create it now
+        user = db.query(models.User).filter(func.lower(models.User.email) == email_normalized).first()
+        if user:
+            new_sub = models.UserSubscription(
+                user_id=user.id,
+                user_email=email_normalized,
+                plan_name=mapped_plan,
+                plan_display_name=latest_payment.plan_name,
+                billing_cycle=latest_payment.billing_cycle or 'yearly',
+                price=latest_payment.amount,
+                currency=latest_payment.currency or 'INR',
+                max_analyses=-1 if mapped_plan in ['professional', 'enterprise'] else 5,
+                features={},
+                subscription_end=expiry_date,
+                status='active'
+            )
+            db.add(new_sub)
+            db.commit()
+            db.refresh(new_sub)
+            return new_sub
+    else:
+        # Subscription exists, check if it matches the latest valid payment
+        needs_update = False
+        if subscription.plan_name != mapped_plan:
+            subscription.plan_name = mapped_plan
+            subscription.plan_display_name = latest_payment.plan_name
+            needs_update = True
+            
+        if not subscription.subscription_end or (subscription.subscription_end.replace(tzinfo=None) != expiry_date.replace(tzinfo=None)):
+            subscription.subscription_end = expiry_date
+            needs_update = True
+            
+        if needs_update:
+            subscription.max_analyses = -1 if mapped_plan in ['professional', 'enterprise'] else 5
+            subscription.status = "active"
+            db.commit()
+            db.refresh(subscription)
+            
+    return subscription
 
 
 
@@ -435,72 +521,91 @@ def health_check():
 @app.post("/api/auth/signup")
 def sign_up(user_data: UserSignUp, db: Session = Depends(get_db)):
     """Sign up with email and password"""
-    print(f"Sign up attempt for: {user_data.email}")
+    logger.info(f"📝 Sign up attempt for: {user_data.email}")
     
-    # Check if user already exists
-    existing_user = db.query(models.User).filter(models.User.email == user_data.email).first()
-    if existing_user:
-        raise HTTPException(status_code=400, detail="User with this email already exists")
-    
-    # Validate password strength
-    if len(user_data.password) < 6:
-        raise HTTPException(status_code=400, detail="Password must be at least 6 characters long")
-    
-    # Hash password
-    password_hash = pwd_context.hash(user_data.password)
-    
-    # Create new user
-    db_user = models.User(
-        email=user_data.email,
-        name=user_data.name,
-        password_hash=password_hash,
-        auth_provider="email",
-        login_count=1,
-        last_login=func.now()
-    )
-    
-    db.add(db_user)
-    db.commit()
-    db.refresh(db_user)
-    
-    print(f"User created successfully: {user_data.email}")
-    return {
-        "id": db_user.id,
-        "email": db_user.email,
-        "name": db_user.name,
-        "image_url": db_user.image_url
-    }
+    try:
+        # Check if user already exists
+        existing_user = db.query(models.User).filter(models.User.email == user_data.email).first()
+        if existing_user:
+            logger.warning(f"⚠️ Sign up failed: User {user_data.email} already exists")
+            raise HTTPException(status_code=400, detail="User with this email already exists")
+        
+        # Validate password strength
+        if len(user_data.password) < 6:
+            logger.warning(f"⚠️ Sign up failed: Password too short for {user_data.email}")
+            raise HTTPException(status_code=400, detail="Password must be at least 6 characters long")
+        
+        # Hash password
+        password_hash = pwd_context.hash(user_data.password)
+        
+        # Create new user
+        db_user = models.User(
+            email=user_data.email,
+            name=user_data.name,
+            password_hash=password_hash,
+            auth_provider="email",
+            login_count=1,
+            last_login=func.now()
+        )
+        
+        db.add(db_user)
+        db.commit()
+        db.refresh(db_user)
+        
+        logger.info(f"✅ User created successfully: {user_data.email}")
+        return {
+            "id": db_user.id,
+            "email": db_user.email,
+            "name": db_user.name,
+            "image_url": db_user.image_url
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Critical error during signup: {str(e)}")
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Internal server error during signup")
 
 @app.post("/api/auth/signin")
 def sign_in(user_data: UserSignIn, db: Session = Depends(get_db)):
     """Sign in with email and password"""
-    print(f"Sign in attempt for: {user_data.email}")
+    logger.info(f"🔑 Sign in attempt for: {user_data.email}")
     
-    # Find user
-    db_user = db.query(models.User).filter(models.User.email == user_data.email).first()
-    if not db_user:
-        raise HTTPException(status_code=401, detail="Invalid email or password")
-    
-    # Check if user has a password (might be OAuth only)
-    if not db_user.password_hash:
-        raise HTTPException(status_code=401, detail="This account uses social login. Please sign in with Google.")
-    
-    # Verify password
-    if not pwd_context.verify(user_data.password, db_user.password_hash):
-        raise HTTPException(status_code=401, detail="Invalid email or password")
-    
-    # Update login info
-    db_user.login_count = (db_user.login_count or 0) + 1
-    db_user.last_login = func.now()
-    db.commit()
-    
-    print(f"User signed in successfully: {user_data.email}")
-    return {
-        "id": db_user.id,
-        "email": db_user.email,
-        "name": db_user.name,
-        "image_url": db_user.image_url
-    }
+    try:
+        # Find user
+        db_user = db.query(models.User).filter(models.User.email == user_data.email).first()
+        if not db_user:
+            logger.warning(f"⚠️ Sign in failed: User {user_data.email} not found")
+            raise HTTPException(status_code=401, detail="Invalid email or password")
+        
+        # Check if user has a password (might be OAuth only)
+        if not db_user.password_hash:
+            logger.warning(f"⚠️ Sign in failed: User {user_data.email} exists but has no password (social login)")
+            raise HTTPException(status_code=401, detail="This account uses social login. Please sign in with Google.")
+        
+        # Verify password
+        if not pwd_context.verify(user_data.password, db_user.password_hash):
+            logger.warning(f"⚠️ Sign in failed: Incorrect password for {user_data.email}")
+            raise HTTPException(status_code=401, detail="Invalid email or password")
+        
+        # Update login info
+        db_user.login_count = (db_user.login_count or 0) + 1
+        db_user.last_login = func.now()
+        db.commit()
+        
+        logger.info(f"✅ User signed in successfully: {user_data.email}")
+        return {
+            "id": db_user.id,
+            "email": db_user.email,
+            "name": db_user.name,
+            "image_url": db_user.image_url
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Critical error during signin: {str(e)}")
+        db.rollback()
+        raise HTTPException(status_code=500, detail="Internal server error during signin")
 
 @app.post("/api/users/sync")
 def sync_user(user_data: UserSync, db: Session = Depends(get_db)):
@@ -787,64 +892,76 @@ def get_history(email: str, db: Session = Depends(get_db)):
 
 @app.post("/api/business-plan")
 def get_business_plan(request: BusinessPlanRequest, db: Session = Depends(get_db)):
-    """Generate a detailed 6-month business plan for a specific business idea"""
+    """Generate a high-fidelity business plan using the best available intelligence engine"""
+    title = request.business_title
+    area = request.area
+    email = request.user_email.lower().strip()
+    lang = request.language
     
-    # Determine if this is an Indian location for currency formatting
-    area_lower = request.area.lower()
-    is_indian_city = 'india' in area_lower or any(city in area_lower for city in ['mumbai', 'delhi', 'bangalore', 'chennai', 'bhopal', 'berasia', 'pune', 'kolkata'])
-    currency = "₹" if is_indian_city else "$"
+    print(f"--- 🚀 Dispatching Business Plan Request: {title} in {area}")
     
-    print(f"--- Generating business plan for: {request.title if hasattr(request, 'title') else request.business_title} in {request.area}")
+    business_plan = None
     
-    # Generate a comprehensive business plan using AI & Real-time data
+    # 1. Try Premium Integrated Intelligence First
+    intel = get_intelligence()
+    if intel:
+        try:
+            business_plan = intel.generate_business_plan(title, area, lang)
+        except Exception as e:
+            print(f"⚠️ Premium engine failed, falling back: {e}")
+            
+    # 2. Try Standard AI Recommendation Engine if premium failed
+    if not business_plan:
+        try:
+            business_plan = generate_ai_business_plan(title, area, lang)
+        except Exception as e:
+            print(f"⚠️ Standard AI failed: {e}")
+            
+    # 3. Final Fallback if everything fails
+    if not business_plan:
+        area_lower = area.lower()
+        is_india = 'india' in area_lower or any(city in area_lower for city in ['mumbai', 'delhi', 'bangalore', 'bhopal', 'pune'])
+        curr = "₹" if is_india else "$"
+        
+        business_plan = {
+            "business_overview": f"A strategic initiative to launch {title} in {area} for 2026.",
+            "market_analysis": f"The {area} market presents unique growth opportunities for {title}.",
+            "success_score": 82,
+            "risk_level": "Medium",
+            "market_gap": "High",
+            "financial_projections": {
+                "month_1": {"revenue": f"{curr}0", "expenses": f"{curr}50K", "profit": f"-{curr}50K"},
+                "month_2": {"revenue": f"{curr}25K", "expenses": f"{curr}40K", "profit": f"-{curr}15K"},
+                "month_3": {"revenue": f"{curr}80K", "expenses": f"{curr}40K", "profit": f"{curr}40K"},
+                "month_4": {"revenue": f"{curr}1.5L" if is_india else f"{curr}25K", "expenses": f"{curr}50K", "profit": f"{curr}1L" if is_india else f"{curr}13K"},
+                "month_5": {"revenue": f"{curr}2.2L" if is_india else f"{curr}35K", "expenses": f"{curr}55K", "profit": f"{curr}1.6L" if is_india else f"{curr}20K"},
+                "month_6": {"revenue": f"{curr}3.5L" if is_india else f"{curr}50K", "expenses": f"{curr}60K", "profit": f"{curr}2.9L" if is_india else f"{curr}32K"}
+            },
+            "marketing_strategy": "Multi-channel local engagement strategy.",
+            "operational_plan": "Scalable operational framework.",
+            "risk_analysis": ["Market entry barriers", "Operational overhead"],
+            "monthly_milestones": ["Concept & Licensing", "Infrastructure", "Soft Launch", "Scale marketing", "Optimize Operations", "Target ROI"],
+            "resource_requirements": "Essential physical/digital infrastructure and core team.",
+            "success_metrics": ["User Growth", "Revenue Run-rate", "Customer Retention"]
+        }
+    
+    # Save to database for history/profile
     try:
-        # Try to generate with AI first
-        ai_plan = generate_ai_business_plan(request.business_title, request.area, request.language)
-        
-        if ai_plan:
-            business_plan = ai_plan
-        else:
-            # Fallback to a better structured template if AI fails
-            business_plan = {
-                "business_overview": f"Strategic business plan for {request.business_title} in {request.area}.",
-                "market_analysis": f"The {request.area} market shows specific gaps for {request.business_title}.",
-                "success_score": 82,
-                "risk_level": "Medium",
-                "market_gap": "Medium",
-                "financial_projections": {
-                    "month_1": {"revenue": f"{currency}0", "expenses": f"{currency}50K", "profit": f"-{currency}50K"},
-                    "month_2": {"revenue": f"{currency}25K", "expenses": f"{currency}40K", "profit": f"-{currency}15K"},
-                    "month_3": {"revenue": f"{currency}80K", "expenses": f"{currency}40K", "profit": f"{currency}40K"},
-                    "month_4": {"revenue": f"{currency}1.2L", "expenses": f"{currency}50K", "profit": f"{currency}70K"},
-                    "month_5": {"revenue": f"{currency}1.5L", "expenses": f"{currency}55K", "profit": f"{currency}95K"},
-                    "month_6": {"revenue": f"{currency}2.0L", "expenses": f"{currency}60K", "profit": f"{currency}1.4L"}
-                },
-                "marketing_strategy": "Local SEO and community outreach.",
-                "operational_plan": "Lean startup model.",
-                "risk_analysis": "Market competition and local regulations.",
-                "monthly_milestones": ["Setup", "Launch", "Growth", "Scale", "Optimization", "Profitability"],
-                "success_metrics": ["Customer Satisfaction", "ROI", "Growth Rate"],
-                "resource_requirements": "Basic office/space and 2-3 staff.",
-                "exit_strategy": "Franchising or strategic sale."
-            }
-        
-        # Save to database
         db_plan = models.BusinessPlan(
-            user_email=request.user_email.lower().strip(),
-            business_title=request.business_title,
-            area=request.area,
+            user_email=email,
+            business_title=title,
+            area=area,
             plan_data=business_plan
         )
         db.add(db_plan)
         db.commit()
         db.refresh(db_plan)
-        
-        print(f"[SUCCESS] Generated and saved business plan for {request.business_title}")
-        return business_plan
-        
+        print(f"✅ Business plan saved to database for {email}")
     except Exception as e:
-        print(f"[ERROR] Error generating business plan: {e}")
-        raise HTTPException(status_code=500, detail="Failed to generate business plan")
+        print(f"⚠️ Database save failed: {e}")
+        # We still return the plan even if save failed
+        
+    return business_plan
 
 class RoadmapRequest(BaseModel):
     area: str
@@ -1222,20 +1339,26 @@ def get_system_location(request: Request):
 @app.get("/api/subscriptions/{user_email}")
 @app.get("/api/subscription/{user_email}") # Support both singular and plural
 def get_user_subscription(user_email: str, db: Session = Depends(get_db)):
-    """Get user's active subscription"""
-    from sqlalchemy import func
-    
+    """Get user's active subscription with robust sync"""
     email_normalized = user_email.lower().strip()
-    subscription = db.query(models.UserSubscription).filter(
-        func.lower(models.UserSubscription.user_email) == email_normalized,
-        models.UserSubscription.status == "active"
-    ).first()
+    
+    # Reconcile and get subscription using robust helper
+    subscription = get_synced_subscription(db, email_normalized)
     
     if not subscription:
         # Check if user exists at all
+        from sqlalchemy import func
         user_exists = db.query(models.User).filter(func.lower(models.User.email) == email_normalized).first()
         if not user_exists:
-            raise HTTPException(status_code=404, detail="User not found")
+            # Create user if doesn't exist to avoid 404 for new oauth users
+            user_exists = models.User(
+                email=email_normalized,
+                name=email_normalized.split('@')[0],
+                auth_provider="razorpay" # or generic
+            )
+            db.add(user_exists)
+            db.commit()
+            db.refresh(user_exists)
         
         # Return a "free" subscription structure as default instead of 404
         return {
@@ -1690,10 +1813,9 @@ async def process_payment_immediately(request: Request, db: Session = Depends(ge
 
 @app.get("/api/users/{email}/profile")
 def get_user_profile(email: str, db: Session = Depends(get_db)):
-    """Get user profile information - REAL DATA ONLY"""
+    """Get user profile information with robust subscription synchronization"""
     from sqlalchemy import func
-    from datetime import datetime, timedelta
-
+    
     email_normalized = email.lower().strip()
     logger.info(f"🔍 Profile request for: {email_normalized}")
 
@@ -1703,84 +1825,18 @@ def get_user_profile(email: str, db: Session = Depends(get_db)):
         logger.error(f"🔍 User not found: {email_normalized}")
         raise HTTPException(status_code=404, detail="User not found")
 
+    # Reconcile and get subscription using robust helper
+    subscription = get_synced_subscription(db, email_normalized)
+
     # Get user statistics
     search_count = db.query(models.SearchHistory).filter(
         func.lower(models.SearchHistory.user_email) == email_normalized
     ).count()
 
-    # Get subscription info
-    subscription = db.query(models.UserSubscription).filter(
-        func.lower(models.UserSubscription.user_email) == email_normalized,
-        models.UserSubscription.status == "active"
-    ).first()
-
-    # Get real payment history only - no auto-creation
+    # Get real payment history
     recent_payments = db.query(models.PaymentHistory).filter(
         func.lower(models.PaymentHistory.user_email) == email_normalized
     ).order_by(models.PaymentHistory.created_at.desc()).limit(10).all()
-
-    logger.info(f"🔍 Found {len(recent_payments)} real payments for {email_normalized}")
-
-    # FIX: If user has payments but no subscription, create subscription from latest payment
-    if recent_payments and not subscription:
-        latest_payment = recent_payments[0]
-        logger.info(f"🔧 Creating subscription from payment: {latest_payment.plan_name}")
-        
-        try:
-            # Mapping with fuzzy logic helper
-            mapped_plan = normalize_plan_name(latest_payment.plan_name)
-            logger.info(f"🔧 Mapping payment plan '{latest_payment.plan_name}' to subscription plan '{mapped_plan}'")
-            
-            # Create subscription record
-            new_subscription = models.UserSubscription(
-                user_id=user.id,
-                user_email=email_normalized,
-                plan_name=mapped_plan,
-                plan_display_name=latest_payment.plan_name,
-                billing_cycle=latest_payment.billing_cycle or 'yearly',
-                price=latest_payment.amount,
-                currency=latest_payment.currency or 'INR',
-                max_analyses=-1 if mapped_plan in ['professional', 'enterprise'] else 5,
-                features={},
-                subscription_end=datetime.now() + timedelta(days=365),
-                status='active'
-            )
-            
-            db.add(new_subscription)
-            db.commit()
-            db.refresh(new_subscription)
-            
-            subscription = new_subscription
-            logger.info(f"✅ Created subscription: {subscription.plan_name} (display: {subscription.plan_display_name}) for {email_normalized}")
-            
-        except Exception as e:
-            logger.error(f"Failed to create subscription from payment: {e}")
-            db.rollback()
-
-    # FIX: If subscription exists but has wrong plan name, update it based on payments
-    elif subscription and recent_payments:
-        latest_payment = recent_payments[0]
-        
-        # Enhanced plan mapping with all possible variations
-        expected_plan = normalize_plan_name(latest_payment.plan_name)
-        
-        if subscription.plan_name != expected_plan:
-            logger.info(f"🔧 Updating subscription plan from {subscription.plan_name} to {expected_plan} based on payment: {latest_payment.plan_name}")
-            
-            try:
-                subscription.plan_name = expected_plan
-                subscription.plan_display_name = latest_payment.plan_name
-                subscription.price = latest_payment.amount
-                subscription.max_analyses = -1 if expected_plan in ['professional', 'enterprise'] else 5
-                
-                db.commit()
-                db.refresh(subscription)
-                
-                logger.info(f"✅ Updated subscription plan to {expected_plan}")
-                
-            except Exception as e:
-                logger.error(f"Failed to update subscription: {e}")
-                db.rollback()
 
     return {
         "user": user,
@@ -1863,97 +1919,22 @@ def debug_user_data(email: str, db: Session = Depends(get_db)):
 
 @app.post("/api/refresh-user-plan/{email}")
 def refresh_user_plan(email: str, db: Session = Depends(get_db)):
-    """Force refresh user's plan based on their latest payment and subscription data"""
-    from sqlalchemy import func
-    from datetime import datetime, timedelta
-    
+    """Force refresh user's plan based on unified sync logic"""
     email_normalized = email.lower().strip()
     logger.info(f"🔄 Force refreshing plan for: {email_normalized}")
     
     try:
-        # Get user
-        user = db.query(models.User).filter(func.lower(models.User.email) == email_normalized).first()
-        if not user:
-            raise HTTPException(status_code=404, detail="User not found")
-        
-        # Get latest payment
-        latest_payment = db.query(models.PaymentHistory).filter(
-            func.lower(models.PaymentHistory.user_email) == email_normalized
-        ).order_by(models.PaymentHistory.created_at.desc()).first()
-        
-        # Get current subscription
-        subscription = db.query(models.UserSubscription).filter(
-            func.lower(models.UserSubscription.user_email) == email_normalized,
-            models.UserSubscription.status == "active"
-        ).first()
-        
-        # Enhanced plan mapping with fuzzy matching
-        plan_mapping = {
-            'professional': 'professional',
-            'pro': 'professional',
-            'growth accelerator': 'professional',
-            'growth architect': 'professional',
-            'enterprise': 'enterprise',
-            'territorial dominance': 'enterprise',
-            'market dominator': 'enterprise',
-            'free': 'free',
-            'starter': 'free',
-            'venture strategist': 'free'
-        }
-        
-        if latest_payment:
-            # Determine correct plan from payment with fuzzy matching
-            payment_plan = normalize_plan_name(latest_payment.plan_name)
-            logger.info(f"🔧 Mapping payment plan '{latest_payment.plan_name}' to '{payment_plan}'")
-            
-            if subscription:
-                # Update existing subscription
-                subscription.plan_name = payment_plan
-                subscription.plan_display_name = latest_payment.plan_name
-                subscription.price = latest_payment.amount
-                subscription.currency = latest_payment.currency or 'INR'
-                subscription.billing_cycle = latest_payment.billing_cycle or 'yearly'
-                subscription.max_analyses = -1 if payment_plan in ['professional', 'enterprise'] else 5
-                subscription.subscription_end = datetime.now() + timedelta(days=365)
-                
-                db.commit()
-                db.refresh(subscription)
-                
-                logger.info(f"✅ Updated subscription plan to: {payment_plan}")
-                
-            else:
-                # Create new subscription
-                new_subscription = models.UserSubscription(
-                    user_id=user.id,
-                    user_email=email_normalized,
-                    plan_name=payment_plan,
-                    plan_display_name=latest_payment.plan_name,
-                    billing_cycle=latest_payment.billing_cycle or 'yearly',
-                    price=latest_payment.amount,
-                    currency=latest_payment.currency or 'INR',
-                    max_analyses=-1 if payment_plan in ['professional', 'enterprise'] else 5,
-                    features={},
-                    subscription_end=datetime.now() + timedelta(days=365),
-                    status='active'
-                )
-                
-                db.add(new_subscription)
-                db.commit()
-                db.refresh(new_subscription)
-                
-                subscription = new_subscription
-                logger.info(f"✅ Created new subscription with plan: {payment_plan}")
+        # Reconcile and get subscription using robust helper
+        subscription = get_synced_subscription(db, email_normalized)
         
         return {
             "status": "success",
             "message": f"Plan refreshed for {email_normalized}",
             "user_email": email_normalized,
             "current_plan": subscription.plan_name if subscription else 'free',
-            "plan_display_name": subscription.plan_display_name if subscription else 'Free',
+            "plan_display_name": subscription.plan_display_name if subscription else 'Starter',
             "max_analyses": subscription.max_analyses if subscription else 5,
-            "has_payment": bool(latest_payment),
-            "payment_amount": latest_payment.amount if latest_payment else 0,
-            "payment_plan_name": latest_payment.plan_name if latest_payment else None
+            "subscription_end": subscription.subscription_end.isoformat() if (subscription and subscription.subscription_end) else None
         }
         
     except Exception as e:
@@ -1963,83 +1944,23 @@ def refresh_user_plan(email: str, db: Session = Depends(get_db)):
 
 @app.post("/api/fix-subscription/{email}")
 def fix_user_subscription(email: str, db: Session = Depends(get_db)):
-    """Fix user subscription based on their payment history"""
-    from sqlalchemy import func
-    from datetime import datetime, timedelta
-    
+    """Fix user subscription based on centralized logic"""
     email_normalized = email.lower().strip()
     logger.info(f"🔧 Fixing subscription for: {email_normalized}")
     
-    # Get user
-    user = db.query(models.User).filter(func.lower(models.User.email) == email_normalized).first()
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    
-    # Get latest payment
-    latest_payment = db.query(models.PaymentHistory).filter(
-        func.lower(models.PaymentHistory.user_email) == email_normalized
-    ).order_by(models.PaymentHistory.created_at.desc()).first()
-    
-    if not latest_payment:
-        raise HTTPException(status_code=404, detail="No payment history found")
-    
-    # Get existing subscription
-    subscription = db.query(models.UserSubscription).filter(
-        func.lower(models.UserSubscription.user_email) == email_normalized,
-        models.UserSubscription.status == "active"
-    ).first()
-    
-    # Enhanced plan mapping with all possible variations
-    mapped_plan = normalize_plan_name(latest_payment.plan_name)
-    
     try:
-        if subscription:
-            # Update existing subscription
-            subscription.plan_name = mapped_plan
-            subscription.plan_display_name = latest_payment.plan_name
-            subscription.price = latest_payment.amount
-            subscription.currency = latest_payment.currency or 'INR'
-            subscription.billing_cycle = latest_payment.billing_cycle or 'yearly'
-            subscription.max_analyses = -1 if mapped_plan in ['professional', 'enterprise'] else 5
-            subscription.subscription_end = datetime.now() + timedelta(days=365)
-            
-            db.commit()
-            db.refresh(subscription)
-            
-            logger.info(f"✅ Updated subscription: {subscription.plan_name}")
-            
-        else:
-            # Create new subscription
-            new_subscription = models.UserSubscription(
-                user_id=user.id,
-                user_email=email_normalized,
-                plan_name=mapped_plan,
-                plan_display_name=latest_payment.plan_name,
-                billing_cycle=latest_payment.billing_cycle or 'yearly',
-                price=latest_payment.amount,
-                currency=latest_payment.currency or 'INR',
-                max_analyses=-1 if mapped_plan in ['professional', 'enterprise'] else 5,
-                features={},
-                subscription_end=datetime.now() + timedelta(days=365),
-                status='active'
-            )
-            
-            db.add(new_subscription)
-            db.commit()
-            db.refresh(new_subscription)
-            
-            subscription = new_subscription
-            logger.info(f"✅ Created subscription: {subscription.plan_name}")
+        # Reconcile and get subscription using robust helper
+        subscription = get_synced_subscription(db, email_normalized)
         
         return {
             "status": "success",
             "message": f"Subscription fixed for {email_normalized}",
             "subscription": {
-                "plan_name": subscription.plan_name,
-                "plan_display_name": subscription.plan_display_name,
-                "price": subscription.price,
-                "currency": subscription.currency,
-                "max_analyses": subscription.max_analyses
+                "plan_name": subscription.plan_name if subscription else 'free',
+                "plan_display_name": subscription.plan_display_name if subscription else 'Starter',
+                "status": subscription.status if subscription else 'active',
+                "max_analyses": subscription.max_analyses if subscription else 5,
+                "subscription_end": subscription.subscription_end.isoformat() if (subscription and subscription.subscription_end) else None
             }
         }
         
