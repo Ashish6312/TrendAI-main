@@ -533,8 +533,9 @@ def sign_up(user_data: UserSignUp, db: Session = Depends(get_db)):
             logger.warning(f"⚠️ Sign up failed: User {email_normalized} already exists")
             raise HTTPException(status_code=400, detail="User with this email already exists")
         
-        # Hash password
-        password_hash = pwd_context.hash(user_data.password)
+        # Hash password (truncate to 72 chars for bcrypt compatibility)
+        password_to_hash = user_data.password[:72]
+        password_hash = pwd_context.hash(password_to_hash)
         
         # Create new user
         db_user = models.User(
@@ -586,8 +587,9 @@ def sign_in(user_data: UserSignIn, db: Session = Depends(get_db)):
             logger.warning(f"⚠️ Sign in failed: User {email_normalized} has no password (social login)")
             raise HTTPException(status_code=401, detail="This account uses social login. Please sign in with Google.")
         
-        # Verify password
-        if not pwd_context.verify(user_data.password, db_user.password_hash):
+        # Verify password (truncate to 72 chars for bcrypt compatibility)
+        password_to_verify = user_data.password[:72]
+        if not pwd_context.verify(password_to_verify, db_user.password_hash):
             logger.warning(f"⚠️ Sign in failed: Incorrect password for {email_normalized}")
             raise HTTPException(status_code=401, detail="Invalid email or password")
         
