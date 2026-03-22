@@ -7,7 +7,7 @@ from sqlalchemy import func
 from pydantic import BaseModel
 from datetime import datetime, timedelta
 from passlib.context import CryptContext
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto", bcrypt__truncate_error=False)
 import os
 import logging
 import traceback
@@ -15,19 +15,26 @@ import hashlib
 import json
 from typing import Dict, List, Any, Optional
 
-# Initialize FastAPI app EARLY for health checks
-app = FastAPI(title="TrendAI Business Intelligence API", version="2.0")
+# Initialize FastAPI app
+app = FastAPI(title="TrendAI Business Intelligence API", version="2.1")
 
-# API metadata and health aliases
-@app.get("/api/info")
-async def api_info():
-    return {"title": "TrendAI API", "version": "2.0", "status": "operational"}
-
+# API metadata and comprehensive health aliases
+@app.get("/")
 @app.get("/api/health")
 @app.get("/api/v1/health")
-def api_health_alias():
-    """Alias for standard health checks to resolve 404/405 errors"""
-    return {"status": "healthy", "timestamp": str(datetime.now())}
+@app.post("/api/health")  # Resolve 405 from misconfigured probes
+def system_health_check():
+    """Consolidated health and status check (v2.1)"""
+    return {
+        "status": "online",
+        "message": "TrendAI API Active",
+        "version": "2.1",
+        "timestamp": str(datetime.now())
+    }
+
+@app.get("/api/info")
+async def api_info():
+    return {"title": "TrendAI API", "version": "2.1", "status": "operational"}
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -529,9 +536,15 @@ def sign_up(user_data: UserSignUp, db: Session = Depends(get_db)):
             logger.warning(f"⚠️ Sign up failed: Password missing special char for {email_normalized}")
             raise HTTPException(status_code=400, detail="Password must contain at least one special character")
         
-        # Hash password (pre-hash with SHA256 to bypass bcrypt's 72-byte limit)
-        password_to_hash = hashlib.sha256(user_data.password.encode('utf-8')).hexdigest()
-        password_hash = pwd_context.hash(password_to_hash)
+        # Hash password with robustness for length
+        try:
+            # Pre-hash to hex (64 chars) to safely bypass 72-byte bcrypt limit
+            password_to_hash = hashlib.sha256(user_data.password.encode('utf-8')).hexdigest()
+            password_hash = pwd_context.hash(password_to_hash)
+        except Exception as hash_err:
+            logger.error(f"⚠️ Password hash error for {email_normalized}: {hash_err}")
+            # Fallback (passlib will truncate automatically now thanks to config)
+            password_hash = pwd_context.hash(user_data.password)
         
         # Create new user
         db_user = models.User(
