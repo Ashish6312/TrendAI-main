@@ -308,12 +308,15 @@ def get_synced_subscription(db: Session, email: str):
         models.UserSubscription.status == "active"
     ).first()
     
-    # 3. If no payment history, ensure no active premium sub exists
+    # 3. If no payment history, fallback to subscription's own expiry
     if not latest_payment:
         if subscription and subscription.plan_name != "free":
-            subscription.status = "expired"
-            db.commit()
-            return None
+            # Only expire if it has an end_date and it's actually in the past
+            if subscription.subscription_end and subscription.subscription_end.replace(tzinfo=None) < now.replace(tzinfo=None):
+                subscription.status = "expired"
+                db.commit()
+                return None
+            return subscription
         return subscription
 
     # 4. We have a payment. Let's validate the subscription against it.

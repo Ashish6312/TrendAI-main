@@ -200,22 +200,23 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     const loadUserPlan = async () => {
       if (session?.user?.email) {
         const email = session.user.email.toLowerCase().trim();
-        const apiUrl = getApiUrl();
-
-        // 1. Check local cache FIRST for instant UI response
+        
+        // 1. Check local cache FIRST
         const cachedPlan = localStorage.getItem(`subscription_${email}`);
         if (cachedPlan && ['free', 'professional', 'enterprise'].includes(cachedPlan)) {
           setPlanState(cachedPlan as SubscriptionPlan);
           setIsLoading(false);
-        } else {
-          setIsLoading(true);
         }
 
         try {
-          // 2. Always verify with API (force refresh)
+          // 2. Refresh from API
           const refreshedPlan = await forceRefreshPlan();
-          if (refreshedPlan) {
-            console.log('✅ Plan successfully refreshed to:', refreshedPlan);
+          
+          // 3. SAFETY: If API says 'free' but we JUST upgraded locally to something else,
+          // trust the local state for 1 minute to allow for backend propagation
+          if (refreshedPlan === 'free' && cachedPlan && cachedPlan !== 'free') {
+             console.log('⚠️ API says free, but local cache says', cachedPlan, '- keeping local state for sync');
+             setPlanState(cachedPlan as SubscriptionPlan);
           }
         } catch (err) {
           console.error('❌ AI Terminal: Subscription fetch error:', err);
