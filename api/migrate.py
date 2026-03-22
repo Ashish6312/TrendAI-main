@@ -20,7 +20,7 @@ def reset_db():
         return False
 
 def run_migration():
-    print("--- TrendAI Database Management Tool (v2.0) ---")
+    print("--- TrendAI Database Management Tool (v2.2) ---")
     
     # Check for reset flag in args
     import sys

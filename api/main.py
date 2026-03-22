@@ -1,4 +1,4 @@
-print("--- TrendAI Backend Booting (v2.0) ---")
+print("--- TrendAI Backend Booting (v2.2) ---")
 from fastapi import FastAPI, Depends, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
@@ -11,8 +11,7 @@ from passlib.context import CryptContext
 pwd_context = CryptContext(
     schemes=["pbkdf2_sha256", "bcrypt"], 
     deprecated="auto",
-    bcrypt__truncate_error=False,
-    bcrypt__truncate=True
+    bcrypt__truncate_error=False
 )
 import os
 import logging
