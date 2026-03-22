@@ -44,13 +44,38 @@ def parse_real_location_data(area: str) -> Dict[str, Any]:
         if not api_key: return None
         
         try:
-            # 1. Ask AI to resolve the location string to EXACT data
+            # 1. Ask AI to resolve the location string (Gemini Primary, Fallback to Pollinations)
             prompt = f"Resolve this location to JSON: '{query}'. Fields: country (Full Name), country_iso (2 chars), state (Full Name or empty), state_iso (2nd level ISO or empty), city (official name), latitude (float), longitude (float)."
-            response = requests.post("https://text.pollinations.ai/", json={"messages": [{"role": "user", "content": prompt}]})
-            content = response.text
-            if "```json" in content: content = content.split("```json")[1].split("```")[0].strip()
-            elif "```" in content: content = content.split("```")[1].split("```")[0].strip()
-            iso_data = json.loads(content)
+            
+            content = None
+            gemini_key = os.getenv("GEMINI_API_KEY")
+            
+            if gemini_key:
+                try:
+                    print(f"🤖 Resolving location via Gemini: {query}")
+                    gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={gemini_key}"
+                    resp = requests.post(gemini_url, json={
+                        "contents": [{"parts": [{"text": prompt}]}],
+                        "generationConfig": {"temperature": 0.1, "maxOutputTokens": 256}
+                    }, timeout=10)
+                    if resp.status_code == 200:
+                        content = resp.json()['candidates'][0]['content']['parts'][0]['text']
+                        print("✅ Gemini successfully resolved location")
+                except Exception as ex:
+                    print(f"⚠️ Gemini location resolution failed: {ex}")
+            
+            if not content:
+                print("🔄 Falling back to Pollinations for location resolution...")
+                response = requests.post("https://text.pollinations.ai/", json={"messages": [{"role": "user", "content": prompt}]}, timeout=10)
+                if response.status_code == 200:
+                    content = response.text
+                
+            if content:
+                if "```json" in content: content = content.split("```json")[1].split("```")[0].strip()
+                elif "```" in content: content = content.split("```")[1].split("```")[0].strip()
+                iso_data = json.loads(content)
+            else:
+                raise Exception("AI location resolution failed - no response content")
             
             country_iso = iso_data.get('country_iso', 'XX').upper()
             state_iso = iso_data.get('state_iso', '').upper()

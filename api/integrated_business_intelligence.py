@@ -674,8 +674,8 @@ class IntegratedBusinessIntelligence:
           }}
         }}"""
         
-        # 1. Try Gemini API with the correct whitelisted models (gemini-2.5-flash)
-        model_candidates = ["gemini-2.5-flash", "gemini-2.5-flash-express-001", "gemini-1.5-pro"]
+        # 1. Try Gemini API with the correct model identifiers (v2.0 Flash is preferred)
+        model_candidates = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"]
         
         for model_name in model_candidates:
             try:
