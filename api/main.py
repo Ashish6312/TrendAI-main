@@ -533,6 +533,21 @@ def sign_up(user_data: UserSignUp, db: Session = Depends(get_db)):
             logger.warning(f"⚠️ Sign up failed: User {email_normalized} already exists")
             raise HTTPException(status_code=400, detail="User with this email already exists")
         
+        # Password validation
+        password = user_data.password
+        if len(password) < 8:
+            logger.warning(f"⚠️ Sign up failed: Password too short for {email_normalized}")
+            raise HTTPException(status_code=400, detail="Password must be at least 8 characters long")
+            
+        if not any(char.isdigit() for char in password):
+            logger.warning(f"⚠️ Sign up failed: Password missing digit for {email_normalized}")
+            raise HTTPException(status_code=400, detail="Password must contain at least one number")
+            
+        import re
+        if not re.search(r"[!@#$%^&*(),.?\":{}|<>]", password):
+            logger.warning(f"⚠️ Sign up failed: Password missing special char for {email_normalized}")
+            raise HTTPException(status_code=400, detail="Password must contain at least one special character")
+        
         # Hash password (truncate to 72 chars for bcrypt compatibility)
         password_to_hash = user_data.password[:72]
         password_hash = pwd_context.hash(password_to_hash)

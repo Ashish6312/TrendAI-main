@@ -108,8 +108,16 @@ export default function AuthPage() {
         setError("Name is required!");
         return;
       }
-      if (formData.password.length < 6) {
-        setError("Password must be at least 6 characters!");
+      if (formData.password.length < 8) {
+        setError("Password must be at least 8 characters!");
+        return;
+      }
+      if (!/\d/.test(formData.password)) {
+        setError("Password must contain at least one number!");
+        return;
+      }
+      if (!/[!@#$%^&*(),.?":{}|<>]/.test(formData.password)) {
+        setError("Password must contain at least one special character!");
         return;
       }
       if (formData.password !== formData.confirmPassword) {
