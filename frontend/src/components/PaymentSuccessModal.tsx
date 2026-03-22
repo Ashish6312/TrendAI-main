@@ -8,6 +8,7 @@ import { useNotifications } from "@/context/NotificationContext";
 import { useSubscription, SubscriptionPlan } from "@/context/SubscriptionContext";
 import { useAnimation } from "@/context/AnimationContext";
 import { useSession } from "next-auth/react";
+import { getApiUrl } from "@/config/api";
 
 interface PaymentSuccessModalProps {
   isOpen: boolean;
@@ -49,23 +50,15 @@ export default function PaymentSuccessModal({ isOpen, onClose, paymentDetails }:
       console.log('🌊 Payment success modal opened - triggering global animation');
       triggerPaymentAnimation();
       
-      const planMapping: Record<string, SubscriptionPlan> = {
-        'Starter': 'free',
-        'Venture Strategist': 'free',
-        'Market Explorer': 'free',
-        'Professional': 'professional',
-        'Growth Architect': 'professional',
-        'Growth Accelerator': 'professional', 
-        'Enterprise': 'enterprise',
-        'Territorial Dominance': 'enterprise',
-        'Market Dominator': 'enterprise',
-        'free': 'free',
-        'pro': 'professional',
-        'professional': 'professional',
-        'enterprise': 'enterprise'
+      const normalizePlan = (name: string): SubscriptionPlan => {
+        const n = name.toLowerCase().trim();
+        if (n.includes('pro') || n.includes('growth') || n.includes('accelerator') || n.includes('architect')) return 'professional';
+        if (n.includes('ent') || n.includes('dominance') || n.includes('dominator') || n.includes('territorial')) return 'enterprise';
+        if (n.includes('start') || n.includes('venture') || n.includes('explorer') || n.includes('strategist') || n.includes('free')) return 'free';
+        return 'free';
       };
       
-      const currentPlan = planMapping[planParam] || 'free';
+      const currentPlan = normalizePlan(planParam);
 
       const planFeaturesMap: Record<SubscriptionPlan, any> = {
         'free': { max_analyses: 5, features: { advancedFeatures: false, prioritySupport: false, exportToPdf: false, apiAccess: false } },
@@ -74,7 +67,7 @@ export default function PaymentSuccessModal({ isOpen, onClose, paymentDetails }:
       };
 
       const syncPlanWithBackend = async () => {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+        const apiUrl = getApiUrl();
         const userEmail = session.user!.email!.toLowerCase().trim();
         
         // 1. IMMEDIATE LOCAL ACTIVATION (CACHE)
@@ -118,6 +111,9 @@ export default function PaymentSuccessModal({ isOpen, onClose, paymentDetails }:
           if (subResponse.ok) {
             const subData = await subResponse.json();
             subId = subData.id;
+            console.log('✅ Subscription synced successfully:', subId);
+          } else {
+            console.error('❌ Subscription sync failed:', subResponse.status, subResponse.statusText);
           }
           
           // 4. Sync Payment Record
@@ -138,15 +134,13 @@ export default function PaymentSuccessModal({ isOpen, onClose, paymentDetails }:
               })
             });
             
-            if (!paymentResponse.ok) {
-              console.error('Payment sync failed:', paymentResponse.status, paymentResponse.statusText);
-              const errorData = await paymentResponse.json().catch(() => ({}));
-              console.error('Payment sync error details:', errorData);
-            } else {
+            if (paymentResponse.ok) {
               console.log('✅ Payment record synced successfully');
+            } else {
+              console.error('❌ Payment record sync failed:', paymentResponse.status);
             }
-          } catch (error) {
-            console.error('Payment sync error:', error);
+          } catch (paymentErr) {
+            console.error('❌ Payment sync exception:', paymentErr);
           }
           
           addNotification({

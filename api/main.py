@@ -262,6 +262,28 @@ class PaymentCreate(BaseModel):
     plan_name: str
     billing_cycle: str
 
+def normalize_plan_name(plan_name: str) -> str:
+    """Consolidated logic to map various plan names to internal plan slugs"""
+    if not plan_name:
+        return "free"
+        
+    p = plan_name.lower().strip()
+    
+    # Enterprise mapping
+    if any(x in p for x in ['enterprise', 'territorial', 'dominance', 'dominator']):
+        return "enterprise"
+        
+    # Professional mapping
+    if any(x in p for x in ['pro', 'growth', 'architect', 'accelerator']):
+        return "professional"
+        
+    # Free/Starter mapping
+    if any(x in p for x in ['free', 'starter', 'venture', 'strategist', 'explorer']):
+        return "free"
+        
+    return "free"
+
+
 
 
 @app.options("/{full_path:path}")
@@ -1575,14 +1597,15 @@ async def payment_webhook(request: Request):
             payment_record = create_payment_record(payment_data, db)
             
             # Create/update subscription immediately
+            mapped_plan = normalize_plan_name(plan_name)
             subscription_data = SubscriptionCreate(
                 user_email=user_email,
-                plan_name=plan_name.lower(),
+                plan_name=mapped_plan,
                 plan_display_name=plan_name,
                 billing_cycle=billing_cycle,
                 price=float(amount),
                 currency="INR",
-                max_analyses=-1 if plan_name.lower() in ['professional', 'enterprise', 'territorial dominance', 'growth architect'] else 5,
+                max_analyses=-1 if mapped_plan in ['professional', 'enterprise'] else 5,
                 features={}
             )
             
@@ -1640,17 +1663,7 @@ async def process_payment_immediately(request: Request, db: Session = Depends(ge
         payment_record = create_payment_record(payment_data, db)
         
         # Map plan names for subscription
-        plan_mapping = {
-            'territorial dominance': 'enterprise',
-            'growth architect': 'professional',
-            'growth accelerator': 'professional',
-            'market dominator': 'enterprise',
-            'venture strategist': 'free',
-            'professional': 'professional',
-            'enterprise': 'enterprise'
-        }
-        
-        mapped_plan = plan_mapping.get(plan_name.lower(), plan_name.lower())
+        mapped_plan = normalize_plan_name(plan_name)
         
         # Create/update subscription immediately
         subscription_data = SubscriptionCreate(
@@ -1722,32 +1735,8 @@ def get_user_profile(email: str, db: Session = Depends(get_db)):
         logger.info(f"🔧 Creating subscription from payment: {latest_payment.plan_name}")
         
         try:
-            # Enhanced plan mapping to handle all variations
-            plan_mapping = {
-                'professional': 'professional',
-                'pro': 'professional',
-                'growth accelerator': 'professional',
-                'growth architect': 'professional',
-                'enterprise': 'enterprise',
-                'territorial dominance': 'enterprise',
-                'market dominator': 'enterprise',
-                'free': 'free',
-                'starter': 'free',
-                'venture strategist': 'free'
-            }
-            
-            # Check both plan_name and any display name variations
-            payment_plan_lower = latest_payment.plan_name.lower()
-            mapped_plan = plan_mapping.get(payment_plan_lower, 'professional')  # Default to professional if not found
-            
-            # Special handling for common payment plan names
-            if 'territorial' in payment_plan_lower or 'dominance' in payment_plan_lower:
-                mapped_plan = 'enterprise'
-            elif 'growth' in payment_plan_lower or 'architect' in payment_plan_lower or 'accelerator' in payment_plan_lower:
-                mapped_plan = 'professional'
-            elif 'pro' in payment_plan_lower and payment_plan_lower != 'professional':
-                mapped_plan = 'professional'
-            
+            # Mapping with fuzzy logic helper
+            mapped_plan = normalize_plan_name(latest_payment.plan_name)
             logger.info(f"🔧 Mapping payment plan '{latest_payment.plan_name}' to subscription plan '{mapped_plan}'")
             
             # Create subscription record
@@ -1781,30 +1770,7 @@ def get_user_profile(email: str, db: Session = Depends(get_db)):
         latest_payment = recent_payments[0]
         
         # Enhanced plan mapping with all possible variations
-        plan_mapping = {
-            'professional': 'professional',
-            'pro': 'professional',
-            'growth accelerator': 'professional',
-            'growth architect': 'professional',
-            'enterprise': 'enterprise',
-            'territorial dominance': 'enterprise',
-            'market dominator': 'enterprise',
-            'free': 'free',
-            'starter': 'free',
-            'venture strategist': 'free'
-        }
-        
-        # Check both plan_name and any display name variations
-        payment_plan_lower = latest_payment.plan_name.lower()
-        expected_plan = plan_mapping.get(payment_plan_lower, 'professional')  # Default to professional if not found
-        
-        # Special handling for common payment plan names
-        if 'territorial' in payment_plan_lower or 'dominance' in payment_plan_lower:
-            expected_plan = 'enterprise'
-        elif 'growth' in payment_plan_lower or 'architect' in payment_plan_lower or 'accelerator' in payment_plan_lower:
-            expected_plan = 'professional'
-        elif 'pro' in payment_plan_lower and payment_plan_lower != 'professional':
-            expected_plan = 'professional'
+        expected_plan = normalize_plan_name(latest_payment.plan_name)
         
         if subscription.plan_name != expected_plan:
             logger.info(f"🔧 Updating subscription plan from {subscription.plan_name} to {expected_plan} based on payment: {latest_payment.plan_name}")
@@ -1945,17 +1911,7 @@ def refresh_user_plan(email: str, db: Session = Depends(get_db)):
         
         if latest_payment:
             # Determine correct plan from payment with fuzzy matching
-            payment_plan_lower = latest_payment.plan_name.lower()
-            payment_plan = plan_mapping.get(payment_plan_lower, 'professional')  # Default to professional
-            
-            # Special handling for common payment plan names
-            if 'territorial' in payment_plan_lower or 'dominance' in payment_plan_lower:
-                payment_plan = 'enterprise'
-            elif 'growth' in payment_plan_lower or 'architect' in payment_plan_lower or 'accelerator' in payment_plan_lower:
-                payment_plan = 'professional'
-            elif 'pro' in payment_plan_lower and payment_plan_lower != 'professional':
-                payment_plan = 'professional'
-            
+            payment_plan = normalize_plan_name(latest_payment.plan_name)
             logger.info(f"🔧 Mapping payment plan '{latest_payment.plan_name}' to '{payment_plan}'")
             
             if subscription:
@@ -2042,20 +1998,7 @@ def fix_user_subscription(email: str, db: Session = Depends(get_db)):
     ).first()
     
     # Enhanced plan mapping with all possible variations
-    plan_mapping = {
-        'professional': 'professional',
-        'pro': 'professional',
-        'growth accelerator': 'professional',
-        'growth architect': 'professional',
-        'enterprise': 'enterprise',
-        'territorial dominance': 'enterprise',
-        'market dominator': 'enterprise',
-        'free': 'free',
-        'starter': 'free',
-        'venture strategist': 'free'
-    }
-    
-    mapped_plan = plan_mapping.get(latest_payment.plan_name.lower(), 'free')
+    mapped_plan = normalize_plan_name(latest_payment.plan_name)
     
     try:
         if subscription:

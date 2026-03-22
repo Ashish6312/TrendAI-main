@@ -159,9 +159,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
         let planToSet: SubscriptionPlan = 'free';
         
         // Check for enterprise plans with fuzzy matching
-        if (rawPlanName === 'enterprise' || 
-            rawDisplayName === 'territorial dominance' || 
-            rawDisplayName === 'market dominator' ||
+        if (rawPlanName.includes('enterprise') || 
             rawDisplayName.includes('enterprise') ||
             rawDisplayName.includes('territorial') ||
             rawDisplayName.includes('dominance') ||
@@ -169,10 +167,8 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
           planToSet = 'enterprise';
         }
         // Check for professional plans with fuzzy matching
-        else if (rawPlanName === 'professional' || 
-                 rawPlanName === 'pro' || 
-                 rawDisplayName === 'growth architect' || 
-                 rawDisplayName === 'growth accelerator' ||
+        else if (rawPlanName.includes('professional') || 
+                 rawPlanName.includes('pro') || 
                  rawDisplayName.includes('professional') ||
                  rawDisplayName.includes('growth') ||
                  rawDisplayName.includes('architect') ||
