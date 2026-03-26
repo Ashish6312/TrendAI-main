@@ -2759,7 +2759,7 @@ async def create_razorpay_order(request: RazorpayOrderRequest, db: Session = Dep
         logger.error(f"❌ Razorpay Order Generation Failed using Key ID {masked_id}: {error_msg}")
         raise HTTPException(
             status_code=500, 
-            detail=f"Payment gateway communication failed: {error_msg}. Verify your Razorpay Key ID/Secret in .env."
+            detail=f"Payment gateway communication failed: {error_msg}. (Attempted with Key ID: {masked_id}). Please check your Render/Vercel ENV settings."
         )
 
 @app.post("/api/payments/razorpay/verify")
@@ -2821,11 +2821,12 @@ async def verify_razorpay_payment(request: RazorpayVerifyRequest, db: Session = 
         
     except Exception as e:
         error_msg = str(e)
-        logger.error(f"❌ Razorpay Verification Failure: {error_msg}")
-        # Provide more detail for the user (safe in dev)
+        curr_key_id = os.getenv("RAZORPAY_KEY_ID", "rzp_test_placeholder").strip()
+        masked_id = f"{curr_key_id[:6]}...{curr_key_id[-4:]}" if len(curr_key_id) > 10 else "INVALID_ID"
+        logger.error(f"❌ Razorpay Verification Failure using Key ID {masked_id}: {error_msg}")
         raise HTTPException(
             status_code=400, 
-            detail=f"Payment verification failed: {error_msg}. Check if RAZORPAY_KEY_SECRET is correct in .env."
+            detail=f"Payment verification failed: {error_msg}. (Key ID used: {masked_id}). Check your dashboard credentials."
         )
 
 
