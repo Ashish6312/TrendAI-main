@@ -37,35 +37,85 @@ export default function AcquisitionTiers() {
     try {
       const apiUrl = getApiUrl();
       
-      // 1. Create Dodo Checkout Session
-      const resSession = await fetch(`${apiUrl}/api/dodo/create-session`, {
+      // 1. Create Razorpay Order
+      const resOrder = await fetch(`${apiUrl}/api/payments/razorpay/order`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          product_id: tier.id === 'professional' ? (billingCycle === 'yearly' ? 'p_5' : 'p_4') : (billingCycle === 'yearly' ? 'p_2' : 'p_1'), // Placeholder IDs - User to replace in Dodo Dashboard
-          quantity: 1,
-          email: session?.user?.email,
-          name: session?.user?.name || (session?.user?.email?.split('@')[0] || 'User'),
-          return_url: `${window.location.origin}/dashboard?payment=success&plan=${tier.id}`
+          plan_id: tier.id,
+          billing_cycle: billingCycle,
+          user_email: session?.user?.email
         })
       });
 
-      if (!resSession.ok) {
-        const errorData = await resSession.json();
-        throw new Error(errorData.detail || 'Failed to create payment session');
+      if (!resOrder.ok) {
+        const errorData = await resOrder.json();
+        throw new Error(errorData.detail || 'Failed to create payment order');
       }
 
-      const sessionData = await resSession.json();
+      const orderData = await resOrder.json();
       
-      // 2. Redirect to Dodo Checkout
-      if (sessionData.data?.checkout_url) {
-        window.location.href = sessionData.data.checkout_url;
-      } else {
-        throw new Error('Dodo Checkout URL not found in response');
-      }
+      // 2. Open Razorpay Checkout
+      const options = {
+        key: orderData.key_id,
+        amount: orderData.amount * 100,
+        currency: orderData.currency,
+        name: "StarterScope",
+        description: `${tier.name} Plan - ${billingCycle}`,
+        order_id: orderData.order_id,
+        handler: async (response: any) => {
+          // 3. Verify Payment
+          try {
+            const resVerify = await fetch(`${apiUrl}/api/payments/razorpay/verify`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+                user_email: session?.user?.email,
+                plan_id: tier.id,
+                billing_cycle: billingCycle
+              })
+            });
+
+            if (resVerify.ok) {
+              const verifyData = await resVerify.json();
+              setPaymentDetails(verifyData);
+              setShowSuccessModal(true);
+              addNotification({
+                type: 'payment',
+                title: 'Payment Successful',
+                message: `You have successfully subscribed to the ${tier.name} plan!`,
+                priority: 'high'
+              });
+            } else {
+              const errorData = await resVerify.json();
+              throw new Error(errorData.detail || 'Payment verification failed');
+            }
+          } catch (err: any) {
+            addNotification({
+              type: 'payment',
+              title: 'Verification Failed',
+              message: err.message || 'Payment verification failed. Please contact support.',
+              priority: 'high'
+            });
+          }
+        },
+        prefill: {
+          name: session?.user?.name || '',
+          email: session?.user?.email || ''
+        },
+        theme: {
+          color: "#10b981"
+        }
+      };
+
+      const rzp = new (window as any).Razorpay(options);
+      rzp.open();
 
     } catch (error: any) {
-      console.error('Dodo Payment error:', error);
+      console.error('Razorpay Error:', error);
       addNotification({
         type: 'payment',
         title: 'Payment Error',
