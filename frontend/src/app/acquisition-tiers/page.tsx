@@ -19,6 +19,7 @@ export default function AcquisitionTiers() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { resolvedTheme } = useTheme();
+  const { addNotification } = useNotifications();
   
   const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("yearly");
   const [loading, setLoading] = useState<string | null>(null);
@@ -44,7 +45,7 @@ export default function AcquisitionTiers() {
           product_id: tier.id === 'professional' ? (billingCycle === 'yearly' ? 'p_5' : 'p_4') : (billingCycle === 'yearly' ? 'p_2' : 'p_1'), // Placeholder IDs - User to replace in Dodo Dashboard
           quantity: 1,
           email: session?.user?.email,
-          name: session?.user?.name || email.split('@')[0],
+          name: session?.user?.name || (session?.user?.email?.split('@')[0] || 'User'),
           return_url: `${window.location.origin}/dashboard?payment=success&plan=${tier.id}`
         })
       });
@@ -66,7 +67,7 @@ export default function AcquisitionTiers() {
     } catch (error: any) {
       console.error('Dodo Payment error:', error);
       addNotification({
-        type: 'error',
+        type: 'payment',
         title: 'Payment Error',
         message: error.message || 'Payment initialization failed. Please try again.',
         priority: 'high'
