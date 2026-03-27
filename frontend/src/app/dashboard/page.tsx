@@ -917,12 +917,20 @@ function Dashboard() {
                             </div>
                           </div>
                           
-                          <h2 className="text-3xl sm:text-4xl font-black text-slate-800 tracking-tight mb-4 drop-shadow-lg">
-                            Analyzing Market
+                          <h2 className="text-3xl sm:text-4xl font-black text-slate-800 tracking-tight mb-4 drop-shadow-lg transition-all duration-700">
+                            {loadingProgress < 20 ? "Targeting Market Clusters..." :
+                             loadingProgress < 50 ? "Fetching Live Signals..." :
+                             loadingProgress < 75 ? "Synthesizing Strategic Memo..." :
+                             loadingProgress < 90 ? "Mapping Competitor Gaps..." :
+                             "Finalizing Intelligence Report..."}
                           </h2>
                           
-                          <p className="text-slate-600 text-base font-medium uppercase tracking-wider mb-8 max-w-md drop-shadow-sm">
-                            Finding the best business opportunities for {area}...
+                          <p className="text-slate-600 text-base font-medium uppercase tracking-wider mb-8 max-w-md drop-shadow-sm min-h-[1.5em] transition-all duration-700">
+                            {loadingProgress < 20 ? `Initializing neural probe for ${area.split(',')[0]}...` :
+                             loadingProgress < 50 ? `Extracting deep-web market signals...` :
+                             loadingProgress < 75 ? `Applying RAG (Retrieval-Augmented) synthesis...` :
+                             loadingProgress < 90 ? `Auditing local competitive entities...` :
+                             `Assembling strategic venture roadmap...`}
                           </p>
                           
                           <div className="w-full max-w-lg h-3 bg-slate-200 rounded-full overflow-hidden backdrop-blur-sm border border-slate-300">
