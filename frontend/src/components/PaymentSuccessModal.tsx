@@ -174,7 +174,7 @@ export default function PaymentSuccessModal({ isOpen, onClose, paymentData, isPa
   const PlanIcon = planIcons[currentPlan] || Target;
 
   const content = (
-    <div className={`relative ${isPage ? 'min-h-screen flex items-center justify-center p-4' : 'w-full max-w-sm max-h-[90vh] overflow-y-auto scrollbar-hide'}`}>
+    <div className={`relative ${isPage ? 'min-h-screen flex items-center justify-center p-4' : 'w-full max-w-sm'}`}>
       
       {/* Premium Confetti Animation */}
       <AnimatePresence>

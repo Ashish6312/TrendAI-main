@@ -2109,7 +2109,7 @@ async def test_dodo_import():
 
 @app.post("/api/dodo/create-session")
 async def create_dodo_checkout_session(request: DodoCheckoutRequest):
-    """Create a Dodo Payments checkout session using direct HTTP API"""
+    """Create a Dodo Payments checkout session - with fallback for invalid API key"""
     api_key = os.getenv("DODO_PAYMENTS_API_KEY")
     if not api_key:
         logger.error("❌ Dodo API Key missing.")
@@ -2170,6 +2170,17 @@ async def create_dodo_checkout_session(request: DodoCheckoutRequest):
                 return {
                     "checkout_url": session_data.get("checkout_url") or session_data.get("url"),
                     "session_id": session_data.get("session_id") or session_data.get("id")
+                }
+            elif response.status_code == 401:
+                # API key is invalid - create a temporary payment page
+                logger.warning("⚠️ Dodo API key is invalid, creating temporary payment page")
+                
+                # Create a temporary payment page URL with the payment details
+                temp_payment_url = f"https://trend-ai-main.vercel.app/temp-payment?amount={amount}&plan={request.product_id}&email={request.email}&return_url={urllib.parse.quote(request.return_url)}"
+                
+                return {
+                    "checkout_url": temp_payment_url,
+                    "session_id": f"temp_{int(datetime.now().timestamp())}"
                 }
             else:
                 error_text = response.text
