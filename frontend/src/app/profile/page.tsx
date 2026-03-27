@@ -642,7 +642,7 @@ function ProfilePageContent() {
     const csvRows = [
       headers.join(","),
       ...payments.map(p => [
-        p.dodo_payment_id || p.razorpay_payment_id || p.id,
+        p.dodo_payment_id || p.id,
         new Date(p.payment_date).toLocaleDateString(),
         p.plan_name,
         p.billing_cycle,
@@ -2090,7 +2090,7 @@ function ProfilePageContent() {
                                 setLoadingPayments(true);
                                 const apiUrl = getApiUrl();
                                 // Trigger Cloud Sync (Caching)
-                                await fetch(`${apiUrl}/api/sync-razorpay-payments?email=${encodeURIComponent(session?.user?.email || '')}`);
+                                // Refresh local records directly - legacy Razorpay sync removed
                                 // Fetch local records
                                 await fetchPayments();
                                 addNotification({
@@ -2241,7 +2241,7 @@ function ProfilePageContent() {
                                     whileHover={{ scale: 1.01 }}
                                   >
                                     <td className="py-4 font-mono text-xs text-slate-600 dark:text-slate-300 italic">
-                                      {payment.razorpay_payment_id?.slice(0, 24)}...
+                                      {payment.dodo_payment_id?.slice(0, 24)}...
                                     </td>
                                     <td className="py-4 text-xs font-black text-slate-600 dark:text-slate-400 uppercase tracking-tighter">
                                       {new Date(payment.created_at || payment.payment_date).toLocaleDateString()}
@@ -2299,7 +2299,7 @@ function ProfilePageContent() {
                                   <div className="space-y-1">
                                     <div className="text-[8px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">Invoice ID</div>
                                     <div className="font-mono text-[10px] text-slate-600 dark:text-slate-300">
-                                      {payment.razorpay_payment_id?.slice(0, 16)}...
+                                      {payment.dodo_payment_id?.slice(0, 16)}...
                                     </div>
                                   </div>
                                   <div className={`px-2 py-1 rounded-full text-[8px] font-black uppercase tracking-widest ${

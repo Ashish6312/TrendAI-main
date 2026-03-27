@@ -44,7 +44,7 @@ StarterScope/
 - **Language**: TypeScript
 - **Styling**: Tailwind CSS
 - **Authentication**: NextAuth.js with Google OAuth
-- **Payment**: Razorpay integration
+- **Payment**: Dodo Payments integration (Checkout Sessions)
 - **Deployment**: Vercel
 
 ### Backend
@@ -72,8 +72,10 @@ GOOGLE_CLIENT_ID=your_google_client_id
 GOOGLE_CLIENT_SECRET=your_google_client_secret
 NEXTAUTH_URL=your_frontend_url
 NEXTAUTH_SECRET=your_nextauth_secret
-NEXT_PUBLIC_RAZORPAY_KEY_ID=your_razorpay_key
-RAZORPAY_KEY_SECRET=your_razorpay_secret
+NEXT_PUBLIC_DODO_STARTER_ID=your_dodo_starter_id
+NEXT_PUBLIC_DODO_PROFESSIONAL_ID=your_dodo_professional_id
+DODO_PAYMENTS_API_KEY=your_dodo_api_key
+DODO_WEBHOOK_KEY=your_dodo_webhook_key
 ```
 
 ### Backend (.env)
@@ -82,8 +84,8 @@ DATABASE_URL=your_postgresql_url
 POLLINATION_API_KEY=your_pollination_key
 SERPAPI_API_KEY=your_serpapi_key
 GEMINI_API_KEY=your_gemini_key
-RAZORPAY_KEY_ID=your_razorpay_key
-RAZORPAY_KEY_SECRET=your_razorpay_secret
+DODO_PAYMENTS_API_KEY=your_dodo_api_key
+DODO_WEBHOOK_KEY=your_dodo_webhook_key
 REDDIT_USERNAME=your_reddit_username
 REDDIT_PASSWORD=your_reddit_password
 REDDIT_CLIENT_ID=your_reddit_client_id
@@ -96,7 +98,7 @@ REDDIT_CLIENT_SECRET=your_reddit_client_secret
 - **Business Recommendations**: Receive tailored business suggestions based on market data
 - **Strategic Planning**: Generate detailed business plans and roadmaps
 - **User Authentication**: Secure login with Google OAuth and email/password
-- **Subscription Management**: Tiered pricing with Razorpay integration
+- **Subscription Management**: Tiered pricing with Dodo Payments integration
 - **Location Intelligence**: GPS-based location detection and analysis
 - **Real-time Data**: Integration with multiple APIs for current market data
 

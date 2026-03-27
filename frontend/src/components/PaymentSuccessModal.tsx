@@ -110,9 +110,7 @@ export default function PaymentSuccessModal({ isOpen, onClose, paymentData, isPa
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://trendai-api.onrender.com';
         const payload = {
           user_email: session?.user?.email || "",
-          payment_id: payment_id,
-          dodo_payment_id: payment_id.startsWith('p_') ? payment_id : null,
-          razorpay_payment_id: !payment_id.startsWith('p_') ? payment_id : null,
+          dodo_payment_id: payment_id,
           order_id: order_id,
           amount: parseFloat(amount),
           plan_name: planParam,

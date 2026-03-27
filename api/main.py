@@ -23,6 +23,7 @@ import hashlib
 import json
 from typing import Dict, List, Any, Optional
 import httpx
+from dodopayments import DodoPayments
 
 # ═══════════════════════════════════════════════════
 # WEBSOCKET MANAGER (Real-Time Insight Streaming)
@@ -91,7 +92,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-    expose_headers=["x-rtb-fingerprint-id", "x-razorpay-signature", "x-razorpay-order-id", "Content-Type", "Authorization"],
+    expose_headers=["x-rtb-fingerprint-id", "Content-Type", "Authorization"],
 )
 
 @app.websocket("/ws/analysis")
@@ -130,7 +131,8 @@ def system_health_check():
 
 @app.get("/api/info")
 async def api_info():
-    return {"title": "StarterScope API", "version": "2.1", "status": "operational", "payments": "razorpay" if razorpay_available else "fallback"}
+    payments = "dodo" if dodo_available else "fallback"
+    return {"title": "StarterScope API", "version": "2.2", "status": "operational", "payments": payments}
 
 # --- Map Data Proxy ---
 @app.get("/api/businesses/search")
@@ -221,19 +223,15 @@ async def search_overpass(payload: OverpassQuery):
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Razorpay removed (Total migration to Dodo Payments completed)
+
 try:
-    import razorpay
-    razorpay_available = True
-    RAZORPAY_KEY_ID = os.getenv("RAZORPAY_KEY_ID", "rzp_test_placeholder")
-    RAZORPAY_KEY_SECRET = os.getenv("RAZORPAY_KEY_SECRET", "rzp_test_secret_placeholder")
-    razor_client = razorpay.Client(auth=(RAZORPAY_KEY_ID, RAZORPAY_KEY_SECRET))
-    logger.info("✅ Razorpay client initialized")
+    from dodopayments import DodoPayments
+    dodo_available = bool(os.getenv("DODO_PAYMENTS_API_KEY"))
+    logger.info(f"✅ Dodo Payments status: {'available' if dodo_available else 'missing key'}")
 except ImportError:
-    razorpay_available = False
-    logger.warning("⚠️ Razorpay SDK not found")
-except Exception as e:
-    razorpay_available = False
-    logger.error(f"⚠️ Razorpay initialization failed: {e}")
+    dodo_available = False
+    logger.warning("⚠️ Dodo Payments SDK not found")
 
 # Global variables for optional imports
 db_available = False
@@ -487,8 +485,6 @@ class SubscriptionCreate(BaseModel):
     currency: str = "INR"
     max_analyses: int = 5
     features: Dict
-    razorpay_subscription_id: Optional[str] = None
-    razorpay_customer_id: Optional[str] = None
     dodo_subscription_id: Optional[str] = None
     dodo_customer_id: Optional[str] = None
 
@@ -510,9 +506,6 @@ class PaymentCreate(BaseModel):
     user_email: str
     subscription_id: Optional[int] = None
     amount: float
-    razorpay_payment_id: Optional[str] = None
-    razorpay_order_id: Optional[str] = None
-    razorpay_signature: Optional[str] = None
     dodo_payment_id: Optional[str] = None
 
     status: str = "success"
@@ -533,6 +526,8 @@ class DodoCheckoutRequest(BaseModel):
     email: str
     name: str
     return_url: str
+    amount: Optional[int] = None
+    billing_cycle: Optional[str] = "yearly"
 
 class DodoPaymentConfirmation(BaseModel):
     payment_id: str
@@ -593,7 +588,7 @@ def get_synced_subscription(db: Session, email: str):
         
     latest_payment = query.order_by(models.PaymentHistory.created_at.desc()).first()
     if latest_payment:
-        logger.info(f"✅ Found latest payment: {latest_payment.razorpay_payment_id} (Plan: {latest_payment.plan_name})")
+        logger.info(f"✅ Found latest payment: {latest_payment.dodo_payment_id} (Plan: {latest_payment.plan_name})")
     else:
         logger.info(f"ℹ️ No payment history found for {email_normalized}")
     
@@ -1656,7 +1651,7 @@ def create_subscription(subscription: SubscriptionCreate, db: Session = Depends(
             user_rec = models.User(
                 email=email_normalized,
                 name=email_normalized.split('@')[0],
-                auth_provider="razorpay"
+                auth_provider="dodo"
             )
             db.add(user_rec)
             db.commit()
@@ -1674,8 +1669,7 @@ def create_subscription(subscription: SubscriptionCreate, db: Session = Depends(
             existing.currency = subscription.currency
             existing.max_analyses = subscription.max_analyses
             existing.features = subscription.features
-            existing.razorpay_subscription_id = subscription.razorpay_subscription_id
-            existing.razorpay_customer_id = subscription.razorpay_customer_id
+            # Razorpay sync removed
             
             # Extend/Refresh subscription end date
             existing.subscription_end = datetime.now() + (timedelta(days=365) if subscription.billing_cycle == "yearly" else timedelta(days=30))
@@ -1700,8 +1694,7 @@ def create_subscription(subscription: SubscriptionCreate, db: Session = Depends(
             max_analyses=subscription.max_analyses,
             features=subscription.features,
             subscription_end=sub_end,
-            razorpay_subscription_id=subscription.razorpay_subscription_id,
-            razorpay_customer_id=subscription.razorpay_customer_id
+            # Razorpay sync removed
         )
         db.add(db_subscription)
         db.commit()
@@ -1734,7 +1727,7 @@ def create_subscription(subscription: SubscriptionCreate, db: Session = Depends(
 
 @app.post("/api/payments")
 def create_payment_record(payment: PaymentCreate, db: Session = Depends(get_db)):
-    """Create payment record with enhanced error handling"""
+    """Create payment record with enhanced error handling (Dodo focused)"""
     from sqlalchemy import func
     import traceback
     
@@ -1745,10 +1738,8 @@ def create_payment_record(payment: PaymentCreate, db: Session = Depends(get_db))
         logger.info(f"DEBUG: Creating payment record for {email_normalized} - Amount: {payment.amount}")
         
         # Validate required fields
-        if not payment.razorpay_payment_id:
-            raise HTTPException(status_code=400, detail="razorpay_payment_id is required")
-        if not payment.razorpay_order_id:
-            raise HTTPException(status_code=400, detail="razorpay_order_id is required")
+        if not payment.dodo_payment_id:
+            raise HTTPException(status_code=400, detail="dodo_payment_id is required")
         if not payment.plan_name:
             raise HTTPException(status_code=400, detail="plan_name is required")
         if not payment.billing_cycle:
@@ -1764,7 +1755,7 @@ def create_payment_record(payment: PaymentCreate, db: Session = Depends(get_db))
                 user_rec = models.User(
                     email=email_normalized,
                     name=email_normalized.split('@')[0],
-                    auth_provider="razorpay"
+                    auth_provider="dodo"
                 )
                 db.add(user_rec)
                 db.commit()
@@ -1780,13 +1771,13 @@ def create_payment_record(payment: PaymentCreate, db: Session = Depends(get_db))
 
         try:
             # Check if payment already exists
-            logger.info(f"🔍 Checking for existing payment: {payment.razorpay_payment_id}")
+            logger.info(f"🔍 Checking for existing payment: {payment.dodo_payment_id}")
             existing_payment = db.query(models.PaymentHistory).filter(
-                models.PaymentHistory.razorpay_payment_id == payment.razorpay_payment_id
+                models.PaymentHistory.dodo_payment_id == payment.dodo_payment_id
             ).first()
             
             if existing_payment:
-                logger.info(f"INFO: Payment {payment.razorpay_payment_id} already exists, returning existing")
+                logger.info(f"INFO: Payment {payment.dodo_payment_id} already exists, returning existing")
                 return existing_payment
             
             # Create new payment record
@@ -1801,11 +1792,10 @@ def create_payment_record(payment: PaymentCreate, db: Session = Depends(get_db))
                 subscription_id=payment.subscription_id,
                 amount=payment.amount,
                 currency=payment.currency or "INR",
-                razorpay_payment_id=payment.razorpay_payment_id,
-                razorpay_order_id=payment.razorpay_order_id,
+                dodo_payment_id=payment.dodo_payment_id,
                 status=payment.status,
-                payment_method=payment.payment_method or "razorpay",
-                plan_name=normalized_plan, # Use normalized name here!
+                payment_method=payment.payment_method or "dodo",
+                plan_name=normalized_plan,
                 billing_cycle=payment.billing_cycle
             )
             db.add(db_payment)
@@ -1828,10 +1818,10 @@ def create_payment_record(payment: PaymentCreate, db: Session = Depends(get_db))
             # Check for duplicate key errors
             if any(term in error_msg for term in ["duplicate key", "unique constraint", "already exists"]):
                 existing = db.query(models.PaymentHistory).filter(
-                    models.PaymentHistory.razorpay_payment_id == payment.razorpay_payment_id
+                    models.PaymentHistory.dodo_payment_id == payment.dodo_payment_id
                 ).first()
                 if existing:
-                    logger.info(f"INFO: Returning existing payment record for {payment.razorpay_payment_id}")
+                    logger.info(f"INFO: Returning existing payment record for {payment.dodo_payment_id}")
                     return existing
             
             # Return a more detailed error
@@ -1840,7 +1830,7 @@ def create_payment_record(payment: PaymentCreate, db: Session = Depends(get_db))
                 detail={
                     "error": "Failed to create payment record",
                     "message": str(e),
-                    "payment_id": payment.razorpay_payment_id,
+                    "payment_id": payment.dodo_payment_id,
                     "user_email": email_normalized,
                     "traceback": traceback.format_exc()
                 }
@@ -1876,7 +1866,7 @@ def get_payment_history(user_email: str, limit: int = 50, db: Session = Depends(
             "id": p.id,
             "amount": p.amount,
             "currency": p.currency or "INR",
-            "razorpay_payment_id": p.razorpay_payment_id,
+            "dodo_payment_id": p.dodo_payment_id,
             "status": p.status,
             "plan_name": p.plan_name,
             "billing_cycle": p.billing_cycle,
@@ -1955,7 +1945,7 @@ def download_all_receipts(email: str, db: Session = Depends(get_db)):
             "message": f"Found {len(payments)} receipts",
             "receipts": [
                 {
-                    "id": p.razorpay_payment_id,
+                    "id": p.dodo_payment_id,
                     "amount": p.amount,
                     "date": p.created_at.isoformat(),
                     "plan": p.plan_name
@@ -2049,7 +2039,7 @@ def search_payments_by_email(partial_email: str, db: Session = Depends(get_db)):
                     "plan_name": p.plan_name,
                     "billing_cycle": p.billing_cycle,
                     "payment_date": p.created_at.isoformat() if p.created_at else None,
-                    "razorpay_payment_id": p.razorpay_payment_id,
+                    "dodo_payment_id": p.dodo_payment_id,
                     "payment_method": p.payment_method
                 } for p in payments
             ]
@@ -2060,17 +2050,7 @@ def search_payments_by_email(partial_email: str, db: Session = Depends(get_db)):
 
 
 # --- DEPRECATED: RAZORPAY ENDPOINTS (Migrated to Dodo Payments V6.1) ---
-@app.post("/api/payment-webhook", tags=["DEPRECATED"])
-async def razorpay_webhook_deprecated():
-    raise HTTPException(status_code=410, detail="Razorpay is deprecated. Please use Dodo Payments.")
-
-@app.post("/api/payments/razorpay/order", tags=["DEPRECATED"])
-async def razorpay_order_deprecated():
-    raise HTTPException(status_code=410, detail="Razorpay is deprecated. Please use Dodo Payments.")
-
-@app.post("/api/payments/razorpay/verify", tags=["DEPRECATED"])
-async def razorpay_verify_deprecated():
-    raise HTTPException(status_code=410, detail="Razorpay is deprecated. Please use Dodo Payments.")
+# Razorpay endpoints completely removed (Migration to Dodo Payments V6.1)
 
 @app.get("/api/test-cors")
 async def test_cors_endpoint():
@@ -2109,7 +2089,7 @@ async def test_dodo_import():
 
 @app.post("/api/dodo/create-session")
 async def create_dodo_checkout_session(request: DodoCheckoutRequest):
-    """Create a Dodo Payments checkout session - with fallback for invalid API key"""
+    """Create a Dodo Payments checkout session using official SDK"""
     api_key = os.getenv("DODO_PAYMENTS_API_KEY")
     if not api_key:
         logger.error("❌ Dodo API Key missing.")
@@ -2118,114 +2098,69 @@ async def create_dodo_checkout_session(request: DodoCheckoutRequest):
     try:
         logger.info(f"🔄 Creating Dodo session for {request.email} with product {request.product_id}")
         
-        # Use direct HTTP API call to Dodo Payments
-        import httpx
+        # Determine environment
+        env = "test_mode" if "test" in api_key.lower() or os.getenv("DODO_ENVIRONMENT") == "test" else "live_mode"
         
-        headers = {
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json"
-        }
+        client = DodoPayments(
+            bearer_token=api_key,
+            environment=env
+        )
         
-        # Create a simple product on-the-fly instead of using pre-created product IDs
-        amount_map = {
-            "prod_starter_199": 199,
-            "prod_professional_499": 499,
-            "starter": 199,
-            "professional": 499
-        }
-        
-        amount = amount_map.get(request.product_id, 199)
-        
-        # Try multiple payload formats for Dodo API
-        payloads_to_try = [
-            # Format 1: Direct amount
-            {
-                "amount": amount * 100,  # Convert to cents/paise
-                "currency": "INR",
-                "customer": {
-                    "email": request.email,
-                    "name": request.name
-                },
-                "return_url": request.return_url,
-                "metadata": {
-                    "plan": request.product_id,
-                    "quantity": request.quantity
+        # Create session using official SDK
+        session = client.checkout_sessions.create(
+            product_cart=[
+                {
+                    "product_id": request.product_id,
+                    "quantity": request.quantity or 1
                 }
-            },
-            # Format 2: Product cart format
-            {
-                "product_cart": [{"product_id": request.product_id, "quantity": request.quantity}],
-                "customer": {"email": request.email, "name": request.name},
-                "return_url": request.return_url,
-            },
-            # Format 3: Simple format
-            {
-                "amount": amount,
-                "currency": "INR",
+            ],
+            customer={
                 "email": request.email,
-                "name": request.name,
-                "return_url": request.return_url,
-                "product": request.product_id
-            }
-        ]
+                "name": request.name
+            },
+            return_url=request.return_url
+        )
         
-        async with httpx.AsyncClient() as client:
-            # Try different API endpoint structures for Dodo
-            endpoints_to_try = [
-                "https://api.dodopayments.com/v1/checkout-sessions",
-                "https://api.dodopayments.com/checkout-sessions", 
-                "https://dodopayments.com/api/v1/checkout-sessions",
-                "https://api.dodo.dev/v1/checkout-sessions"
-            ]
-            
-            for endpoint in endpoints_to_try:
-                for payload_idx, payload in enumerate(payloads_to_try):
-                    try:
-                        logger.info(f"🔄 Trying endpoint {endpoint} with payload format {payload_idx + 1}: {payload}")
-                        
-                        response = await client.post(
-                            endpoint,
-                            headers=headers,
-                            json=payload,
-                            timeout=30.0
-                        )
-                        
-                        logger.info(f"🔄 {endpoint} (format {payload_idx + 1}): {response.status_code}")
-                        
-                        if response.status_code == 200 or response.status_code == 201:
-                            session_data = response.json()
-                            logger.info(f"✅ Dodo session created via {endpoint}: {session_data}")
-                            return {
-                                "checkout_url": session_data.get("checkout_url") or session_data.get("url"),
-                                "session_id": session_data.get("session_id") or session_data.get("id")
-                            }
-                        elif response.status_code == 401:
-                            logger.warning(f"⚠️ 401 Unauthorized for {endpoint} (format {payload_idx + 1})")
-                            continue  # Try next format/endpoint
-                        else:
-                            logger.warning(f"⚠️ {endpoint} (format {payload_idx + 1}) returned {response.status_code}: {response.text}")
-                            continue  # Try next format/endpoint
-                            
-                    except Exception as e:
-                        logger.warning(f"⚠️ Failed {endpoint} (format {payload_idx + 1}): {e}")
-                        continue  # Try next format/endpoint
-            
-            # If all endpoints failed, create temporary payment page
-            logger.warning("⚠️ All Dodo endpoints failed, creating temporary payment page")
-            temp_payment_url = f"https://trend-ai-main.vercel.app/temp-payment?amount={amount}&plan={request.product_id}&email={request.email}&return_url={urllib.parse.quote(request.return_url)}"
-            
-            return {
-                "checkout_url": temp_payment_url,
-                "session_id": f"temp_{int(datetime.now().timestamp())}"
-            }
+        logger.info(f"✅ Dodo session created: {session.id}")
+        return {
+            "checkout_url": session.checkout_url,
+            "session_id": session.id
+        }
                 
-    except httpx.RequestError as e:
-        logger.error(f"❌ Dodo HTTP request failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Network error connecting to Dodo: {str(e)}")
     except Exception as e:
-        logger.error(f"❌ Dodo Request failed: {e}")
+        logger.error(f"❌ Dodo SDK Request failed: {e}")
         logger.error(f"❌ Full traceback: {traceback.format_exc()}")
-        raise HTTPException(status_code=500, detail=f"Dodo session creation failed: {str(e)}")
+        
+        # Fallback to manual HTTP for compatibility if SDK fails 
+        # (Though SDK is preferred, keeping fallback for production stability)
+        try:
+            headers = {
+                "Authorization": f"Bearer {api_key}",
+                "Content-Type": "application/json"
+            }
+            payload = {
+                "product_cart": [{"product_id": request.product_id, "quantity": request.quantity or 1}],
+                "customer": {"email": request.email, "name": request.name},
+                "return_url": request.return_url
+            }
+            
+            async with httpx.AsyncClient() as h_client:
+                # Try test then live
+                for base_url in ["https://test.dodopayments.com", "https://api.dodopayments.com"]:
+                    try:
+                        response = await h_client.post(f"{base_url}/checkouts", headers=headers, json=payload, timeout=10.0)
+                        if response.status_code in [200, 201]:
+                            data = response.json()
+                            return {
+                                "checkout_url": data.get("checkout_url"),
+                                "session_id": data.get("id")
+                            }
+                    except:
+                        continue
+        except:
+            pass
+            
+        raise HTTPException(status_code=500, detail=f"Failed to create checkout session: {str(e)}")
 
 @app.post("/api/dodo/webhook")
 @app.post("/dodo/webhook")
@@ -2292,37 +2227,54 @@ async def process_dodo_payload(payload: Dict[str, Any]):
         customer = data.get("customer", {})
         email = (customer.get("email") or "").lower().strip()
         
-        # Extract metadata if available, or derive from product/amount
-        # Dodo doesn't always send plan name in top level, so we map product_id or amount
-        amount = float(data.get("amount", 0)) / 100 # Dodo amount is in cents
+        # Amount in Dodo is in cents
+        amount_cents = data.get("total_amount") or data.get("amount") or 0
+        amount = float(amount_cents) / 100
         
-        plan_name = "Professional" if amount > 300 else "Starter"
+        # Determine plan from product_id or amount
+        product_cart = data.get("product_cart", [])
+        product_id = product_cart[0].get("product_id") if product_cart else None
+        
+        if product_id:
+            if "professional" in product_id.lower():
+                plan_name = "Professional"
+            elif "starter" in product_id.lower():
+                plan_name = "Starter"
+            else:
+                plan_name = "Starter" # Fallback
+        else:
+            plan_name = "Professional" if amount > 300 else "Starter"
+            
         mapped_plan = normalize_plan_name(plan_name)
         
         from database import SessionLocal
         db = SessionLocal()
         try:
             # 1. Update Payment History
-            payment_record = models.PaymentHistory(
-                user_email=email,
-                dodo_payment_id=payment_id,
-                amount=amount,
-                currency="INR",
-                status="success",
-                plan_name=plan_name,
-                billing_cycle="monthly", # Default
-                payment_method="dodo"
-            )
-            db.add(payment_record)
+            # Check if this payment already recorded
+            existing = db.query(models.PaymentHistory).filter(models.PaymentHistory.dodo_payment_id == payment_id).first()
+            if not existing:
+                payment_record = models.PaymentHistory(
+                    user_email=email,
+                    dodo_payment_id=payment_id,
+                    amount=amount,
+                    currency=data.get("currency") or "INR",
+                    status="success",
+                    plan_name=plan_name,
+                    billing_cycle="monthly", # Default
+                    payment_method="dodo"
+                )
+                db.add(payment_record)
             
             # 2. Update Subscription
+            # Use SubscriptionCreate model if available
             subscription_data = SubscriptionCreate(
                 user_email=email,
                 plan_name=mapped_plan,
                 plan_display_name=plan_name,
                 billing_cycle="monthly",
                 price=amount,
-                currency="INR",
+                currency=data.get("currency") or "INR",
                 max_analyses=-1 if mapped_plan == 'professional' else 100,
                 features={}
             )
@@ -2330,12 +2282,16 @@ async def process_dodo_payload(payload: Dict[str, Any]):
             
             db.commit()
             invalidate_user_cache(email)
-            logger.info(f"✅ Dodo Subscription Activated: {email} | Plan: {plan_name}")
+            logger.info(f"✅ Dodo Subscription Activated via Webhook: {email} | Plan: {plan_name}")
             return {"status": "success"}
+        except Exception as e:
+            logger.error(f"❌ Error processing Dodo webhook: {e}")
+            db.rollback()
+            return {"status": "error", "message": str(e)}
         finally:
             db.close()
             
-    return {"status": "ignored", "message": "Event type not handled"}
+    return {"status": "ignored", "message": f"Event type {event_type} not handled"}
 
 @app.post("/api/dodo/confirm-payment")
 async def confirm_dodo_payment(confirmation: DodoPaymentConfirmation, db: Session = Depends(get_db)):
@@ -2402,14 +2358,14 @@ async def confirm_dodo_payment(confirmation: DodoPaymentConfirmation, db: Sessio
 
 @app.post("/api/process-payment")
 async def process_payment_immediately(request: Request, db: Session = Depends(get_db)):
-    """Process payment immediately after successful Razorpay transaction"""
+    """Process payment immediately after successful transaction"""
     try:
         body = await request.json()
         logger.info(f"🔔 Processing immediate payment: {body}")
         
         user_email = body.get('user_email')
-        payment_id = body.get('dodo_payment_id') or body.get('razorpay_payment_id') or body.get('payment_id')
-        order_id = body.get('razorpay_order_id') or body.get('order_id') or f"order_{payment_id}"
+        payment_id = body.get('dodo_payment_id') or body.get('payment_id')
+        order_id = body.get('order_id') or f"order_{payment_id}"
         amount = body.get('amount')
         plan_name = body.get('plan_name')
         billing_cycle = body.get('billing_cycle', 'yearly')
@@ -2421,13 +2377,11 @@ async def process_payment_immediately(request: Request, db: Session = Depends(ge
         payment_data = PaymentCreate(
             user_email=user_email,
             amount=float(amount),
-            razorpay_payment_id=payment_id if not str(payment_id).startswith('p_') else None,
-            dodo_payment_id=payment_id if str(payment_id).startswith('p_') else None,
-            razorpay_order_id=order_id,
+            dodo_payment_id=payment_id,
             status="success",
             plan_name=plan_name,
             billing_cycle=billing_cycle,
-            payment_method="dodo" if str(payment_id).startswith('p_') else "razorpay"
+            payment_method="dodo"
         )
         
         payment_record = create_payment_record(payment_data, db)
@@ -2535,7 +2489,7 @@ def get_user_profile(email: str, db: Session = Depends(get_db)):
                 "id": payment.id,
                 "amount": payment.amount,
                 "currency": payment.currency or "INR",
-                "razorpay_payment_id": payment.razorpay_payment_id,
+                "dodo_payment_id": payment.dodo_payment_id,
                 "status": payment.status,
                 "plan_name": payment.plan_name,
                 "billing_cycle": payment.billing_cycle,
@@ -2547,111 +2501,7 @@ def get_user_profile(email: str, db: Session = Depends(get_db)):
     }
 
 
-@app.get("/api/system/all-payments-debug")
-def debug_all_payments(db: Session = Depends(get_db)):
-    """TEMPORARY DEBUG - List all payments in DB to find mismatches"""
-    payments = db.query(models.PaymentHistory).all()
-    return [{
-        "id": p.id,
-        "user_email": p.user_email,
-        "plan_name": p.plan_name,
-        "amount": p.amount,
-        "status": p.status,
-        "created_at": p.created_at
-    } for p in payments]
-
-@app.get("/api/sync-razorpay-payments")
-async def sync_razorpay_payments(email: str):
-    """Fetch recent payments from Razorpay and ensure they are in our DB.
-    Opens its own DB session to avoid Depends(get_db) failure when DB isn't loaded."""
-    import httpx
-    import base64
-    
-    if not db_available:
-        return {"status": "error", "message": "Database not available", "synced_count": 0}
-    
-    email_normalized = email.lower().strip()
-    key_id = os.getenv("RAZORPAY_KEY_ID")
-    key_secret = os.getenv("RAZORPAY_KEY_SECRET")
-    
-    if not key_id or not key_secret:
-        return {"status": "error", "message": "Razorpay credentials not configured", "synced_count": 0}
-    
-    # Open our own DB session
-    from database import SessionLocal
-    db = SessionLocal()
-    synced_count = 0
-    
-    try:
-        auth_str = f"{key_id}:{key_secret}"
-        encoded_auth = base64.b64encode(auth_str.encode()).decode()
-        
-        async with httpx.AsyncClient(timeout=15.0) as client:
-            response = await client.get(
-                "https://api.razorpay.com/v1/payments?count=50",
-                headers={"Authorization": f"Basic {encoded_auth}"}
-            )
-            
-            if response.status_code != 200:
-                logger.error(f"Razorpay API error: {response.status_code} {response.text[:200]}")
-                return {"status": "error", "message": f"Razorpay API returned {response.status_code}", "synced_count": 0}
-            
-            data = response.json()
-            items = data.get('items', [])
-            logger.info(f"📡 Razorpay returned {len(items)} payments to check for {email_normalized}")
-            
-            synced_count = 0
-            for item in items:
-                notes = item.get('notes', {})
-                if isinstance(notes, list):
-                    notes = {}  # Razorpay occasionally returns [] instead of {}
-                
-                payment_email = notes.get('email', '').lower().strip()
-                if not payment_email:
-                    payment_email = item.get('email', '').lower().strip()
-                
-                if payment_email == email_normalized and item.get('status') == 'captured':
-                    p_id = item.get('id')
-                    existing = db.query(models.PaymentHistory).filter(
-                        models.PaymentHistory.razorpay_payment_id == p_id
-                    ).first()
-                    
-                    if not existing:
-                        logger.info(f"🔄 Backfilling payment {p_id} for {email_normalized}")
-                        plan_name = notes.get('plan', notes.get('plan_name', 'Starter'))
-                        billing_cycle = notes.get('billing', notes.get('billing_cycle', 'monthly'))
-                        amount_paise = item.get('amount', 0)
-                        amount_inr = float(amount_paise) / 100
-                        
-                        payment_data = PaymentCreate(
-                            user_email=email_normalized,
-                            amount=amount_inr,
-                            razorpay_payment_id=p_id,
-                            razorpay_order_id=item.get('order_id', f"order_{p_id}"),
-                            status="success",
-                            plan_name=plan_name,
-                            billing_cycle=billing_cycle,
-                            payment_method=item.get('method', 'razorpay')
-                        )
-                        create_payment_record(payment_data, db)
-                        synced_count += 1
-            
-            if synced_count > 0:
-                invalidate_user_cache(email_normalized)
-            
-            return {
-                "status": "success",
-                "message": f"Checked {len(items)} payments, synchronized {synced_count} missing records",
-                "synced_count": synced_count
-            }
-            
-    except Exception as e:
-        logger.error(f"Sync error for {email_normalized}: {e}\n{traceback.format_exc()}")
-        return {"status": "error", "message": str(e), "synced_count": 0}
-    finally:
-        db.close()
-
-
+# Legacy Razorpay synchronization and debug endpoints removed.
 
 @app.post("/api/refresh-user-plan/{email}")
 def refresh_user_plan(email: str, db: Session = Depends(get_db)):
@@ -2862,142 +2712,7 @@ def update_user_location(email: str, location_data: dict, db: Session = Depends(
     }
 
 
-# --- Razorpay Integration Endpoints ---
-class RazorpayOrderRequest(BaseModel):
-    plan_id: str
-    billing_cycle: str
-    user_email: str
-
-class RazorpayVerifyRequest(BaseModel):
-    razorpay_order_id: str
-    razorpay_payment_id: str
-    razorpay_signature: str
-    user_email: str
-    plan_id: str
-    billing_cycle: str
-
-@app.post("/api/payments/razorpay/order")
-async def create_razorpay_order(request: RazorpayOrderRequest, db: Session = Depends(get_db)):
-    # Dynamically re-read keys to avoid stale placeholder issues in server environments
-    curr_key_id = os.getenv("RAZORPAY_KEY_ID", "rzp_test_placeholder").strip()
-    curr_key_secret = os.getenv("RAZORPAY_KEY_SECRET", "rzp_test_secret").strip()
-    
-    # Initialize a clean client for this request to ensure correct auth
-    temp_client = razorpay.Client(auth=(curr_key_id, curr_key_secret))
-    
-    # Unified Pricing Source of Truth (Must match frontend)
-    prices = {
-        "starter": {"monthly": 199, "yearly": 1799},
-        "professional": {"monthly": 499, "yearly": 4499}
-    }
-    
-    plan_id = request.plan_id.lower()
-    cycle = request.billing_cycle.lower()
-    
-    if plan_id not in prices or cycle not in prices[plan_id]:
-        raise HTTPException(status_code=400, detail="Invalid plan or billing cycle selection")
-    
-    amount = prices[plan_id][cycle]
-    
-    # Razorpay expects amount in paise (multiply by 100)
-    order_data = {
-        "amount": int(amount * 100),
-        "currency": "INR",
-        "payment_capture": 1,
-        "notes": {
-            "user_email": request.user_email,
-            "plan_id": plan_id,
-            "billing_cycle": cycle
-        }
-    }
-    
-    try:
-        # Robust Logging: Masked keys to verify reload
-        masked_id = f"{curr_key_id[:6]}...{curr_key_id[-4:]}" if len(curr_key_id) > 10 else "INVALID_ID"
-        logger.info(f"🔍 Initializing Razorpay Checkout with Key ID: {masked_id} (len: {len(curr_key_id)})")
-        
-        order = temp_client.order.create(data=order_data)
-        logger.info(f"✅ Created Razorpay Order {order['id']} for {request.user_email}")
-        return {
-            "order_id": order["id"],
-            "amount": amount,
-            "currency": order["currency"],
-            "key_id": curr_key_id
-        }
-    except Exception as e:
-        error_msg = str(e)
-        logger.error(f"❌ Razorpay Order Generation Failed using Key ID {masked_id}: {error_msg}")
-        raise HTTPException(
-            status_code=500, 
-            detail=f"Payment gateway communication failed: {error_msg}. (Attempted with Key ID: {masked_id}). Please check your Render/Vercel ENV settings."
-        )
-
-@app.post("/api/payments/razorpay/verify")
-async def verify_razorpay_payment(request: RazorpayVerifyRequest, db: Session = Depends(get_db)):
-    """Verify Razorpay payment signature and activate subscription"""
-    if not razorpay_available:
-        raise HTTPException(status_code=503, detail="Razorpay integration is currently offline")
-    
-    try:
-        # Dynamically re-read keys for verification
-        curr_key_id = os.getenv("RAZORPAY_KEY_ID", "rzp_test_placeholder")
-        curr_key_secret = os.getenv("RAZORPAY_KEY_SECRET", "rzp_test_secret")
-        temp_client = razorpay.Client(auth=(curr_key_id, curr_key_secret))
-
-        # Verify signature with SDK
-        params_dict = {
-            'razorpay_order_id': request.razorpay_order_id,
-            'razorpay_payment_id': request.razorpay_payment_id,
-            'razorpay_signature': request.razorpay_signature
-        }
-        
-        temp_client.utility.verify_payment_signature(params_dict)
-        
-        # Identity reconciliation
-        email = request.user_email.lower().strip()
-        user = db.query(models.User).filter(func.lower(models.User.email) == email).first()
-        
-        # Pricing reconciliation (Source of truth)
-        prices = {
-            "starter": {"monthly": 199, "yearly": 1799},
-            "professional": {"monthly": 499, "yearly": 4499}
-        }
-        amount = prices.get(request.plan_id.lower(), {}).get(request.billing_cycle.lower(), 0)
-        
-        # Atomically record payment success
-        payment_record = models.PaymentHistory(
-            user_id=user.id if user else None,
-            user_email=email,
-            razorpay_payment_id=request.razorpay_payment_id,
-            razorpay_order_id=request.razorpay_order_id,
-            amount=amount,
-            currency="INR",
-            status="success",
-            plan_name=request.plan_id.capitalize(),
-            billing_cycle=request.billing_cycle,
-            payment_method="razorpay"
-        )
-        
-        db.add(payment_record)
-        db.commit()
-        db.refresh(payment_record)
-        
-        # System-wide synchronization
-        invalidate_user_cache(email)
-        get_synced_subscription(db, email)
-        
-        logger.info(f"💰 Payment Verified: {request.razorpay_payment_id} | User: {email} | Plan: {request.plan_id}")
-        return {"status": "success", "message": "Subscription activated successfully"}
-        
-    except Exception as e:
-        error_msg = str(e)
-        curr_key_id = os.getenv("RAZORPAY_KEY_ID", "rzp_test_placeholder").strip()
-        masked_id = f"{curr_key_id[:6]}...{curr_key_id[-4:]}" if len(curr_key_id) > 10 else "INVALID_ID"
-        logger.error(f"❌ Razorpay Verification Failure using Key ID {masked_id}: {error_msg}")
-        raise HTTPException(
-            status_code=400, 
-            detail=f"Payment verification failed: {error_msg}. (Key ID used: {masked_id}). Check your dashboard credentials."
-        )
+# Razorpay legacy endpoints removed as part of full migration to Dodo Payments.
 
 
 # Vercel handler

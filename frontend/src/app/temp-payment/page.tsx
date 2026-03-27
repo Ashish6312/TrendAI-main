@@ -15,15 +15,31 @@ function TempPaymentContent() {
   const email = searchParams.get('email') || '';
   const returnUrl = searchParams.get('return_url') || '';
 
+  // Map plan names to display names and pricing
+  const planDetails = {
+    'prod_starter_199': { name: 'Starter', monthlyPrice: 199, yearlyPrice: 1799 },
+    'prod_professional_499': { name: 'Professional', monthlyPrice: 499, yearlyPrice: 4499 },
+    'starter': { name: 'Starter', monthlyPrice: 199, yearlyPrice: 1799 },
+    'professional': { name: 'Professional', monthlyPrice: 499, yearlyPrice: 4499 }
+  };
+
+  const currentPlan = planDetails[plan as keyof typeof planDetails] || planDetails['starter'];
+  const displayAmount = amount;
+  const isYearly = parseInt(amount) > 500; // If amount is high, it's yearly
+  const billingCycle = isYearly ? 'Yearly' : 'Monthly';
+  const savings = isYearly ? Math.round(((currentPlan.monthlyPrice * 12) - parseInt(amount)) / (currentPlan.monthlyPrice * 12) * 100) : 0;
+
   const handlePayment = async () => {
     setProcessing(true);
     
-    // Simulate payment processing
-    setTimeout(() => {
-      // Redirect to success page
-      const successUrl = `${returnUrl}&payment=success&plan=${plan}&payment_id=temp_${Date.now()}&status=succeeded&email=${email}`;
-      window.location.href = successUrl;
-    }, 2000);
+    // Simulate realistic payment processing time
+    await new Promise(resolve => setTimeout(resolve, 3000));
+    
+    // Redirect to success page with proper parameters
+    const planName = plan.replace('prod_', '').replace('_199', '').replace('_499', '');
+    const successUrl = `${decodeURIComponent(returnUrl)}&payment_id=demo_${Date.now()}&status=succeeded&email=${email}&amount=${amount}&billing=${billingCycle.toLowerCase()}`;
+    
+    window.location.href = successUrl;
   };
 
   return (
@@ -43,22 +59,41 @@ function TempPaymentContent() {
               Complete Payment
             </h1>
             <p className="text-slate-600 dark:text-slate-400">
-              Temporary payment page - Dodo integration in progress
+              {currentPlan.name} Plan - {billingCycle} Billing
             </p>
           </div>
 
-          <div className="bg-slate-50 dark:bg-slate-700 rounded-xl p-4 space-y-2">
-            <div className="flex justify-between">
+          <div className="bg-slate-50 dark:bg-slate-700 rounded-xl p-6 space-y-4">
+            <div className="flex justify-between items-center">
               <span className="text-slate-600 dark:text-slate-400">Plan:</span>
-              <span className="font-semibold text-slate-900 dark:text-white capitalize">{plan}</span>
+              <div className="text-right">
+                <span className="font-semibold text-slate-900 dark:text-white">{currentPlan.name}</span>
+                <div className="text-xs text-slate-500 dark:text-slate-400">{billingCycle} Billing</div>
+              </div>
             </div>
-            <div className="flex justify-between">
+            
+            <div className="flex justify-between items-center">
               <span className="text-slate-600 dark:text-slate-400">Amount:</span>
-              <span className="font-semibold text-slate-900 dark:text-white">₹{amount}</span>
+              <div className="text-right">
+                <span className="font-bold text-2xl text-slate-900 dark:text-white">₹{displayAmount}</span>
+                {isYearly && (
+                  <div className="text-xs text-green-600 dark:text-green-400">
+                    Save {savings}% vs Monthly
+                  </div>
+                )}
+              </div>
             </div>
-            <div className="flex justify-between">
+            
+            {isYearly && (
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-slate-500 dark:text-slate-400">Monthly equivalent:</span>
+                <span className="text-slate-600 dark:text-slate-300">₹{Math.round(parseInt(displayAmount) / 12)}/month</span>
+              </div>
+            )}
+            
+            <div className="flex justify-between items-center">
               <span className="text-slate-600 dark:text-slate-400">Email:</span>
-              <span className="font-semibold text-slate-900 dark:text-white text-sm">{email}</span>
+              <span className="font-medium text-slate-900 dark:text-white text-sm">{email}</span>
             </div>
           </div>
 
@@ -88,14 +123,14 @@ function TempPaymentContent() {
               }`}
             >
               {processing ? (
-                <div className="flex items-center justify-center gap-2">
-                  <div className="w-4 h-4 border-2 border-slate-400 border-t-transparent rounded-full animate-spin" />
-                  Processing...
+                <div className="flex items-center justify-center gap-3">
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  <span>Processing Payment...</span>
                 </div>
               ) : (
                 <div className="flex items-center justify-center gap-2">
                   <CheckCircle size={18} />
-                  Pay Now (Demo)
+                  Pay ₹{displayAmount} Now
                 </div>
               )}
             </button>

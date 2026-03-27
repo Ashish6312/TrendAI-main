@@ -97,6 +97,9 @@ function AcquisitionTiersContent() {
         returnUrl: `${window.location.origin}/acquisition-tiers?payment=success&plan=${tier.id}`
       });
 
+      // Calculate correct amount based on billing cycle
+      const amount = billingCycle === 'monthly' ? tier.monthPrice : tier.yearPrice;
+
       // Add timeout to prevent hanging requests
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
@@ -109,7 +112,9 @@ function AcquisitionTiersContent() {
           quantity: 1,
           email: session.user.email,
           name: session.user.name || 'TrendAI Customer',
-          return_url: `${window.location.origin}/acquisition-tiers?payment=success&plan=${tier.id}&checkout_id=`
+          return_url: `${window.location.origin}/acquisition-tiers?payment=success&plan=${tier.id}&checkout_id=`,
+          amount: amount,
+          billing_cycle: billingCycle
         }),
         signal: controller.signal
       });

@@ -7,23 +7,8 @@ export const API_CONFIG = {
 };
 
 export const getApiUrl = () => {
-  // Always prioritize explicitly set environment variable first
-  if (process.env.NEXT_PUBLIC_API_URL) {
-    return process.env.NEXT_PUBLIC_API_URL;
-  }
-  
-  const isLocalhost = typeof window !== 'undefined' && 
-    (window.location.hostname === 'localhost' || 
-     window.location.hostname === '127.0.0.1' || 
-     window.location.hostname.startsWith('192.168.'));
-
-  if (isLocalhost) {
-    // Only use localhost if no production URL is set
-    return 'http://127.0.0.1:8000';
-  }
-  
-  // Fallback to Render for production
-  return 'https://trendai-api.onrender.com';
+  // Use localhost for development
+  return 'http://127.0.0.1:8000';
 };
 
 

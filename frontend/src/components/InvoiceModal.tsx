@@ -11,7 +11,7 @@ interface InvoiceModalProps {
   onClose: () => void;
   payment: {
     id: string;
-    razorpay_payment_id: string;
+    dodo_payment_id: string;
     amount: string | number;
     currency: string;
     plan_name: string;
@@ -111,7 +111,7 @@ export default function InvoiceModal({ isOpen, onClose, payment, userData }: Inv
       const imgHeight = (canvas.height * pdfWidth) / canvas.width;
       
       pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, imgHeight, undefined, 'FAST');
-      pdf.save(`StarterScope-Receipt-${payment.razorpay_payment_id || 'DEMO'}.pdf`);
+      pdf.save(`StarterScope-Receipt-${payment.dodo_payment_id || 'DEMO'}.pdf`);
     } catch (error) {
       console.error("PDF generation failed:", error);
       window.print();
@@ -161,7 +161,7 @@ export default function InvoiceModal({ isOpen, onClose, payment, userData }: Inv
           <div className="sticky top-0 z-20 p-4 sm:p-6 border-b border-white/5 bg-slate-950/80 backdrop-blur-xl flex items-center justify-between">
             <div className="flex flex-col">
               <span className={`text-[10px] font-black uppercase tracking-[0.3em] ${planTheme.text} mb-0.5`}>Payment Document</span>
-              <h2 className="text-white font-black text-sm italic tracking-tight">Receipt #{payment.razorpay_payment_id?.slice(-8).toUpperCase() || 'DEMO'}</h2>
+              <h2 className="text-white font-black text-sm italic tracking-tight">Receipt #{payment.dodo_payment_id?.slice(-8).toUpperCase() || 'DEMO'}</h2>
             </div>
 
             <div className="flex items-center gap-2 sm:gap-4">
@@ -237,7 +237,7 @@ export default function InvoiceModal({ isOpen, onClose, payment, userData }: Inv
                     </div>
                     <div className="pt-2">
                       <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 block">Transaction ID</span>
-                      <p className={`font-mono text-xs font-bold ${planTheme.text}`}>{payment.razorpay_payment_id?.toUpperCase() || 'PROV-INTEL-2024'}</p>
+                      <p className={`font-mono text-xs font-bold ${planTheme.text}`}>{payment.dodo_payment_id?.toUpperCase() || 'PROV-INTEL-2024'}</p>
                     </div>
                   </div>
                 </div>

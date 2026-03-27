@@ -57,8 +57,6 @@ class UserSubscription(Base):
     features = Column(JSON)  # Store available features
     subscription_start = Column(DateTime(timezone=True), server_default=func.now())
     subscription_end = Column(DateTime(timezone=True), nullable=True)
-    razorpay_subscription_id = Column(String, nullable=True)
-    razorpay_customer_id = Column(String, nullable=True)
     dodo_subscription_id = Column(String, nullable=True)
     dodo_customer_id = Column(String, nullable=True)
 
@@ -72,8 +70,6 @@ class PaymentHistory(Base):
     user_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     user_email = Column(String, ForeignKey("users.email"), index=True)
     subscription_id = Column(Integer, ForeignKey("user_subscriptions.id"), nullable=True)
-    razorpay_payment_id = Column(String, unique=True, index=True, nullable=True)
-    razorpay_order_id = Column(String, index=True, nullable=True)
     dodo_payment_id = Column(String, unique=True, index=True, nullable=True)
 
     amount = Column(Float)

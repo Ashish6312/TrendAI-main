@@ -63,7 +63,7 @@ class LocationAPI {
   async detectUserLocation(): Promise<{ city: string; country: string; countryCode: string } | null> {
     try {
       // 1. Try our own backend proxy first (solves CORS and rate limits)
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://trendai-api.onrender.com';
+      const apiUrl = 'http://127.0.0.1:8000';
       const proxyRes = await fetch(`${apiUrl}/api/system/location`);
       if (proxyRes.ok) {
         const data = await proxyRes.json();
@@ -209,7 +209,7 @@ class LocationAPI {
       
       // 1. TRY BACKEND AI RESOLVER FIRST (Source Research + Gemini)
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://trendai-api.onrender.com';
+        const apiUrl = 'http://127.0.0.1:8000';
         const response = await fetch(`${apiUrl}/api/system/resolve-location?q=${encodeURIComponent(locationString)}`);
         
         if (response.ok) {
