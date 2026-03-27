@@ -2108,9 +2108,9 @@ async def create_dodo_checkout_session(request: DodoCheckoutRequest):
         env = "test_mode" if "test" in api_key.lower() or os.getenv("DODO_ENVIRONMENT") == "test" else "live_mode"
         
         # Initialize official Dodo SDK
-        # Some versions use api_key, others bearer_token. We use the keyword found in the current environment's SDK.
+        # The merchant's SDK version uses bearer_token as the keyword
         client = DodoPayments(
-            api_key=api_key,
+            bearer_token=api_key,
             environment=env
         )
         
