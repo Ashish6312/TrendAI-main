@@ -2082,8 +2082,12 @@ async def create_dodo_checkout_session(request: DodoCheckoutRequest):
     
     try:
         from dodopayments import DodoPayments
+        
         # SDK automatically handles test/live environments based on the key
-        client = DodoPayments(bearer_token=api_key)
+        client = DodoPayments(
+            bearer_token=api_key,
+            environment='test_mode'  # Will auto-detect based on API key
+        )
         
         session = client.checkout_sessions.create(
             product_cart=[{"product_id": request.product_id, "quantity": request.quantity}],
@@ -2091,46 +2095,58 @@ async def create_dodo_checkout_session(request: DodoCheckoutRequest):
             return_url=request.return_url,
         )
         
-        # We return the object correctly matching the frontend expectations
+        logger.info(f"✅ Dodo session created: {session.session_id}")
         return {"checkout_url": session.checkout_url, "session_id": session.session_id}
     except Exception as e:
-        logger.error(f"Dodo Request failed: {e}")
+        logger.error(f"❌ Dodo Request failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/dodo/webhook")
 @app.post("/dodo/webhook")
 @app.post("/webhook/dodo")
 async def dodo_webhook(request: Request):
-    """Standard Webhooks integration for Dodo Payments (V7.3 Universal)"""
+    """Standard Webhooks integration for Dodo Payments following Standard Webhooks spec"""
     webhook_secret = os.getenv("DODO_WEBHOOK_KEY")
+    
     if not webhook_secret:
-        logger.warning("DODO_WEBHOOK_KEY not set, skipping verification (DEV ONLY)")
+        logger.warning("⚠️ DODO_WEBHOOK_KEY not set, skipping verification (DEV ONLY)")
         try:
             body = await request.json()
             return await process_dodo_payload(body)
         except Exception as e:
+            logger.error(f"❌ Webhook processing failed: {e}")
             return {"status": "error", "message": str(e)}
 
-    if not Webhook:
-        logger.error("standardwebhooks library not installed")
-        return {"status": "error", "message": "Webhook library missing"}
-
-    headers = {
-        "webhook-id": request.headers.get("webhook-id", ""),
-        "webhook-signature": request.headers.get("webhook-signature", ""),
-        "webhook-timestamp": request.headers.get("webhook-timestamp", ""),
-    }
-    
-    raw_body = await request.body()
-    wh = Webhook(webhook_secret)
-    
     try:
+        from standardwebhooks import Webhook
+        
+        # Get webhook headers following Standard Webhooks spec
+        webhook_id = request.headers.get("webhook-id", "")
+        webhook_signature = request.headers.get("webhook-signature", "")
+        webhook_timestamp = request.headers.get("webhook-timestamp", "")
+        
+        if not all([webhook_id, webhook_signature, webhook_timestamp]):
+            logger.error("❌ Missing required webhook headers")
+            raise HTTPException(status_code=400, detail="Missing webhook headers")
+        
+        headers = {
+            "webhook-id": webhook_id,
+            "webhook-signature": webhook_signature,
+            "webhook-timestamp": webhook_timestamp,
+        }
+        
+        raw_body = await request.body()
+        wh = Webhook(webhook_secret)
+        
         wh.verify(raw_body.decode(), headers)
         payload = json.loads(raw_body)
+        
+        logger.info(f"✅ Webhook verified successfully: {payload.get('type')}")
         return await process_dodo_payload(payload)
+        
     except Exception as e:
-        logger.error(f"Webhook verification failed: {e}")
-        raise HTTPException(status_code=400, detail="Invalid signature")
+        logger.error(f"❌ Webhook verification failed: {e}")
+        raise HTTPException(status_code=400, detail="Invalid webhook signature")
 
 @app.get("/api/dodo/webhook")
 @app.get("/dodo/webhook")

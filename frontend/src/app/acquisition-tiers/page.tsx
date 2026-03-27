@@ -1,12 +1,10 @@
 "use client";
 
-import React, { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { 
-  Check, X, Crown, Zap, Rocket, Star, Shield, 
-  ArrowRight, ShieldCheck, CreditCard, Sparkles 
+  Check, X, Crown, Zap, Rocket, 
+  ArrowRight, ShieldCheck, Sparkles 
 } from "lucide-react";
-import Link from "next/link";
-import { useLanguage } from "@/context/LanguageContext";
 import { useNotifications } from "@/context/NotificationContext";
 import { motion, AnimatePresence } from "framer-motion";
 import { useSession } from "next-auth/react";
@@ -16,7 +14,6 @@ import PaymentSuccessModal from "@/components/PaymentSuccessModal";
 import { getApiUrl } from "@/config/api";
 
 function AcquisitionTiersContent() {
-  const { t } = useLanguage();
   const { data: session } = useSession();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -29,13 +26,19 @@ function AcquisitionTiersContent() {
   const [paymentDetails, setPaymentDetails] = useState<any>(null);
   const isDark = resolvedTheme !== 'light';
 
-  // Check for successful payment in URL on mount (V7.5)
+  // Check for successful payment in URL on mount - Dodo returns payment details as query params
   useEffect(() => {
     const paymentStatus = searchParams.get('payment');
     const planId = searchParams.get('plan');
-    const paymentId = searchParams.get('checkout_id'); // Dodo callback param
+    const paymentId = searchParams.get('payment_id'); // Dodo returns this
+    const status = searchParams.get('status'); // Dodo returns this
+    const email = searchParams.get('email'); // Dodo returns this
     
-    if (paymentStatus === 'success' && planId) {
+    console.log('🔍 Checking URL params:', { paymentStatus, planId, paymentId, status, email });
+    
+    if ((paymentStatus === 'success' || status === 'succeeded') && planId) {
+      console.log('✅ Payment success detected from Dodo redirect');
+      
       setPaymentDetails({
         payment_id: paymentId || 'DODO_' + Date.now(),
         order_id: 'ORDER_' + Date.now(),
@@ -45,8 +48,12 @@ function AcquisitionTiersContent() {
         billing: billingCycle
       });
       setShowSuccessModal(true);
+      
+      // Clean up URL params
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, '', newUrl);
     }
-  }, [searchParams]);
+  }, [searchParams, billingCycle]);
 
   const handlePayment = async (tier: any) => {
     if (!session?.user) {
@@ -55,45 +62,61 @@ function AcquisitionTiersContent() {
     }
 
     setLoading(tier.id);
+    
     try {
       const apiUrl = getApiUrl();
       
+      // Map tier IDs to Dodo product IDs
       const dodoProductIdMap: Record<string, string> = {
-        'starter': process.env.NEXT_PUBLIC_DODO_STARTER_ID || 'p_starter_placeholder',
-        'professional': process.env.NEXT_PUBLIC_DODO_PROFESSIONAL_ID || 'p_professional_placeholder'
+        'starter': process.env.NEXT_PUBLIC_DODO_STARTER_ID || 'prod_starter_199',
+        'professional': process.env.NEXT_PUBLIC_DODO_PROFESSIONAL_ID || 'prod_professional_499'
       };
+
+      const productId = dodoProductIdMap[tier.id];
+      if (!productId) {
+        throw new Error(`Product ID not found for tier: ${tier.id}`);
+      }
+
+      console.log('🔄 Creating Dodo checkout session...', {
+        productId,
+        email: session.user.email,
+        returnUrl: `${window.location.origin}/acquisition-tiers?payment=success&plan=${tier.id}`
+      });
 
       const resSession = await fetch(`${apiUrl}/api/dodo/create-session`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          product_id: dodoProductIdMap[tier.id] || tier.id,
+          product_id: productId,
           quantity: 1,
-          email: session?.user?.email,
-          name: session?.user?.name || 'Venture Partner',
-          return_url: `${window.location.origin}/acquisition-tiers?payment=success&plan=${tier.id}`
+          email: session.user.email,
+          name: session.user.name || 'TrendAI Customer',
+          return_url: `${window.location.origin}/acquisition-tiers?payment=success&plan=${tier.id}&checkout_id=`
         })
       });
 
       if (!resSession.ok) {
-        const errorData = await resSession.json();
-        throw new Error(errorData.detail || 'Failed to initialize Dodo checkout');
+        const errorData = await resSession.json().catch(() => ({}));
+        console.error('❌ Dodo session creation failed:', errorData);
+        throw new Error(errorData.detail || `Failed to create checkout session (${resSession.status})`);
       }
 
       const sessionData = await resSession.json();
+      console.log('✅ Dodo session created:', sessionData);
       
-      if (sessionData && sessionData.checkout_url) {
+      if (sessionData?.checkout_url) {
+        console.log('🔄 Redirecting to Dodo checkout...');
         window.location.href = sessionData.checkout_url;
       } else {
-        throw new Error('Dodo Checkout URL not found in response');
+        throw new Error('Checkout URL not received from Dodo Payments');
       }
 
     } catch (error: any) {
-      console.error('Dodo Payment Error:', error);
+      console.error('❌ Payment Error:', error);
       addNotification({
-        type: 'payment',
+        type: 'alert',
         title: 'Payment Error',
-        message: error.message || 'Payment initialization failed. Please try again.',
+        message: error.message || 'Failed to initialize payment. Please try again.',
         priority: 'high'
       });
     } finally {
@@ -148,20 +171,7 @@ function AcquisitionTiersContent() {
 
   return (
     <div className={`min-h-screen ${isDark ? 'bg-[#020617] text-white' : 'bg-slate-50 text-slate-900'} transition-colors duration-500 overflow-x-hidden`}>
-      {/* Premium Navigation Bar */}
-      <nav className={`fixed top-0 w-full z-50 border-b ${isDark ? 'bg-[#020617]/80 border-white/5' : 'bg-white/80 border-slate-200'} backdrop-blur-xl`}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-2 group">
-            <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center rotate-3 group-hover:rotate-0 transition-transform shadow-lg shadow-emerald-500/20">
-              <Zap size={18} className="text-white" />
-            </div>
-            <span className="text-xl font-black italic tracking-tighter">StarterScope</span>
-          </Link>
-          <div className="flex items-center gap-6 text-xs font-black uppercase tracking-widest">
-            <Link href="/dashboard" className="opacity-70 hover:opacity-100 transition-opacity">{t('nav_dashboard')}</Link>
-          </div>
-        </div>
-      </nav>
+     
 
       <main className="pt-32 pb-24 px-4 relative">
         <div className="max-w-7xl mx-auto">
@@ -173,10 +183,10 @@ function AcquisitionTiersContent() {
               className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 text-xs font-black uppercase tracking-[0.2em]"
             >
               <Sparkles size={14} className="animate-pulse" />
-              {t('pricing_badge')}
+              PRICING PLANS
             </motion.div>
             <h1 className="text-5xl md:text-7xl font-black tracking-tighter leading-none italic uppercase">
-              {t('pricing_title')}
+              ACQUISITION TIERS
             </h1>
             <p className="text-lg md:text-xl opacity-70 max-w-2xl mx-auto font-medium">
               Join 1,000+ entrepreneurs building with AI precision.
