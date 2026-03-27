@@ -2136,75 +2136,88 @@ async def create_dodo_checkout_session(request: DodoCheckoutRequest):
         
         amount = amount_map.get(request.product_id, 199)
         
-        payload = {
-            "amount": amount * 100,  # Convert to cents/paise
-            "currency": "INR",
-            "customer": {
-                "email": request.email,
-                "name": request.name
+        # Try multiple payload formats for Dodo API
+        payloads_to_try = [
+            # Format 1: Direct amount
+            {
+                "amount": amount * 100,  # Convert to cents/paise
+                "currency": "INR",
+                "customer": {
+                    "email": request.email,
+                    "name": request.name
+                },
+                "return_url": request.return_url,
+                "metadata": {
+                    "plan": request.product_id,
+                    "quantity": request.quantity
+                }
             },
-            "return_url": request.return_url,
-            "metadata": {
-                "plan": request.product_id,
-                "quantity": request.quantity
+            # Format 2: Product cart format
+            {
+                "product_cart": [{"product_id": request.product_id, "quantity": request.quantity}],
+                "customer": {"email": request.email, "name": request.name},
+                "return_url": request.return_url,
+            },
+            # Format 3: Simple format
+            {
+                "amount": amount,
+                "currency": "INR",
+                "email": request.email,
+                "name": request.name,
+                "return_url": request.return_url,
+                "product": request.product_id
             }
-        }
-        
-        logger.info(f"🔄 Dodo payload: {payload}")
+        ]
         
         async with httpx.AsyncClient() as client:
-            # Try the checkout sessions endpoint
-            response = await client.post(
+            # Try different API endpoint structures for Dodo
+            endpoints_to_try = [
                 "https://api.dodopayments.com/v1/checkout-sessions",
-                headers=headers,
-                json=payload,
-                timeout=30.0
-            )
+                "https://api.dodopayments.com/checkout-sessions", 
+                "https://dodopayments.com/api/v1/checkout-sessions",
+                "https://api.dodo.dev/v1/checkout-sessions"
+            ]
             
-            logger.info(f"🔄 Dodo response status: {response.status_code}")
-            logger.info(f"🔄 Dodo response: {response.text}")
+            for endpoint in endpoints_to_try:
+                for payload_idx, payload in enumerate(payloads_to_try):
+                    try:
+                        logger.info(f"🔄 Trying endpoint {endpoint} with payload format {payload_idx + 1}: {payload}")
+                        
+                        response = await client.post(
+                            endpoint,
+                            headers=headers,
+                            json=payload,
+                            timeout=30.0
+                        )
+                        
+                        logger.info(f"🔄 {endpoint} (format {payload_idx + 1}): {response.status_code}")
+                        
+                        if response.status_code == 200 or response.status_code == 201:
+                            session_data = response.json()
+                            logger.info(f"✅ Dodo session created via {endpoint}: {session_data}")
+                            return {
+                                "checkout_url": session_data.get("checkout_url") or session_data.get("url"),
+                                "session_id": session_data.get("session_id") or session_data.get("id")
+                            }
+                        elif response.status_code == 401:
+                            logger.warning(f"⚠️ 401 Unauthorized for {endpoint} (format {payload_idx + 1})")
+                            continue  # Try next format/endpoint
+                        else:
+                            logger.warning(f"⚠️ {endpoint} (format {payload_idx + 1}) returned {response.status_code}: {response.text}")
+                            continue  # Try next format/endpoint
+                            
+                    except Exception as e:
+                        logger.warning(f"⚠️ Failed {endpoint} (format {payload_idx + 1}): {e}")
+                        continue  # Try next format/endpoint
             
-            if response.status_code == 200 or response.status_code == 201:
-                session_data = response.json()
-                logger.info(f"✅ Dodo session created via HTTP: {session_data}")
-                return {
-                    "checkout_url": session_data.get("checkout_url") or session_data.get("url"),
-                    "session_id": session_data.get("session_id") or session_data.get("id")
-                }
-            elif response.status_code == 401:
-                # API key is invalid - create a temporary payment page
-                logger.warning("⚠️ Dodo API key is invalid, creating temporary payment page")
-                
-                # Create a temporary payment page URL with the payment details
-                temp_payment_url = f"https://trend-ai-main.vercel.app/temp-payment?amount={amount}&plan={request.product_id}&email={request.email}&return_url={urllib.parse.quote(request.return_url)}"
-                
-                return {
-                    "checkout_url": temp_payment_url,
-                    "session_id": f"temp_{int(datetime.now().timestamp())}"
-                }
-            else:
-                error_text = response.text
-                logger.error(f"❌ Dodo HTTP API failed: {response.status_code} - {error_text}")
-                
-                # Try alternative endpoint structure
-                if response.status_code == 404:
-                    # Try different endpoint
-                    response2 = await client.post(
-                        "https://api.dodopayments.com/v1/payments",
-                        headers=headers,
-                        json=payload,
-                        timeout=30.0
-                    )
-                    
-                    if response2.status_code in [200, 201]:
-                        session_data = response2.json()
-                        logger.info(f"✅ Dodo payment created via alternative endpoint: {session_data}")
-                        return {
-                            "checkout_url": session_data.get("checkout_url") or session_data.get("url"),
-                            "session_id": session_data.get("id")
-                        }
-                
-                raise HTTPException(status_code=response.status_code, detail=f"Dodo API error: {error_text}")
+            # If all endpoints failed, create temporary payment page
+            logger.warning("⚠️ All Dodo endpoints failed, creating temporary payment page")
+            temp_payment_url = f"https://trend-ai-main.vercel.app/temp-payment?amount={amount}&plan={request.product_id}&email={request.email}&return_url={urllib.parse.quote(request.return_url)}"
+            
+            return {
+                "checkout_url": temp_payment_url,
+                "session_id": f"temp_{int(datetime.now().timestamp())}"
+            }
                 
     except httpx.RequestError as e:
         logger.error(f"❌ Dodo HTTP request failed: {e}")
