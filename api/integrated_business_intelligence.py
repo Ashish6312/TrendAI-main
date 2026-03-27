@@ -21,20 +21,24 @@ from datetime import datetime
 
 class IntegratedBusinessIntelligence:
     def __init__(self):
-        # API Keys - Ensuring we pick them up from .env correctly
+        # ═══════════════════════════════════════════════════
+        # MULTI-LAYER AI ENGINE: Gemini → Pollinations
+        # All keys loaded from .env for maximum uptime
+        # ═══════════════════════════════════════════════════
         self.serpapi_key = os.getenv("SERPAPI_API_KEY")
         self.gemini_key = os.getenv("GEMINI_API_KEY")
+        self.pollinations_key = os.getenv("POLLINATION_API_KEY")
+        self.claude_key = os.getenv("CLAUDE_API_KEY")  # loaded but currently 401; future use
         
-        if not self.gemini_key:
-            print("❌ WARNING: GEMINI_API_KEY not found in environment!")
-        else:
-            # Use string cast for explicit lint safety
-            key_preview = str(self.gemini_key)[:8]
-            print(f"✅ Gemini Key Loaded: {key_preview}...")
+        # API Status Report
+        print("🔑 API Layer Status:")
+        print(f"  Layer 1 - Gemini:      {'✅ Active' if self.gemini_key else '❌ Missing'}")
+        print(f"  Layer 2 - Pollinations: {'✅ Active' if self.pollinations_key else '❌ Missing'}")
+        print(f"  Layer 3 - Claude:       {'⚠️  Loaded (verify key)' if self.claude_key else '❌ Missing'}")
             
-        # Endpoints - Using the whitelisted gemini-2.5-flash for this key
+        # Endpoints
         self.serpapi_base = "https://serpapi.com/search"
-        self.gemini_base = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
+        self.gemini_base = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
         
         # Intelligence Throttling & Liquidity Caches
         self._market_context_cache = {}
@@ -905,56 +909,67 @@ class IntegratedBusinessIntelligence:
                 print(f"❌ Gemini ({model_name}) Exception: {str(e)[:100]}")
                 continue
 
-        # 2. Try Pollinations AI (High-Integrity Redundancy Stack)
+        # ══════════════════════════════════════
+        # LAYER 2: POLLINATIONS AI FALLBACK
+        # Confirmed working - used as primary backup
+        # ══════════════════════════════════════
+        print("🔄 Gemini unavailable. Switching to Layer 2: Pollinations AI...")
         try:
-            print("🐝 Gemini clusters saturated. Rerouting to Pollinations AI cluster...")
             pollinations_data = self._pollinations_ai_fallback(prompt)
             if pollinations_data and pollinations_data.get("success"):
-                print("✅ Pollinations AI successfully stabilized the intelligence stream!")
+                print("✅ Layer 2 (Pollinations) successfully generated intelligence!")
                 return pollinations_data
         except Exception as e:
-            print(f"❌ Pollinations Cluster Exception: {str(e)[:100]}")
+            print(f"❌ Layer 2 Pollinations Exception: {str(e)[:100]}")
 
-        # 3. Final Resort: No rule-based fallbacks (as per requirement: 'no api fallback')
-        print("❌ All High-Performance AI clusters (Gemini + Pollinations) failed. Triggering Self-Healing...")
-        
-        # Trigger an immediate 'Soft Heal' attempt
+        # ══════════════════════════════════════
+        # ALL LAYERS EXHAUSTED - return error state
+        # ══════════════════════════════════════
+        print("❌ All AI layers exhausted. Returning failure state.")
         self._trigger_self_healing("FULL_CLUSTER_SATURATION")
         
         return {
             "success": False,
-            "error": "Service Unavailable",
-            "message": "The Premium Intelligence Clusters (Gemini & Pollinations) are undergoing scheduled autonomous optimization. Please return in 30 minutes. Our background fix engine is currently restoring peak performance.",
+            "error": "All AI layers unavailable",
+            "message": "Both Gemini and Pollinations layers are unresponsive. Please try again in 2-3 minutes.",
             "recommendations": [],
-            "status": "Self-Healing Active"
         }
 
     def _pollinations_ai_fallback(self, prompt: str) -> Optional[Dict]:
-        """Redundancy Stack Component: High-integrity AI backup using Pollinations"""
+        """Layer 2 AI: Pollinations API - confirmed working with Bearer auth"""
         try:
             url = "https://text.pollinations.ai/"
+            system_msg = (
+                "You are a senior business intelligence analyst specializing in market entry strategy. "
+                "Your task is to generate 5 specific, actionable business opportunities for the requested location. "
+                "You MUST respond with ONLY valid JSON matching the schema exactly. No markdown, no explanations."
+            )
             payload = {
                 "messages": [
-                    {"role": "system", "content": "You are a senior business intelligence analyst. Respond ONLY with valid JSON."},
+                    {"role": "system", "content": system_msg},
                     {"role": "user", "content": prompt}
                 ],
-                "model": "openai", # High-quality reasoning model
-                "jsonMode": True
+                "model": "openai",
+                "jsonMode": True,
+                "seed": 42
             }
-            api_key = os.getenv("POLLINATION_API_KEY")
             headers = {"Content-Type": "application/json"}
-            if api_key:
-                headers["Authorization"] = f"Bearer {api_key}"
+            if self.pollinations_key:
+                headers["Authorization"] = f"Bearer {self.pollinations_key}"
             
-            resp = requests.post(url, json=payload, headers=headers, timeout=25)
-            if resp.status_code == 200:
-                text = resp.text
-                data = self._clean_and_parse_json(text)
+            resp = requests.post(url, json=payload, headers=headers, timeout=45)
+            if resp.status_code == 200 and resp.text:
+                data = self._clean_and_parse_json(resp.text)
                 if isinstance(data, dict) and "recommendations" in data:
-                    data["success"] = True
-                    data["ai_source"] = "Pollinations Cluster"
-                    return data
-        except: pass
+                    recs = data.get("recommendations", [])
+                    if isinstance(recs, list) and len(recs) > 0:
+                        data["success"] = True
+                        data["ai_source"] = "Pollinations AI (Layer 2)"
+                        print(f"✅ Pollinations returned {len(recs)} recommendations")
+                        return data
+                print(f"⚠️ Pollinations response missing valid recommendations structure")
+        except Exception as e:
+            print(f"❌ Pollinations exception: {e}")
         return None
 
     def _perform_neural_repair(self, model_name: str, broken_text: str, error: str) -> Optional[Dict]:
