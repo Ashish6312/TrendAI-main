@@ -2072,6 +2072,31 @@ async def razorpay_order_deprecated():
 async def razorpay_verify_deprecated():
     raise HTTPException(status_code=410, detail="Razorpay is deprecated. Please use Dodo Payments.")
 
+@app.get("/api/dodo/test")
+async def test_dodo_import():
+    """Test if Dodo Payments library can be imported"""
+    try:
+        from dodopayments import DodoPayments
+        api_key = os.getenv("DODO_PAYMENTS_API_KEY")
+        return {
+            "status": "success",
+            "library_imported": True,
+            "api_key_present": bool(api_key),
+            "api_key_prefix": api_key[:10] + "..." if api_key else None
+        }
+    except ImportError as e:
+        return {
+            "status": "error",
+            "library_imported": False,
+            "error": f"Import error: {str(e)}"
+        }
+    except Exception as e:
+        return {
+            "status": "error", 
+            "library_imported": True,
+            "error": f"Other error: {str(e)}"
+        }
+
 @app.post("/api/dodo/create-session")
 async def create_dodo_checkout_session(request: DodoCheckoutRequest):
     """Create a Dodo Payments checkout session using standard SDK"""
@@ -2081,6 +2106,8 @@ async def create_dodo_checkout_session(request: DodoCheckoutRequest):
         raise HTTPException(status_code=401, detail="Dodo API Key missing. Please check your .env file.")
     
     try:
+        logger.info(f"🔄 Creating Dodo session for {request.email} with product {request.product_id}")
+        
         from dodopayments import DodoPayments
         
         # SDK automatically handles test/live environments based on the key
@@ -2097,9 +2124,16 @@ async def create_dodo_checkout_session(request: DodoCheckoutRequest):
         
         logger.info(f"✅ Dodo session created: {session.session_id}")
         return {"checkout_url": session.checkout_url, "session_id": session.session_id}
+    except ImportError as e:
+        logger.error(f"❌ Dodo library import failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Dodo Payments library not available: {str(e)}")
+    except AttributeError as e:
+        logger.error(f"❌ Dodo API method error: {e}")
+        raise HTTPException(status_code=500, detail=f"Dodo API method error: {str(e)}")
     except Exception as e:
         logger.error(f"❌ Dodo Request failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        logger.error(f"❌ Full traceback: {traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=f"Dodo session creation failed: {str(e)}")
 
 @app.post("/api/dodo/webhook")
 @app.post("/dodo/webhook")
