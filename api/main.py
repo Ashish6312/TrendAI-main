@@ -2072,6 +2072,16 @@ async def razorpay_order_deprecated():
 async def razorpay_verify_deprecated():
     raise HTTPException(status_code=410, detail="Razorpay is deprecated. Please use Dodo Payments.")
 
+@app.get("/api/test-cors")
+async def test_cors_endpoint():
+    """Simple endpoint to test CORS from frontend"""
+    return {
+        "status": "success",
+        "message": "CORS is working",
+        "timestamp": datetime.now().isoformat(),
+        "server": "trendai-api.onrender.com"
+    }
+
 @app.get("/api/dodo/test")
 async def test_dodo_import():
     """Test if Dodo Payments library can be imported"""

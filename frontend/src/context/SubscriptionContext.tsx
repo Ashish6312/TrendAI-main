@@ -132,6 +132,9 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     const email = session.user.email.toLowerCase().trim();
     const apiUrl = getApiUrl();
     
+    console.log('🔗 Subscription API URL:', apiUrl);
+    console.log('👤 Fetching subscription for:', email);
+    
     try {
       // Use the profile endpoint which reconciles payment history (source of truth)
       const controller = new AbortController();

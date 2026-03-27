@@ -65,6 +65,20 @@ function AcquisitionTiersContent() {
     
     try {
       const apiUrl = getApiUrl();
+      console.log('🔗 Using API URL:', apiUrl);
+      
+      // Test API connectivity first
+      try {
+        const testResponse = await fetch(`${apiUrl}/api/test-cors`);
+        if (testResponse.ok) {
+          const testData = await testResponse.json();
+          console.log('✅ API connectivity test passed:', testData);
+        } else {
+          console.warn('⚠️ API connectivity test failed:', testResponse.status);
+        }
+      } catch (testError) {
+        console.error('❌ API connectivity test error:', testError);
+      }
       
       // Map tier IDs to Dodo product IDs
       const dodoProductIdMap: Record<string, string> = {
