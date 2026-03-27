@@ -174,7 +174,7 @@ export default function PaymentSuccessModal({ isOpen, onClose, paymentData, isPa
   const PlanIcon = planIcons[currentPlan] || Target;
 
   const content = (
-    <div className={`relative ${isPage ? 'min-h-screen flex items-center justify-center p-4' : 'w-full max-w-4xl max-h-[90vh] overflow-y-auto scrollbar-hide'}`}>
+    <div className={`relative ${isPage ? 'min-h-screen flex items-center justify-center p-4' : 'w-full max-w-md max-h-[90vh] overflow-y-auto scrollbar-hide'}`}>
       
       {/* Premium Confetti Animation */}
       <AnimatePresence>
@@ -215,7 +215,7 @@ export default function PaymentSuccessModal({ isOpen, onClose, paymentData, isPa
         initial={isPage ? { opacity: 0, scale: 0.9 } : { opacity: 0, y: 50 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.9, y: 50 }}
-        className={`relative bg-white dark:bg-slate-950 border border-slate-200 dark:border-white/10 rounded-[2.5rem] shadow-2xl overflow-hidden ${isPage ? 'w-full max-w-4xl' : ''}`}
+        className={`relative bg-white dark:bg-slate-950 border border-slate-200 dark:border-white/10 rounded-[2.5rem] shadow-2xl overflow-hidden ${isPage ? 'w-full max-w-md' : ''}`}
       >
         {/* Background Accents */}
         <div className="absolute inset-0 pointer-events-none">
@@ -232,7 +232,7 @@ export default function PaymentSuccessModal({ isOpen, onClose, paymentData, isPa
           </button>
         )}
 
-        <div className="relative z-10 p-8 sm:p-12 space-y-10">
+        <div className="relative z-10 p-6 sm:p-8 space-y-6">
           {/* Header */}
           <div className="text-center space-y-6">
             <motion.div

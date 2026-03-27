@@ -81,7 +81,15 @@ export default function AcquisitionTiers() {
 
             if (resVerify.ok) {
               const verifyData = await resVerify.json();
-              setPaymentDetails(verifyData);
+              setPaymentDetails({
+                ...verifyData,
+                payment_id: response.razorpay_payment_id,
+                order_id: response.razorpay_order_id,
+                plan: tier.name,
+                billing: billingCycle,
+                amount: billingCycle === 'monthly' ? tier.monthPrice : tier.yearPrice,
+                currency: 'INR'
+              });
               setShowSuccessModal(true);
               addNotification({
                 type: 'payment',
