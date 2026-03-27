@@ -1,3 +1,5 @@
+import { getApiUrl } from "@/config/api";
+
 // Country State City API Integration
 const API_KEY = '2f0d244021227aff82ad8164aad0f2bf0d1eaa3a289b111307fbaeee16436922';
 const BASE_URL = 'https://api.countrystatecity.in/v1';
@@ -63,7 +65,7 @@ class LocationAPI {
   async detectUserLocation(): Promise<{ city: string; country: string; countryCode: string } | null> {
     try {
       // 1. Try our own backend proxy first (solves CORS and rate limits)
-      const apiUrl = 'http://127.0.0.1:8000';
+      const apiUrl = getApiUrl();
       const proxyRes = await fetch(`${apiUrl}/api/system/location`);
       if (proxyRes.ok) {
         const data = await proxyRes.json();
@@ -209,7 +211,7 @@ class LocationAPI {
       
       // 1. TRY BACKEND AI RESOLVER FIRST (Source Research + Gemini)
       try {
-        const apiUrl = 'http://127.0.0.1:8000';
+        const apiUrl = getApiUrl();
         const response = await fetch(`${apiUrl}/api/system/resolve-location?q=${encodeURIComponent(locationString)}`);
         
         if (response.ok) {

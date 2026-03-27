@@ -262,12 +262,12 @@ function AcquisitionTiersContent() {
             </div>
           </div>
 
-          <div className="grid lg:grid-cols-2 gap-6 max-w-3xl mx-auto relative z-10">
+          <div className="grid lg:grid-cols-2 gap-4 max-w-2xl mx-auto relative z-10">
             {tiers.map((tier) => (
               <motion.div
                 key={tier.id}
                 whileHover={{ y: -8 }}
-                className={`p-6 rounded-3xl border ${tier.popular ? 'border-emerald-500/50 scale-[1.01] shadow-2xl shadow-emerald-500/10' : isDark ? 'border-white/5 shadow-xl shadow-black/20' : 'border-slate-200 shadow-xl'} ${isDark ? 'bg-white/5' : 'bg-white'} backdrop-blur-xl relative flex flex-col`}
+                className={`p-5 rounded-3xl border ${tier.popular ? 'border-emerald-500/50 scale-[1.01] shadow-2xl shadow-emerald-500/10' : isDark ? 'border-white/5 shadow-xl shadow-black/20' : 'border-slate-200 shadow-xl'} ${isDark ? 'bg-white/5' : 'bg-white'} backdrop-blur-xl relative flex flex-col`}
               >
                 {tier.popular && (
                   <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest rounded-full shadow-lg shadow-emerald-500/40 animate-pulse">
@@ -275,31 +275,31 @@ function AcquisitionTiersContent() {
                   </div>
                 )}
 
-                <div className="space-y-4 flex-grow">
+                <div className="space-y-3 flex-grow">
                   <div className="flex items-center justify-between">
-                    <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${tier.color} flex items-center justify-center text-white shadow-lg`}>
+                    <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${tier.color} flex items-center justify-center text-white shadow-lg`}>
                       {tier.icon}
                     </div>
-                    {tier.popular && <Crown size={18} className="text-emerald-500" />}
+                    {tier.popular && <Crown size={16} className="text-emerald-500" />}
                   </div>
 
                   <div>
-                    <h3 className="text-xl font-black uppercase tracking-tight">{tier.name}</h3>
-                    <p className="text-xs opacity-60 font-medium">{tier.tagline}</p>
+                    <h3 className="text-lg font-black uppercase tracking-tight">{tier.name}</h3>
+                    <p className="text-[10px] opacity-60 font-medium">{tier.tagline}</p>
                   </div>
 
-                  <div className="py-1.5 border-y border-white/5">
+                  <div className="py-1 border-y border-white/5">
                     <div className="flex items-baseline gap-2">
-                      <span className="text-3xl font-black italic">₹{billingCycle === 'monthly' ? tier.monthPrice : tier.yearPrice}</span>
-                      <span className="text-[10px] opacity-50 font-bold uppercase tracking-widest">/ {billingCycle === 'monthly' ? 'mo' : 'yr'}</span>
+                      <span className="text-2xl font-black italic">₹{billingCycle === 'monthly' ? tier.monthPrice : tier.yearPrice}</span>
+                      <span className="text-[9px] opacity-50 font-bold uppercase tracking-widest">/ {billingCycle === 'monthly' ? 'mo' : 'yr'}</span>
                     </div>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-[10px] line-through opacity-40">₹{billingCycle === 'monthly' ? tier.originalMonth : tier.originalYear}</span>
-                      <span className="text-[10px] font-black text-emerald-500 uppercase">{tier.dailyLabel}</span>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-[9px] line-through opacity-40">₹{billingCycle === 'monthly' ? tier.originalMonth : tier.originalYear}</span>
+                      <span className="text-[9px] font-black text-emerald-500 uppercase">{tier.dailyLabel}</span>
                     </div>
                   </div>
 
-                  <ul className="space-y-3">
+                  <ul className="space-y-2">
                     {tier.features.map((feature, fIdx) => (
                       <li key={fIdx} className={`flex items-center gap-3 text-sm ${feature.active ? 'opacity-100' : 'opacity-30'}`}>
                         {feature.active ? (
@@ -315,11 +315,11 @@ function AcquisitionTiersContent() {
                   </ul>
                 </div>
 
-                <div className="mt-8">
+                <div className="mt-6">
                   <button
                     onClick={() => handlePayment(tier)}
                     disabled={loading !== null}
-                    className={`w-full py-3.5 rounded-2xl font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 ${tier.popular ? 'bg-emerald-500 hover:bg-emerald-400 text-white shadow-lg shadow-emerald-500/20' : isDark ? 'bg-white/10 hover:bg-white/20' : 'bg-slate-900 hover:bg-slate-800 text-white shadow-xl'} ${loading === tier.id ? 'animate-pulse scale-95 opacity-70' : ''}`}
+                    className={`w-full py-2.5 rounded-2xl font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 ${tier.popular ? 'bg-emerald-500 hover:bg-emerald-400 text-white shadow-lg shadow-emerald-500/20' : isDark ? 'bg-white/10 hover:bg-white/20' : 'bg-slate-900 hover:bg-slate-800 text-white shadow-xl'} ${loading === tier.id ? 'animate-pulse scale-95 opacity-70' : ''}`}
                   >
                     {loading === tier.id ? (
                       <div className="w-5 h-5 border-2 border-white/50 border-t-white rounded-full animate-spin" />

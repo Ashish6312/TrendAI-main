@@ -37,15 +37,15 @@ export default function ContactPage() {
       setFormData({ name: "", email: "", subject: "", message: "" });
     } catch (error) {
       console.error("Transmission Error:", error);
-      alert("Neural transmission failed. Please try again or email ops@starterscope.ai directly.");
+      alert("Neural transmission failed. Please try again or email StarterScope7@gmail.com directly.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const contactItems = [
-    { icon: <Mail />, title: t('contact_mail_title'), detail: "ops@starterscope.ai", subtext: t('contact_mail_sub') },
-    { icon: <MapPin />, title: t('contact_loc_title'), detail: "Global Command Center", subtext: t('contact_loc_sub') },
+    { icon: <Mail />, title: t('contact_mail_title'), detail: "StarterScope7@gmail.com", subtext: t('contact_mail_sub') },
+    { icon: <MapPin />, title: t('contact_loc_title'), detail: "Operations Command", subtext: "India Remote Network" },
     { icon: <Headset />, title: t('contact_support_title'), detail: "Priority Support", subtext: t('contact_support_sub') }
   ];
 
