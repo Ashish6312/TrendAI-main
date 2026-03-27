@@ -1121,14 +1121,10 @@ def get_recommendations(request: RecommendationRequest, db: Session = Depends(ge
                 "area": analysis_area,
                 "status": "service_unavailable",
                 "error": "Service Unavailable",
-                "message": "Our Premium Intelligence Engine is currently optimizing. Please return in 30 minutes — our system is automatically fixing the issue in the background. Your results will be ready when you come back.",
-                "analysis": {
-                    "executive_summary": "The AI analysis engine is temporarily unavailable. Our autonomous system is working to restore service.",
-                    "market_overview": "Analysis will be available shortly.",
-                    "confidence_score": "0%"
-                },
+                "message": "The AI engine is warming up. Please wait 30 seconds and try again — it will work on retry!",
+                "analysis": {},
                 "recommendations": [],
-                "retry_after_minutes": 30,
+                "retry_after_seconds": 30,
                 "self_healing": True
             }
         
@@ -1169,14 +1165,10 @@ def get_recommendations(request: RecommendationRequest, db: Session = Depends(ge
             "area": request.area,
             "status": "service_unavailable",
             "error": "Service Unavailable",
-            "message": "Our Intelligence Engine encountered an unexpected error. Please try again in 30 minutes — our system is automatically diagnosing and fixing the issue.",
-            "analysis": {
-                "executive_summary": "Temporary service interruption. Autonomous recovery in progress.",
-                "market_overview": "Analysis will be available shortly.",
-                "confidence_score": "0%"
-            },
+            "message": f"Unexpected error: {str(e)[:120]}. Please try again in 30 seconds.",
+            "analysis": {},
             "recommendations": [],
-            "retry_after_minutes": 30,
+            "retry_after_seconds": 30,
             "self_healing": True
         }
 

@@ -957,56 +957,30 @@ function Dashboard() {
                     <UniformCard 
                       variant="glass" 
                       size="lg"
-                      className="min-h-[500px] flex flex-col items-center justify-center text-center p-8 sm:p-12 border-2 border-blue-500/20 shadow-[0_0_50px_rgba(59,130,246,0.1)]"
+                      className="min-h-[300px] flex flex-col items-center justify-center text-center p-8 sm:p-12 border-2 border-orange-500/20 shadow-[0_0_50px_rgba(249,115,22,0.05)]"
                     >
-                      <div className="w-24 h-24 mb-10 relative">
-                        <div className="absolute inset-0 bg-blue-500/20 rounded-full animate-ping" />
-                        <div className="absolute inset-2 bg-blue-500/10 rounded-full animate-pulse flex items-center justify-center text-blue-500">
-                          <ShieldCheck size={40} className="animate-pulse" />
-                        </div>
+                      <div className="w-16 h-16 mb-6 bg-orange-500/10 rounded-full flex items-center justify-center">
+                        <Activity size={32} className="text-orange-400 animate-pulse" />
                       </div>
                       
-                      <h2 className="text-3xl sm:text-5xl font-black text-slate-800 dark:text-white tracking-tight mb-6">
-                        System Optimization
+                      <h2 className="text-2xl sm:text-3xl font-black text-slate-800 dark:text-white tracking-tight mb-3">
+                        AI Engine Warming Up
                       </h2>
                       
-                      <div className="max-w-xl mx-auto space-y-6">
-                        <p className="text-lg font-medium text-slate-600 dark:text-gray-400 leading-relaxed">
-                          {result.message || "Our Premium Intelligence Clusters are currently undergoing autonomous optimization to ensure peak fidelity."}
-                        </p>
-                        
-                        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
-                          <div className="px-6 py-3 bg-blue-500/10 border border-blue-500/20 rounded-2xl flex items-center gap-3">
-                            <Clock className="text-blue-500" size={18} />
-                            <span className="text-sm font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest">
-                              Availability: 30 Minutes
-                            </span>
-                          </div>
-                          <div className="px-6 py-3 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center gap-3">
-                            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                            <span className="text-sm font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">
-                              Healing Active
-                            </span>
-                          </div>
-                        </div>
-                        
-                        <div className="pt-8 grid grid-cols-1 sm:grid-cols-3 gap-4">
-                          {[
-                            { label: "Restoring Clusters", icon: <Cpu size={14} />, status: "in-progress" },
-                            { label: "Neural Re-syncing", icon: <Activity size={14} />, status: "in-progress" },
-                            { label: "Ground-Truth Link", icon: <Globe2 size={14} />, status: "pending" }
-                          ].map((step, idx) => (
-                            <div key={idx} className="p-4 rounded-xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/5 text-center">
-                              <div className="flex justify-center mb-2 text-blue-400">{step.icon}</div>
-                              <div className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-gray-500">{step.label}</div>
-                            </div>
-                          ))}
-                        </div>
+                      <p className="text-base font-medium text-slate-600 dark:text-gray-400 leading-relaxed mb-8 max-w-md">
+                        {result.message || "The AI engine is starting up. Please try again in a few seconds."}
+                      </p>
+                      
+                      <button
+                        onClick={(e) => handleAnalyze(e as any)}
+                        className="px-8 py-3 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-black rounded-2xl transition-all shadow-lg hover:shadow-orange-500/25 hover:scale-105 active:scale-95"
+                      >
+                        🔄 Try Again Now
+                      </button>
 
-                        <p className="text-xs text-slate-400 dark:text-gray-600 pt-6 italic">
-                          This is a Zero-Fallback system. We prioritize deep factual integrity over immediate generic output.
-                        </p>
-                      </div>
+                      <p className="text-xs text-slate-400 dark:text-gray-600 pt-6 italic">
+                        Both AI layers (Gemini + Pollinations) are active. Retrying usually works immediately.
+                      </p>
                     </UniformCard>
                   </motion.div>
                 ) : result ? (
