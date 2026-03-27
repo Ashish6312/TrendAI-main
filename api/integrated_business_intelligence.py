@@ -41,7 +41,7 @@ class IntegratedBusinessIntelligence:
         self._final_recommendations_cache = {} # Caches deep reasoning outputs
         self._cache_expiry = 900  # 15 min for context
         self._final_cache_expiry = 1800 # 30 min for final reasoning (Optimize API Usage)
-        self._logic_version = "v2.1_clean_rag" # Increment to force fresh context logic
+        self._logic_version = "v2.2_working_models" # Bumped to bust stale cache from broken model runs
         
         # Immediate Global Purge for standard targets to ensure fix visibility
         print("🧼 Global Cache Purge initialized...")
@@ -849,34 +849,31 @@ class IntegratedBusinessIntelligence:
         }}
         """
         
-        # 1. Try Gemini API with your specific 2026 Tier candidates
-        # Based on your Rate Limit Table: 2.5 Flash (5 RPM), 3 Flash (5 RPM), 3.1 Flash Lite (15 RPM).
-        # We also keep high-compatibility anchors like 1.0 Pro to ensure zero-downtime.
+        # 1. Try Gemini API - ONLY models verified available for this key
+        # Confirmed via models list: gemini-2.5-flash, gemini-2.5-flash-lite
         model_candidates = [
-            "gemini-2.5-flash", 
-            "gemini-3.1-flash-lite", 
-            "gemini-3-flash", 
+            "gemini-2.5-flash",
             "gemini-2.5-flash-lite",
-            "gemini-1.0-pro"
+            "gemini-2.0-flash",
         ]
         
         for model_name in model_candidates:
             try:
-                print(f"🤖 Calling High-Performance Gemini AI ({model_name}) for {area}...")
+                print(f"🤖 Calling Gemini AI ({model_name}) for {area}...")
                 headers = {"Content-Type": "application/json"}
                 payload = {
                     "contents": [{
                         "parts": [{"text": prompt}]
                     }],
                     "generationConfig": {
-                        "temperature": 0.9,
+                        "temperature": 0.85,
                         "maxOutputTokens": 2048,
                         "topP": 0.95
                     }
                 }
                 
-                # Using v1 endpoint for GA stability across the 2.5/3.x series
-                gemini_url = f"https://generativelanguage.googleapis.com/v1/models/{model_name}:generateContent?key={self.gemini_key}"
+                # Use v1beta endpoint - exposes latest preview models including 2.5-flash
+                gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={self.gemini_key}"
                 resp = requests.post(gemini_url, json=payload, headers=headers, timeout=25)
                 
                 if resp.status_code == 200:
