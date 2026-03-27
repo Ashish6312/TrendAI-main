@@ -37,93 +37,41 @@ export default function AcquisitionTiers() {
     try {
       const apiUrl = getApiUrl();
       
-      // 1. Create Razorpay Order
-      const resOrder = await fetch(`${apiUrl}/api/payments/razorpay/order`, {
+      // 🏎️ Dodo Payments V6.0 Flow: Session Creation -> Redirection
+      // To get your Product IDs, please check your Dodo Payments Dashboard.
+      const dodoProductIdMap: Record<string, string> = {
+        'starter': process.env.NEXT_PUBLIC_DODO_STARTER_ID || 'p_starter_placeholder',
+        'professional': process.env.NEXT_PUBLIC_DODO_PROFESSIONAL_ID || 'p_professional_placeholder'
+      };
+
+      const resSession = await fetch(`${apiUrl}/api/dodo/create-session`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          plan_id: tier.id,
-          billing_cycle: billingCycle,
-          user_email: session?.user?.email
+          product_id: dodoProductIdMap[tier.id] || tier.id,
+          quantity: 1,
+          email: session?.user?.email,
+          name: session?.user?.name || 'Venture Partner',
+          return_url: `${window.location.origin}/dashboard?payment=success&plan=${tier.id}`
         })
       });
 
-      if (!resOrder.ok) {
-        const errorData = await resOrder.json();
-        throw new Error(errorData.detail || 'Failed to create payment order');
+      if (!resSession.ok) {
+        const errorData = await resSession.json();
+        throw new Error(errorData.detail || 'Failed to initialize Dodo checkout');
       }
 
-      const orderData = await resOrder.json();
+      const sessionData = await resSession.json();
       
-      // 2. Open Razorpay Checkout
-      const options = {
-        key: orderData.key_id,
-        amount: orderData.amount * 100,
-        currency: orderData.currency,
-        name: "StarterScope",
-        description: `${tier.name} Plan - ${billingCycle}`,
-        order_id: orderData.order_id,
-        handler: async (response: any) => {
-          // 3. Verify Payment
-          try {
-            const resVerify = await fetch(`${apiUrl}/api/payments/razorpay/verify`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature,
-                user_email: session?.user?.email,
-                plan_id: tier.id,
-                billing_cycle: billingCycle
-              })
-            });
-
-            if (resVerify.ok) {
-              const verifyData = await resVerify.json();
-              setPaymentDetails({
-                ...verifyData,
-                payment_id: response.razorpay_payment_id,
-                order_id: response.razorpay_order_id,
-                plan: tier.name,
-                billing: billingCycle,
-                amount: billingCycle === 'monthly' ? tier.monthPrice : tier.yearPrice,
-                currency: 'INR'
-              });
-              setShowSuccessModal(true);
-              addNotification({
-                type: 'payment',
-                title: 'Payment Successful',
-                message: `You have successfully subscribed to the ${tier.name} plan!`,
-                priority: 'high'
-              });
-            } else {
-              const errorData = await resVerify.json();
-              throw new Error(errorData.detail || 'Payment verification failed');
-            }
-          } catch (err: any) {
-            addNotification({
-              type: 'payment',
-              title: 'Verification Failed',
-              message: err.message || 'Payment verification failed. Please contact support.',
-              priority: 'high'
-            });
-          }
-        },
-        prefill: {
-          name: session?.user?.name || '',
-          email: session?.user?.email || ''
-        },
-        theme: {
-          color: "#10b981"
-        }
-      };
-
-      const rzp = new (window as any).Razorpay(options);
-      rzp.open();
+      // 🚀 Redirect to Dodo Checkout URL
+      if (sessionData && sessionData.checkout_url) {
+        window.location.href = sessionData.checkout_url;
+      } else {
+        throw new Error('Dodo Checkout URL not found in response');
+      }
 
     } catch (error: any) {
-      console.error('Razorpay Error:', error);
+      console.error('Dodo Payment Error:', error);
       addNotification({
         type: 'payment',
         title: 'Payment Error',

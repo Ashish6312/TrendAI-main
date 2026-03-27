@@ -214,8 +214,12 @@ export default function Home() {
                     </div>
 
                     <div className="h-64 relative bg-slate-50/50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden group">
-                      <img src="/analysis.png" alt="Data" className="w-full h-full object-cover opacity-80 group-hover:scale-110 transition-transform duration-1000" />
-                      <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 to-transparent" />
+                      <img 
+                        src="https://images.pexels.com/photos/3183150/pexels-photo-3183150.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2" 
+                        alt="AI Strategic Analysis" 
+                        className="w-full h-full object-cover opacity-90 group-hover:scale-105 transition-transform duration-1000" 
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-slate-900/40 via-transparent to-transparent" />
                       <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between">
                         <div className="text-white">
                           <div className="text-xs font-bold opacity-70">Saturation Level</div>
@@ -338,55 +342,11 @@ export default function Home() {
           >
             <div className="absolute -inset-4 bg-emerald-600/10 dark:bg-emerald-600/5 rounded-full blur-[50px] animate-pulse" />
             <img
-              src="/analysis.png"
-              alt="Market Results"
-              className="compact-img relative border border-slate-200/50 dark:border-slate-700/50 shadow-2xl transform -rotate-2 hover:rotate-0 transition-transform duration-500 w-full backdrop-blur-sm max-h-[350px] md:max-h-none object-contain md:object-cover"
+              src="https://images.pexels.com/photos/3182812/pexels-photo-3182812.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2"
+              alt="Predictive Market Intelligence"
+              className="compact-img relative border border-slate-200/50 dark:border-slate-700/50 shadow-2xl transform -rotate-1 hover:rotate-0 transition-transform duration-500 w-full backdrop-blur-sm max-h-[350px] md:max-h-none object-cover rounded-2xl"
             />
-            {/* Overlay Stat Card - Dynamic & Interactive */}
-            <motion.div 
-              initial={{ x: -20, opacity: 0 }}
-              whileInView={{ x: 0, opacity: 1 }}
-              transition={{ delay: 0.8 }}
-              className="absolute -bottom-3 -left-3 bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl p-5 space-y-3 border border-emerald-500/40 dark:border-emerald-500/20 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.2)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.5)] z-20 min-w-[220px]"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="p-1.5 rounded-lg bg-emerald-500/10 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400">
-                    <MapPin size={14} className="animate-bounce" />
-                  </div>
-                  <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 tracking-[0.2em] uppercase">
-                    {detectedLocation ? `${detectedLocation.city}, ${detectedLocation.country}` : 'Detecting...'}
-                  </span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                  </span>
-                  <span className="text-[8px] font-bold text-slate-400 uppercase tracking-widest">LIVE</span>
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <div className="text-xl lg:text-2xl font-black text-slate-900 dark:text-white tracking-tighter italic">High Profit Chance</div>
-                <p className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-tight">AI Confidence Score: 94%</p>
-              </div>
-
-              <div className="h-1.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden relative">
-                <motion.div
-                  initial={{ width: 0 }}
-                  whileInView={{ width: '94%' }}
-                  transition={{ duration: 1.5, delay: 1.2, ease: "circOut" }}
-                  className="h-full bg-gradient-to-r from-emerald-600 to-emerald-400 rounded-full relative"
-                >
-                  <motion.div 
-                    animate={{ x: ['-100%', '100%'] }}
-                    transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
-                    className="absolute inset-0 bg-white/20 skew-x-12"
-                  />
-                </motion.div>
-              </div>
-            </motion.div>
+            {/* Overlay Stat Card Removed (V7.4) */}
           </motion.div>
         </div>
       </section>
@@ -398,12 +358,13 @@ export default function Home() {
             variants={fadeInUp}
             initial="initial"
             whileInView="whileInView"
-            className="order-2 md:order-1"
+            className="order-2 md:order-1 relative group"
           >
+            <div className="absolute inset-0 bg-indigo-500/10 rounded-3xl blur-2xl group-hover:blur-3xl transition-all" />
             <img
-              src="/roadmap.png"
-              alt="Business Plan"
-              className="compact-img border border-slate-200/50 dark:border-slate-700/50 shadow-2xl w-full backdrop-blur-sm max-h-[350px] md:max-h-none object-contain md:object-cover"
+              src="https://images.pexels.com/photos/3184291/pexels-photo-3184291.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2"
+              alt="Co-Pilot Strategic Execution"
+              className="compact-img relative border border-slate-200/50 dark:border-slate-700/50 shadow-2xl w-full backdrop-blur-sm max-h-[350px] md:max-h-none object-cover rounded-3xl grayscale-[20%] group-hover:grayscale-0 transition-all duration-700"
             />
           </motion.div>
 
@@ -618,7 +579,7 @@ export default function Home() {
                   location: "San Francisco, CA",
                   quote: t('home_story_1_quote'),
                   revenue: "$45K/month",
-                  avatar: "https://i.pravatar.cc/100?img=1",
+                  avatar: "https://images.pexels.com/photos/774909/pexels-photo-774909.jpeg?auto=compress&cs=tinysrgb&w=150",
                   delay: 0.1
                 },
                 {
@@ -627,7 +588,7 @@ export default function Home() {
                   location: "Austin, TX",
                   quote: t('home_story_2_quote'),
                   revenue: "$12K/month",
-                  avatar: "https://i.pravatar.cc/100?img=2",
+                  avatar: "https://images.pexels.com/photos/220453/pexels-photo-220453.jpeg?auto=compress&cs=tinysrgb&w=150",
                   delay: 0.2
                 },
                 {
@@ -636,7 +597,7 @@ export default function Home() {
                   location: "Denver, CO",
                   quote: t('home_story_3_quote'),
                   revenue: "$28K/month",
-                  avatar: "https://i.pravatar.cc/100?img=3",
+                  avatar: "https://images.pexels.com/photos/1181686/pexels-photo-1181686.jpeg?auto=compress&cs=tinysrgb&w=150",
                   delay: 0.3
                 }
               ].map((testimonial, idx) => (

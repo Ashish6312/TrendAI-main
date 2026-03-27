@@ -2059,89 +2059,31 @@ def search_payments_by_email(partial_email: str, db: Session = Depends(get_db)):
         return {"error": str(e)}
 
 
-@app.post("/api/payment-webhook")
-async def payment_webhook(request: Request):
-    """Webhook endpoint for real-time payment notifications"""
-    try:
-        body = await request.json()
-        logger.info(f"🔔 Payment webhook received: {body}")
-        
-        # Extract payment information
-        payment_id = body.get('razorpay_payment_id')
-        order_id = body.get('razorpay_order_id')
-        signature = body.get('razorpay_signature')
-        user_email = body.get('user_email')
-        amount = body.get('amount')
-        plan_name = body.get('plan_name')
-        billing_cycle = body.get('billing_cycle', 'yearly')
-        
-        if not all([payment_id, user_email, amount, plan_name]):
-            return {"status": "error", "message": "Missing required fields"}
-        
-        # Process payment immediately using direct session
-        from database import SessionLocal
-        db = SessionLocal()
-        try:
-            # Create payment record
-            payment_data = PaymentCreate(
-                user_email=user_email,
-                amount=float(amount),
-                razorpay_payment_id=payment_id,
-                razorpay_order_id=order_id or f"order_{payment_id}",
-                razorpay_signature=signature,
-                status="success",
-                plan_name=plan_name,
-                billing_cycle=billing_cycle,
-                payment_method="razorpay"
-            )
-            
-            payment_record = create_payment_record(payment_data, db)
-            
-            # Create/update subscription immediately
-            mapped_plan = normalize_plan_name(plan_name)
-            subscription_data = SubscriptionCreate(
-                user_email=user_email,
-                plan_name=mapped_plan,
-                plan_display_name=plan_name,
-                billing_cycle=billing_cycle,
-                price=float(amount),
-                currency="INR",
-                max_analyses=-1 if mapped_plan in ['professional', 'enterprise'] else 5,
-                features={}
-            )
-            
-            subscription_record = create_subscription(subscription_data, db)
-            
-            logger.info(f"✅ Payment processed successfully: {payment_id}")
-            
-            return {
-                "status": "success",
-                "message": "Payment processed successfully",
-                "payment_id": payment_id,
-                "subscription_id": subscription_record.get('id') if isinstance(subscription_record, dict) else subscription_record.id,
-                "timestamp": datetime.now().isoformat()
-            }
-            
-        finally:
-            db.close()
-            
-    except Exception as e:
-        logger.error(f"Payment webhook error: {e}")
-        return {"status": "error", "message": str(e)}
+# --- DEPRECATED: RAZORPAY ENDPOINTS (Migrated to Dodo Payments V6.1) ---
+@app.post("/api/payment-webhook", tags=["DEPRECATED"])
+async def razorpay_webhook_deprecated():
+    raise HTTPException(status_code=410, detail="Razorpay is deprecated. Please use Dodo Payments.")
+
+@app.post("/api/payments/razorpay/order", tags=["DEPRECATED"])
+async def razorpay_order_deprecated():
+    raise HTTPException(status_code=410, detail="Razorpay is deprecated. Please use Dodo Payments.")
+
+@app.post("/api/payments/razorpay/verify", tags=["DEPRECATED"])
+async def razorpay_verify_deprecated():
+    raise HTTPException(status_code=410, detail="Razorpay is deprecated. Please use Dodo Payments.")
 
 @app.post("/api/dodo/create-session")
 async def create_dodo_checkout_session(request: DodoCheckoutRequest):
     """Create a Dodo Payments checkout session"""
     api_key = os.getenv("DODO_PAYMENTS_API_KEY")
     api_key_str = str(api_key or "")
-    if not api_key_str or not (api_key_str.startswith("dp_test") or api_key_str.startswith("dp_live")):
-        logger.error(f"❌ Invalid Dodo API Key format: {api_key_str[:10]}...")
-        raise HTTPException(
-            status_code=401, 
-            detail="Invalid Dodo API Key format. Key must start with 'dp_test_' or 'dp_live_'. Please check your .env file."
-        )
+    if not api_key_str:
+        logger.error("❌ Dodo API Key missing.")
+        raise HTTPException(status_code=401, detail="Dodo API Key missing. Please check your .env file.")
     
-    url = "https://live.dodopayments.com/checkouts" if api_key_str.startswith("dp_live") else "https://test.dodopayments.com/checkouts"
+    # Relaxed validation for custom key formats (V6.0)
+    is_live = "live" in api_key_str.lower() or not api_key_str.startswith("dp_test")
+    url = "https://live.dodopayments.com/checkouts" if is_live else "https://test.dodopayments.com/checkouts"
     
     payload = {
         "product_cart": [{ "product_id": request.product_id, "quantity": request.quantity }],
@@ -2167,8 +2109,10 @@ async def create_dodo_checkout_session(request: DodoCheckoutRequest):
             raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/dodo/webhook")
+@app.post("/dodo/webhook")
+@app.post("/webhook/dodo")
 async def dodo_webhook(request: Request):
-    """Standard Webhooks integration for Dodo Payments"""
+    """Standard Webhooks integration for Dodo Payments (V7.3 Universal)"""
     webhook_secret = os.getenv("DODO_WEBHOOK_KEY")
     if not webhook_secret:
         logger.warning("DODO_WEBHOOK_KEY not set, skipping verification (DEV ONLY)")
@@ -2199,27 +2143,68 @@ async def dodo_webhook(request: Request):
         logger.error(f"Webhook verification failed: {e}")
         raise HTTPException(status_code=400, detail="Invalid signature")
 
+@app.get("/api/dodo/webhook")
+@app.get("/dodo/webhook")
+async def dodo_webhook_heartbeat():
+    """Heartbeat for Dodo Webhook to prevent 404 on browser visits"""
+    return {"status": "active", "message": "StarterScope Dodo Webhook is Up (POST Only)"}
+
 async def process_dodo_payload(payload: Dict[str, Any]):
-    """Internal logic to process verified Dodo webhook payload"""
-    logger.info(f"🔔 Verified Dodo Payload: {json.dumps(payload, indent=2)}")
+    """Internal logic to process verified Dodo webhook payload and activate subscriptions"""
+    logger.info(f"🔔 Processing Dodo Event: {payload.get('type')}")
     
-    event_type = payload.get("type", "payment.succeeded")
+    event_type = payload.get("type")
     data = payload.get("data", payload)
     
     if event_type == "payment.succeeded":
         payment_id = data.get("payment_id")
         customer = data.get("customer", {})
-        email = customer.get("email")
+        email = (customer.get("email") or "").lower().strip()
+        
+        # Extract metadata if available, or derive from product/amount
+        # Dodo doesn't always send plan name in top level, so we map product_id or amount
+        amount = float(data.get("amount", 0)) / 100 # Dodo amount is in cents
+        
+        plan_name = "Professional" if amount > 300 else "Starter"
+        mapped_plan = normalize_plan_name(plan_name)
         
         from database import SessionLocal
         db = SessionLocal()
         try:
-            logger.info(f"✅ Dodo Payment Succeeded: {payment_id} for {email}")
+            # 1. Update Payment History
+            payment_record = models.PaymentHistory(
+                user_email=email,
+                dodo_payment_id=payment_id,
+                amount=amount,
+                currency="INR",
+                status="success",
+                plan_name=plan_name,
+                billing_cycle="monthly", # Default
+                payment_method="dodo"
+            )
+            db.add(payment_record)
+            
+            # 2. Update Subscription
+            subscription_data = SubscriptionCreate(
+                user_email=email,
+                plan_name=mapped_plan,
+                plan_display_name=plan_name,
+                billing_cycle="monthly",
+                price=amount,
+                currency="INR",
+                max_analyses=-1 if mapped_plan == 'professional' else 100,
+                features={}
+            )
+            create_subscription(subscription_data, db)
+            
+            db.commit()
+            invalidate_user_cache(email)
+            logger.info(f"✅ Dodo Subscription Activated: {email} | Plan: {plan_name}")
             return {"status": "success"}
         finally:
             db.close()
             
-    return {"status": "ignored"}
+    return {"status": "ignored", "message": "Event type not handled"}
 
 @app.post("/api/dodo/confirm-payment")
 async def confirm_dodo_payment(confirmation: DodoPaymentConfirmation, db: Session = Depends(get_db)):
