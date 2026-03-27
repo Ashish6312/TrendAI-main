@@ -2074,39 +2074,28 @@ async def razorpay_verify_deprecated():
 
 @app.post("/api/dodo/create-session")
 async def create_dodo_checkout_session(request: DodoCheckoutRequest):
-    """Create a Dodo Payments checkout session"""
+    """Create a Dodo Payments checkout session using standard SDK"""
     api_key = os.getenv("DODO_PAYMENTS_API_KEY")
-    api_key_str = str(api_key or "")
-    if not api_key_str:
+    if not api_key:
         logger.error("❌ Dodo API Key missing.")
         raise HTTPException(status_code=401, detail="Dodo API Key missing. Please check your .env file.")
     
-    # Relaxed validation for custom key formats (V6.0)
-    is_live = "live" in api_key_str.lower() or not api_key_str.startswith("dp_test")
-    url = "https://live.dodopayments.com/checkouts" if is_live else "https://test.dodopayments.com/checkouts"
-    
-    payload = {
-        "product_cart": [{ "product_id": request.product_id, "quantity": request.quantity }],
-        "customer": { "email": request.email, "name": request.name },
-        "return_url": request.return_url,
-    }
-    
-    headers = {
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {api_key}"
-    }
-    
-    async with httpx.AsyncClient() as client:
-        try:
-            response = await client.post(url, json=payload, headers=headers)
-            response.raise_for_status()
-            return response.json()
-        except httpx.HTTPStatusError as e:
-            logger.error(f"Dodo API error: {e.response.text}")
-            raise HTTPException(status_code=e.response.status_code, detail=json.loads(e.response.text))
-        except Exception as e:
-            logger.error(f"Dodo Request failed: {e}")
-            raise HTTPException(status_code=500, detail=str(e))
+    try:
+        from dodopayments import DodoPayments
+        # SDK automatically handles test/live environments based on the key
+        client = DodoPayments(bearer_token=api_key)
+        
+        session = client.checkout_sessions.create(
+            product_cart=[{"product_id": request.product_id, "quantity": request.quantity}],
+            customer={"email": request.email, "name": request.name},
+            return_url=request.return_url,
+        )
+        
+        # We return the object correctly matching the frontend expectations
+        return {"checkout_url": session.checkout_url, "session_id": session.session_id}
+    except Exception as e:
+        logger.error(f"Dodo Request failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/api/dodo/webhook")
 @app.post("/dodo/webhook")

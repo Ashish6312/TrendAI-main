@@ -12,5 +12,5 @@ textblob>=0.17.0
 duckduckgo-search>=3.9.0
 praw>=7.7.0
 standardwebhooks
-razorpay>=1.4.1
+dodopayments
 apify-client>=1.6.0
