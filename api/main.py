@@ -23,6 +23,9 @@ import traceback
 import hashlib
 import json
 from typing import Dict, List, Any, Optional
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 import httpx
 from dodopayments import DodoPayments
 
@@ -58,6 +61,12 @@ class ScrapeRequest(BaseModel):
     location: str
     max_results: int = 50
     email: Optional[str] = None
+
+class ContactRequest(BaseModel):
+    name: str
+    email: str
+    subject: str
+    message: str
 try:
     from standardwebhooks import Webhook
 except ImportError:
@@ -129,6 +138,101 @@ def system_health_check():
         "version": "2.2",
         "timestamp": str(datetime.now())
     }
+
+# ═══════════════════════════════════════════════════
+# CONTACT & SUPPORT SYSTEM
+# ═══════════════════════════════════════════════════
+@app.post("/api/contact")
+async def contact_form_submission(contact: ContactRequest):
+    """
+    Receives contact form submissions and sends them to StarterScope7@gmail.com.
+    """
+    try:
+        # 1. Environment Variables for Email (Add these to api/.env)
+        EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.gmail.com")
+        EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))
+        EMAIL_USER = os.getenv("EMAIL_USER") # e.g., starterscope@gmail.com
+        EMAIL_PASS = os.getenv("EMAIL_PASS") # APP PASSWORD
+        TARGET_EMAIL = "StarterScope7@gmail.com"
+
+        # ═══════════════════════════════════════════════════
+        # EMAIL TEMPLATE (Predefined & Professional)
+        # ═══════════════════════════════════════════════════
+        html_content = f"""
+        <html>
+        <body style="font-family: 'Inter', sans-serif; background-color: #f8fafc; padding: 40px; color: #1e293b;">
+            <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 24px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+                <div style="background: #0f172a; padding: 40px; text-align: center;">
+                    <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.05em; font-style: italic;">
+                        STARTERSCOPE <span style="color: #10b981;">SUPPORT</span>
+                    </h1>
+                </div>
+                
+                <div style="padding: 40px;">
+                    <div style="margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid #f1f5f9;">
+                        <p style="text-transform: uppercase; font-size: 10px; font-weight: 900; letter-spacing: 0.1em; color: #64748b; margin-bottom: 8px;">Subject</p>
+                        <h2 style="font-size: 20px; font-weight: 800; color: #0f172a; margin: 0;">{contact.subject}</h2>
+                    </div>
+
+                    <div style="margin-bottom: 30px;">
+                        <p style="text-transform: uppercase; font-size: 10px; font-weight: 900; letter-spacing: 0.1em; color: #64748b; margin-bottom: 8px;">Incoming Message</p>
+                        <p style="font-size: 16px; line-height: 1.6; color: #334155; white-space: pre-wrap;">{contact.message}</p>
+                    </div>
+
+                    <div style="background: #f1f5f9; padding: 24px; border-radius: 16px;">
+                        <p style="text-transform: uppercase; font-size: 10px; font-weight: 900; letter-spacing: 0.1em; color: #64748b; margin-bottom: 12px;">Sender Details</p>
+                        <table style="width: 100%; font-size: 14px;">
+                            <tr>
+                                <td style="color: #64748b; padding: 4px 0;">Name:</td>
+                                <td style="font-weight: 700; color: #0f172a;">{contact.name}</td>
+                            </tr>
+                            <tr>
+                                <td style="color: #64748b; padding: 4px 0;">Email:</td>
+                                <td style="font-weight: 700; color: #10b981;">{contact.email}</td>
+                            </tr>
+                        </table>
+                    </div>
+                </div>
+
+                <div style="background: #f8fafc; padding: 20px 40px; text-align: center; border-top: 1px solid #e2e8f0;">
+                    <p style="font-size: 12px; color: #94a3b8; margin: 0;">
+                        AI Core System Generated • {datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC')}
+                    </p>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+
+        # ═══════════════════════════════════════════════════
+        # SENDING LOGIC
+        # ═══════════════════════════════════════════════════
+        if not EMAIL_USER or not EMAIL_PASS:
+            logging.warning("⚠️ SMTP Credentials missing! Logging message to terminal instead.")
+            print(f"📬 FORM SUBMISSION: {contact.name} ({contact.email}) | Sub: {contact.subject}")
+            print(f"💬 MESSAGE: {contact.message}")
+            request_id = str(hashlib.md5(str(time.time()).encode()).hexdigest())[:8]
+            return {"status": "success", "message": "Feedback logged (SMTP not configured)", "id": request_id}
+
+        msg = MIMEMultipart()
+        msg["From"] = str(EMAIL_USER)
+        msg["To"] = str(TARGET_EMAIL)
+        msg["Subject"] = f"StarterScope: {contact.subject} (from {contact.name})"
+        msg.attach(MIMEText(html_content, "html"))
+
+        # Send using SMTP
+        with smtplib.SMTP(str(EMAIL_HOST), int(EMAIL_PORT)) as server:
+            server.starttls()
+            server.login(str(EMAIL_USER), str(EMAIL_PASS))
+            server.send_message(msg)
+
+        request_id = str(hashlib.md5(str(time.time()).encode()).hexdigest())[:8]
+        return {"status": "success", "message": "Neural transmission complete", "id": request_id}
+
+    except Exception as e:
+        logging.error(f"❌ Contact processing failed: {str(e)}")
+        # Return partial success to frontend to avoid user panic, but log real error
+        return {"status": "error", "message": "Transmission interrupted"}
 
 @app.get("/api/info")
 async def api_info():

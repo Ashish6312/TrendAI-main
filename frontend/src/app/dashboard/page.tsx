@@ -952,11 +952,11 @@ function DashboardContent() {
                             </div>
                           </div>
                           
-                          <h2 className="text-3xl sm:text-4xl font-black text-slate-800 tracking-tight mb-4 drop-shadow-lg transition-all duration-700">
+                          <h2 className="text-3xl sm:text-4xl font-black text-slate-800 dark:text-white tracking-tight mb-4 drop-shadow-lg transition-all duration-700">
                             {loadingMessage}
                           </h2>
                           
-                          <p className="text-slate-600 text-base font-medium uppercase tracking-wider mb-8 max-w-md drop-shadow-sm min-h-[1.5em] transition-all duration-700">
+                          <p className="text-slate-600 dark:text-gray-400 text-base font-medium uppercase tracking-wider mb-8 max-w-md drop-shadow-sm min-h-[1.5em] transition-all duration-700">
                             {loadingProgress < 20 ? `Initializing neural probe for ${area.split(',')[0]}...` :
                              loadingProgress < 50 ? `Extracting deep-web market signals...` :
                              loadingProgress < 75 ? `Applying RAG (Retrieval-Augmented) synthesis...` :

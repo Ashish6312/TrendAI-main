@@ -753,7 +753,7 @@ function ProfilePageContent() {
     exit: { opacity: 0, y: -20 }
   };
   return (
-    <div className="min-h-screen bg-white dark:bg-[#020617] relative transition-colors duration-500 pt-20 sm:pt-28 lg:pt-36">
+    <div className="min-h-screen bg-white dark:bg-[#020617] relative transition-colors duration-500 pt-12 sm:pt-16 lg:pt-20">
       {/* Animated Background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute inset-0 bg-grid-white/[0.02]" />

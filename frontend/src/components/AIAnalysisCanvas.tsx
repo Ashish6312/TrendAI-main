@@ -143,7 +143,8 @@ const AIAnalysisCanvas: React.FC<{ className?: string }> = ({ className = "" }) 
       const isMobile = width < 768;
 
       // Clear canvas with theme-aware background
-      ctx.fillStyle = isDark ? 'rgba(2, 6, 23, 0.1)' : 'rgba(255, 255, 255, 0.1)';
+      ctx.clearRect(0, 0, width, height);
+      ctx.fillStyle = isDark ? 'rgba(2, 6, 23, 0.05)' : 'rgba(255, 255, 255, 0.05)';
       ctx.fillRect(0, 0, width, height);
 
       time += 0.016; // ~60fps
