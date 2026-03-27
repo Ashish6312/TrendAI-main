@@ -1707,33 +1707,14 @@ function DashboardContent() {
 
 export default function Dashboard() {
   return (
-    <ProtectedRoute>
-      <Suspense fallback={
-        <div className="flex h-screen items-center justify-center bg-white dark:bg-[#020617] relative overflow-hidden">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(168,85,247,0.05),transparent_70%)]" />
-          <div className="relative flex flex-col items-center gap-6">
-            <div className="relative">
-              <div className="w-20 h-20 border-4 border-purple-500/10 border-t-purple-500 rounded-full animate-spin" />
-              <div className="absolute inset-0 flex items-center justify-center">
-                <Cpu className="text-purple-500 animate-pulse" size={24} />
-              </div>
-            </div>
-            <div className="space-y-2 text-center">
-              <p className="text-[10px] font-black uppercase tracking-[0.5em] text-purple-500/60 animate-pulse">Initializing Strategic Dashboard</p>
-              <div className="h-1 w-48 bg-purple-500/5 rounded-full overflow-hidden">
-                <motion.div 
-                  initial={{ x: "-100%" }}
-                  animate={{ x: "100%" }}
-                  transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                  className="h-full w-full bg-gradient-to-r from-transparent via-purple-500 to-transparent"
-                />
-              </div>
-            </div>
-          </div>
-        </div>
-      }>
+    <Suspense fallback={
+      <div className="flex h-screen items-center justify-center bg-white dark:bg-[#020617] relative overflow-hidden">
+         <div className="w-20 h-20 border-4 border-purple-500/10 border-t-purple-500 rounded-full animate-spin" />
+      </div>
+    }>
+      <ProtectedRoute>
         <DashboardContent />
-      </Suspense>
-    </ProtectedRoute>
+      </ProtectedRoute>
+    </Suspense>
   );
 }
