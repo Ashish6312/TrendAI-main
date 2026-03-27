@@ -232,7 +232,7 @@ export default function PaymentSuccessModal({ isOpen, onClose, paymentData, isPa
           </button>
         )}
 
-        <div className="relative z-10 p-5 sm:p-6 space-y-4">
+        <div className="relative z-10 p-5 sm:p-6 space-y-3">
           {/* Header */}
           <div className="text-center space-y-6">
             <motion.div
@@ -264,38 +264,38 @@ export default function PaymentSuccessModal({ isOpen, onClose, paymentData, isPa
           </div>
 
           {/* Details Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 bg-slate-900/5 dark:bg-white/5 rounded-3xl p-6 border border-slate-900/10 dark:border-white/10 backdrop-blur-sm">
+          <div className="grid grid-cols-3 gap-2 bg-slate-900/5 dark:bg-white/5 rounded-2xl p-4 border border-slate-900/10 dark:border-white/10 backdrop-blur-sm">
             {[
               { label: 'Payment ID', value: payment_id, icon: CreditCard },
-              { label: 'Amount Paid', value: `${currency} ${parseFloat(amount).toLocaleString()}`, icon: Gift, color: currentPlanFeatures.color },
+              { label: 'Amount', value: `${currency} ${parseFloat(amount).toLocaleString()}`, icon: Gift, color: currentPlanFeatures.color },
               { label: 'Cycle', value: billingCycle, icon: Calendar }
             ].map((detail, i) => (
-              <div key={i} className="text-center space-y-1">
-                <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-white/5 mx-auto mb-2">
-                  <detail.icon size={14} style={{ color: detail.color || '#94a3b8' }} />
+              <div key={i} className="text-center space-y-0.5">
+                <div className="flex items-center justify-center w-6 h-6 rounded-lg bg-white/5 mx-auto mb-1">
+                  <detail.icon size={10} style={{ color: detail.color || '#94a3b8' }} />
                 </div>
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">{detail.label}</p>
-                <p className="font-bold text-slate-900 dark:text-white text-sm truncate px-2" style={detail.color ? { color: detail.color } : {}}>{detail.value}</p>
+                <p className="text-[8px] font-black uppercase tracking-widest text-slate-500">{detail.label}</p>
+                <p className="font-bold text-slate-900 dark:text-white text-[10px] truncate px-1" style={detail.color ? { color: detail.color } : {}}>{detail.value}</p>
               </div>
             ))}
           </div>
 
           {/* Features Granted */}
-          <div className="space-y-6">
-            <h3 className="text-center text-sm font-black uppercase tracking-[0.3em] text-slate-500">Privileges Unlocked</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {currentPlanFeatures.features.map((feature, i) => (
+          <div className="space-y-4">
+            <h3 className="text-center text-[9px] font-black uppercase tracking-[0.3em] text-slate-500">Privileges Unlocked</h3>
+            <div className="grid grid-cols-3 gap-2">
+              {currentPlanFeatures.features.slice(0, 6).map((feature, i) => (
                 <motion.div
                   key={i}
                   initial={{ x: -20, opacity: 0 }}
                   animate={{ x: 0, opacity: 1 }}
                   transition={{ delay: 1 + i * 0.1 }}
-                  className="flex items-center gap-3 p-3 rounded-xl bg-slate-900/[0.02] dark:bg-white/[0.02] border border-slate-900/5 dark:border-white/5 group hover:bg-slate-900/[0.05] dark:hover:bg-white/[0.05] transition-all"
+                  className="flex items-center gap-2 p-2 rounded-lg bg-slate-900/[0.02] dark:bg-white/[0.02] border border-slate-900/5 dark:border-white/5 group hover:bg-slate-900/[0.05] dark:hover:bg-white/[0.05] transition-all"
                 >
-                  <div className="w-5 h-5 rounded-full bg-emerald-500/20 flex items-center justify-center">
-                    <CheckCircle size={10} className="text-emerald-500" />
+                  <div className="shrink-0 w-3 h-3 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                    <CheckCircle size={8} className="text-emerald-500" />
                   </div>
-                  <span className="text-xs font-bold text-slate-300 group-hover:text-white transition-colors">{feature}</span>
+                  <span className="text-[8px] font-bold text-slate-400 group-hover:text-white transition-colors truncate">{feature}</span>
                 </motion.div>
               ))}
             </div>
