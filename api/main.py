@@ -2122,14 +2122,22 @@ async def create_dodo_checkout_session(request: DodoCheckoutRequest):
         )
         
         logger.info(f"✅ Dodo session created: {session.id}")
+        # Log the response structure for debugging
+        logger.info(f"✅ Dodo SDK response received. Keys: {dir(session)}")
+        
+        # Safely get ID and URL
+        checkout_id = getattr(session, "id", getattr(session, "checkout_id", None))
+        checkout_url = getattr(session, "checkout_url", None)
+        
         return {
-            "checkout_url": session.checkout_url,
-            "session_id": session.id
+            "checkout_url": checkout_url,
+            "session_id": checkout_id
         }
                 
     except Exception as e:
-        logger.error(f"❌ Dodo SDK Request failed: {e}")
-        logger.error(f"❌ Full traceback: {traceback.format_exc()}")
+        error_msg = str(e)
+        logger.error(f"❌ Dodo SDK Request failed: {error_msg}")
+        logger.error(f"❌ Traceback: {traceback.format_exc()}")
         
         # Fallback to manual HTTP for compatibility if SDK fails 
         # (Though SDK is preferred, keeping fallback for production stability)
@@ -2138,6 +2146,7 @@ async def create_dodo_checkout_session(request: DodoCheckoutRequest):
                 "Authorization": f"Bearer {api_key}",
                 "Content-Type": "application/json"
             }
+            # Standard Dodo payload
             payload = {
                 "product_cart": [{"product_id": request.product_id, "quantity": request.quantity or 1}],
                 "customer": {"email": request.email, "name": request.name},
@@ -2145,22 +2154,41 @@ async def create_dodo_checkout_session(request: DodoCheckoutRequest):
             }
             
             async with httpx.AsyncClient() as h_client:
-                # Try test then live
-                for base_url in ["https://test.dodopayments.com", "https://api.dodopayments.com"]:
+                # Try test then live (or vice versa depending on key)
+                base_urls = ["https://test.dodopayments.com", "https://api.dodopayments.com"]
+                if "live" in api_key.lower():
+                    base_urls = ["https://api.dodopayments.com", "https://test.dodopayments.com"]
+                
+                for base_url in base_urls:
                     try:
+                        logger.info(f"🔄 Attempting manual fallback to {base_url}...")
                         response = await h_client.post(f"{base_url}/checkouts", headers=headers, json=payload, timeout=10.0)
+                        
                         if response.status_code in [200, 201]:
                             data = response.json()
+                            logger.info(f"✅ Manual fallback successful: {data.get('id')}")
                             return {
                                 "checkout_url": data.get("checkout_url"),
                                 "session_id": data.get("id")
                             }
-                    except:
+                        else:
+                            resp_text = response.text
+                            logger.warning(f"⚠️ Manual fallback to {base_url} failed with status {response.status_code}: {resp_text}")
+                            error_msg = f"Dodo API Error ({response.status_code}): {resp_text}"
+                    except Exception as fallback_e:
+                        logger.warning(f"⚠️ Manual fallback request to {base_url} failed: {fallback_e}")
                         continue
-        except:
-            pass
+        except Exception as outer_fallback_e:
+            logger.error(f"❌ Outer fallback logic failed: {outer_fallback_e}")
             
-        raise HTTPException(status_code=500, detail=f"Failed to create checkout session: {str(e)}")
+        raise HTTPException(
+            status_code=500, 
+            detail={
+                "error": "Failed to create checkout session",
+                "message": error_msg,
+                "product_id": request.product_id
+            }
+        )
 
 @app.post("/api/dodo/webhook")
 @app.post("/dodo/webhook")
@@ -2181,14 +2209,22 @@ async def dodo_webhook(request: Request):
     try:
         from standardwebhooks import Webhook
         
+        # 🛡️ Dodo 'whsec_' prefix handling
+        if webhook_secret.startswith("whsec_"):
+            logger.info("🔧 Stripping 'whsec_' prefix from webhook key for verification")
+            webhook_secret = webhook_secret.replace("whsec_", "")
+        
         # Get webhook headers following Standard Webhooks spec
-        webhook_id = request.headers.get("webhook-id", "")
-        webhook_signature = request.headers.get("webhook-signature", "")
-        webhook_timestamp = request.headers.get("webhook-timestamp", "")
+        webhook_id = request.headers.get("webhook-id")
+        webhook_signature = request.headers.get("webhook-signature")
+        webhook_timestamp = request.headers.get("webhook-timestamp")
+        
+        # Log received headers for debugging (only in non-prod or carefully)
+        logger.info(f"🔔 Webhook Headers: id={webhook_id}, has_sig={bool(webhook_signature)}, ts={webhook_timestamp}")
         
         if not all([webhook_id, webhook_signature, webhook_timestamp]):
-            logger.error("❌ Missing required webhook headers")
-            raise HTTPException(status_code=400, detail="Missing webhook headers")
+            logger.error(f"❌ Missing required webhook headers. Raw headers: {dict(request.headers)}")
+            raise HTTPException(status_code=400, detail="Missing required webhook headers (id, signature, or timestamp)")
         
         headers = {
             "webhook-id": webhook_id,
@@ -2199,15 +2235,20 @@ async def dodo_webhook(request: Request):
         raw_body = await request.body()
         wh = Webhook(webhook_secret)
         
-        wh.verify(raw_body.decode(), headers)
-        payload = json.loads(raw_body)
-        
-        logger.info(f"✅ Webhook verified successfully: {payload.get('type')}")
-        return await process_dodo_payload(payload)
+        try:
+            wh.verify(raw_body.decode(), headers)
+            payload = json.loads(raw_body)
+            logger.info(f"✅ Webhook verified successfully: {payload.get('type')}")
+            return await process_dodo_payload(payload)
+        except Exception as verify_err:
+            logger.error(f"❌ Webhook verification failed logic: {verify_err}")
+            # Log first few chars of secret for sanity check
+            logger.error(f"❌ Secret key used ends with: ...{webhook_secret[-10:]}")
+            raise HTTPException(status_code=400, detail=f"Invalid webhook signature matching failed: {str(verify_err)}")
         
     except Exception as e:
-        logger.error(f"❌ Webhook verification failed: {e}")
-        raise HTTPException(status_code=400, detail="Invalid webhook signature")
+        logger.error(f"❌ Webhook verification critical error: {e}")
+        raise HTTPException(status_code=400, detail=f"Webhook verification Error: {str(e)}")
 
 @app.get("/api/dodo/webhook")
 @app.get("/dodo/webhook")
