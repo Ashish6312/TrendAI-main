@@ -944,7 +944,12 @@ class IntegratedBusinessIntelligence:
                 "model": "openai", # High-quality reasoning model
                 "jsonMode": True
             }
-            resp = requests.post(url, json=payload, timeout=25)
+            api_key = os.getenv("POLLINATION_API_KEY")
+            headers = {"Content-Type": "application/json"}
+            if api_key:
+                headers["Authorization"] = f"Bearer {api_key}"
+            
+            resp = requests.post(url, json=payload, headers=headers, timeout=25)
             if resp.status_code == 200:
                 text = resp.text
                 data = self._clean_and_parse_json(text)
