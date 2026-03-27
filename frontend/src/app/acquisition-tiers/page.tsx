@@ -1,7 +1,10 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { Check, X, Crown, Zap, Rocket, Star, Shield, ArrowRight, ShieldCheck, CreditCard, Sparkles, Users } from "lucide-react";
+import React, { useState, useEffect, Suspense } from "react";
+import { 
+  Check, X, Crown, Zap, Rocket, Star, Shield, 
+  ArrowRight, ShieldCheck, CreditCard, Sparkles 
+} from "lucide-react";
 import Link from "next/link";
 import { useLanguage } from "@/context/LanguageContext";
 import { useNotifications } from "@/context/NotificationContext";
@@ -10,10 +13,9 @@ import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useTheme } from "next-themes";
 import PaymentSuccessModal from "@/components/PaymentSuccessModal";
-import Script from "next/script";
 import { getApiUrl } from "@/config/api";
 
-export default function AcquisitionTiers() {
+function AcquisitionTiersContent() {
   const { t } = useLanguage();
   const { data: session } = useSession();
   const router = useRouter();
@@ -27,6 +29,25 @@ export default function AcquisitionTiers() {
   const [paymentDetails, setPaymentDetails] = useState<any>(null);
   const isDark = resolvedTheme !== 'light';
 
+  // Check for successful payment in URL on mount (V7.5)
+  useEffect(() => {
+    const paymentStatus = searchParams.get('payment');
+    const planId = searchParams.get('plan');
+    const paymentId = searchParams.get('checkout_id'); // Dodo callback param
+    
+    if (paymentStatus === 'success' && planId) {
+      setPaymentDetails({
+        payment_id: paymentId || 'DODO_' + Date.now(),
+        order_id: 'ORDER_' + Date.now(),
+        plan: planId,
+        amount: planId === 'starter' ? '199' : '499',
+        currency: 'INR',
+        billing: billingCycle
+      });
+      setShowSuccessModal(true);
+    }
+  }, [searchParams]);
+
   const handlePayment = async (tier: any) => {
     if (!session?.user) {
       router.push('/api/auth/signin');
@@ -37,8 +58,6 @@ export default function AcquisitionTiers() {
     try {
       const apiUrl = getApiUrl();
       
-      // 🏎️ Dodo Payments V6.0 Flow: Session Creation -> Redirection
-      // To get your Product IDs, please check your Dodo Payments Dashboard.
       const dodoProductIdMap: Record<string, string> = {
         'starter': process.env.NEXT_PUBLIC_DODO_STARTER_ID || 'p_starter_placeholder',
         'professional': process.env.NEXT_PUBLIC_DODO_PROFESSIONAL_ID || 'p_professional_placeholder'
@@ -52,7 +71,7 @@ export default function AcquisitionTiers() {
           quantity: 1,
           email: session?.user?.email,
           name: session?.user?.name || 'Venture Partner',
-          return_url: `${window.location.origin}/dashboard?payment=success&plan=${tier.id}`
+          return_url: `${window.location.origin}/acquisition-tiers?payment=success&plan=${tier.id}`
         })
       });
 
@@ -63,7 +82,6 @@ export default function AcquisitionTiers() {
 
       const sessionData = await resSession.json();
       
-      // 🚀 Redirect to Dodo Checkout URL
       if (sessionData && sessionData.checkout_url) {
         window.location.href = sessionData.checkout_url;
       } else {
@@ -98,281 +116,198 @@ export default function AcquisitionTiers() {
       popular: false,
       features: [
         { text: "100 recommendations/month", active: true },
-        { text: "City-level insights", active: true },
-        { text: "Basic profit estimation", active: true },
-        { text: "Alpha Vault (5 Saves)", active: true },
-        { text: "Standard AI processing", active: true, sub: true },
-        { text: "No competitor heatmaps", active: false },
-        { text: "No custom AI search", active: false }
-      ],
-      cta: "Get Started"
+        { text: "Daily market pulse", active: true },
+        { text: "Community access", active: true },
+        { text: "Standard support", active: true },
+        { text: "Global location scouting", active: false },
+        { text: "Indestructible Fallback Engine", active: false }
+      ]
     },
     {
       id: "professional",
       name: "Professional",
-      tagline: "Built for serious entrepreneurs",
+      tagline: "Full-scale intelligence for growth",
       monthPrice: 499,
       yearPrice: 4499,
       originalMonth: 699,
       originalYear: 6999,
-      dailyLabel: "Only ₹15/day",
+      dailyLabel: "Only ₹12/day",
       icon: <Rocket className="w-6 h-6" />,
-      color: "from-indigo-600 to-emerald-500",
+      color: "from-emerald-500 to-teal-400",
       popular: true,
-      badge: "🔥 MOST POPULAR",
-      bestValue: "Best Value",
-      comparison: "Everything in Starter, plus:",
       features: [
-        { text: "Unlimited recommendations", active: true, bold: true },
-        { text: "Neural Profit Engine (AI)", active: true },
-        { text: "Competitor Neural Heatmaps", active: true },
-        { text: "Elite Alpha Vault (Unlimited)", active: true },
-        { text: "6-Month Strategic Roadmaps", active: true },
-        { text: "Real-time Demand Scoring", active: true },
-        { text: "Priority Support Concierge", active: true }
-      ],
-      cta: "Upgrade Now →",
-      triggers: ["Make smarter business decisions", "Maximize your profits"]
+        { text: "Unlimited recommendations", active: true },
+        { text: "Eternal Reliability Bridge", active: true },
+        { text: "Priority scouting speed", active: true },
+        { text: "24/7 Strategic support", active: true },
+        { text: "Full roadmap generation", active: true },
+        { text: "Dual AI provider priority", active: true }
+      ]
     }
   ];
 
   return (
-    <div className={`min-h-screen selection:bg-emerald-500/30 ${isDark ? 'bg-[#020617] text-white' : 'bg-slate-50 text-slate-900'}`}>
-      <Script
-        id="razorpay-checkout-js"
-        src="https://checkout.razorpay.com/v1/checkout.js"
-        strategy="lazyOnload"
-      />
-      {/* Background Elements */}
-      <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-        <div className={`absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[600px] rounded-full blur-[120px] opacity-20 ${isDark ? 'bg-indigo-500/30' : 'bg-indigo-500/10'}`} />
-        <div className={`absolute bottom-0 right-0 w-[500px] h-[500px] rounded-full blur-[100px] opacity-10 ${isDark ? 'bg-emerald-500/20' : 'bg-emerald-500/5'}`} />
-      </div>
-
-      <div className="relative z-10 max-w-7xl mx-auto px-4 pt-20 pb-24">
-        {/* Header Section */}
-        <div className="text-center mb-16 space-y-4">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 text-[10px] font-black uppercase tracking-widest shadow-lg shadow-emerald-500/5"
-          >
-            <Sparkles size={12} /> Transform Your Business with AI
-          </motion.div>
-          
-          <motion.h1 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="text-4xl md:text-6xl font-black tracking-tight leading-[1.1]"
-          >
-            Precision Pricing for <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-emerald-400 to-cyan-400">
-              Maximum Growth.
-            </span>
-          </motion.h1>
-
-          <motion.p 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="text-slate-400 text-base max-w-xl mx-auto font-medium"
-          >
-            Make smarter business decisions with our high-performance recommendation ecosystem. Choose the plan that fits your ambition.
-          </motion.p>
-
-          {/* Toggle */}
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.3 }}
-            className="flex flex-col items-center gap-4 pt-8"
-          >
-            <div className={`inline-flex items-center p-1 rounded-2xl border backdrop-blur-3xl shadow-2xl ${isDark ? 'bg-white/5 border-white/10' : 'bg-slate-200/50 border-slate-300'}`}>
-              <button 
-                onClick={() => setBillingCycle('monthly')}
-                className={`relative px-8 py-3 rounded-xl text-xs font-black transition-all uppercase tracking-widest ${
-                  billingCycle === 'monthly' 
-                    ? (isDark ? 'text-white bg-white/10' : 'text-slate-900 bg-white shadow-xl') 
-                    : 'text-slate-500 hover:text-slate-900'
-                }`}
-              >
-                Monthly
-              </button>
-              <div className="relative">
-                <button 
-                  onClick={() => setBillingCycle('yearly')}
-                  className={`relative px-8 py-3 rounded-xl text-xs font-black transition-all uppercase tracking-widest ${
-                    billingCycle === 'yearly' ? 'text-white bg-gradient-to-r from-indigo-600 to-emerald-500 shadow-xl' : 'text-slate-500 hover:text-slate-900'
-                  }`}
-                >
-                  Yearly
-                </button>
-                <div className="absolute -top-3 -right-4 translate-x-1/2">
-                  <span className="bg-emerald-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full shadow-lg shadow-emerald-500/40 animate-pulse">
-                    Save 20%
-                  </span>
-                </div>
-              </div>
+    <div className={`min-h-screen ${isDark ? 'bg-[#020617] text-white' : 'bg-slate-50 text-slate-900'} transition-colors duration-500 overflow-x-hidden`}>
+      {/* Premium Navigation Bar */}
+      <nav className={`fixed top-0 w-full z-50 border-b ${isDark ? 'bg-[#020617]/80 border-white/5' : 'bg-white/80 border-slate-200'} backdrop-blur-xl`}>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-2 group">
+            <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center rotate-3 group-hover:rotate-0 transition-transform shadow-lg shadow-emerald-500/20">
+              <Zap size={18} className="text-white" />
             </div>
-            
-            <div className="flex items-center gap-6 text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-              <span className="flex items-center gap-1.5"><ShieldCheck size={14} className="text-emerald-500" /> Cancel anytime</span>
-              <span className="flex items-center gap-1.5"><CreditCard size={14} className="text-emerald-500" /> Secure payment</span>
-              <span className="flex items-center gap-1.5 font-black text-emerald-400">Trusted by 5,000+ Entrepreneurs</span>
-            </div>
-          </motion.div>
-        </div>
-
-        {/* Pricing Cards */}
-        <div className="flex flex-col md:flex-row items-center justify-center gap-6 max-w-4xl mx-auto">
-          {tiers.map((tier, idx) => {
-            const currentPrice = billingCycle === 'monthly' ? tier.monthPrice : Math.floor(tier.yearPrice / 12);
-            const originalPrice = billingCycle === 'monthly' ? tier.originalMonth : Math.floor(tier.originalYear / 12);
-            
-            return (
-              <motion.div
-                key={tier.id}
-                initial={{ opacity: 0, y: 30 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 + idx * 0.1 }}
-                whileHover={{ y: -8, transition: { duration: 0.3 } }}
-                className={`relative group w-full max-w-[310px] rounded-[1.25rem] p-4 transition-all duration-300 border ${
-                  tier.popular 
-                    ? `z-20 ${isDark ? 'bg-slate-900/90 border-emerald-500 shadow-2xl shadow-emerald-500/10' : 'bg-white border-emerald-500 shadow-2xl shadow-emerald-500/20 scale-[1.03]'}` 
-                    : `${isDark ? 'bg-slate-900/40 border-white/5' : 'bg-white border-slate-200'} shadow-xl hover:border-emerald-500/30`
-                }`}
-              >
-                {/* Popular Accents */}
-                {tier.popular && (
-                  <div className="absolute inset-0 rounded-[2rem] bg-gradient-to-br from-indigo-500/5 via-transparent to-emerald-500/5 pointer-events-none" />
-                )}
-                
-                <div className="flex items-center justify-between mb-4">
-                  <div className={`p-2.5 rounded-2xl bg-gradient-to-br ${tier.color} text-white shadow-lg`}>
-                    {tier.icon}
-                  </div>
-                  {tier.popular && (
-                    <div className="flex flex-col items-end gap-1">
-                      <span className="bg-indigo-600 text-white text-[9px] font-black px-2.5 py-1 rounded-full uppercase tracking-tighter">
-                        {tier.badge}
-                      </span>
-                      <span className="text-emerald-500 text-[10px] font-black uppercase italic">
-                        {tier.bestValue}
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                <h3 className="text-lg font-black mb-0">{tier.name}</h3>
-                <p className="text-slate-500 text-[8px] font-bold leading-relaxed mb-2">{tier.tagline}</p>
-
-                <div className="mb-6 space-y-0.5">
-                  <div className="flex items-center gap-2">
-                    <span className="text-slate-400 line-through text-xs font-bold tracking-tighter">₹{originalPrice}</span>
-                    <span className="bg-emerald-500/10 text-emerald-500 text-[9px] font-black px-2 py-0.5 rounded-lg">
-                      Save ₹{originalPrice - currentPrice}
-                    </span>
-                  </div>
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-2xl font-black tracking-tighter">₹{currentPrice}</span>
-                    <span className="text-slate-500 font-bold text-[10px] tracking-tighter">/mo</span>
-                  </div>
-                  <div className="flex flex-col gap-1 pt-1">
-                    {billingCycle === 'yearly' && (
-                       <p className="text-[10px] font-black text-indigo-500 uppercase tracking-widest italic">
-                         ₹{tier.yearPrice} Paid At Once
-                       </p>
-                    )}
-                    <p className="text-emerald-500 font-black text-sm italic tracking-tight">{tier.dailyLabel}</p>
-                    <p className="text-slate-500 text-[8px] font-black uppercase tracking-widest leading-none">
-                      Inclusive of 18% GST • No hidden charges
-                    </p>
-                  </div>
-                </div>
-
-                <div className="space-y-1.5 mb-4 min-h-[140px]">
-                  {tier.comparison && (
-                    <div className="text-[8px] font-black text-slate-400 uppercase tracking-widest border-b border-white/5 pb-1.5 mb-2">
-                      {tier.comparison}
-                    </div>
-                  )}
-                  {tier.features.map((f: any, i) => (
-                    <div key={i} className={`flex items-start gap-3 ${!f.active ? 'opacity-30' : ''}`}>
-                      <div className={`mt-0.5 p-0.5 rounded-full ${f.active ? 'bg-emerald-500 text-white' : 'bg-slate-700 text-slate-400'}`}>
-                        {f.active ? <Check size={7} strokeWidth={4} /> : <X size={7} strokeWidth={2} />}
-                      </div>
-                      <span className={`text-[11px] ${f.bold ? 'font-black' : 'font-medium'} ${isDark ? 'text-slate-300' : 'text-slate-600'} ${f.sub ? 'italic text-[9px]' : ''}`}>
-                        {f.text}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="space-y-4">
-                  {tier.triggers && (
-                    <div className="flex flex-col gap-2 mb-4">
-                      {tier.triggers.map((t, i) => (
-                        <div key={i} className="flex items-center gap-2 text-[10px] font-black text-emerald-400 uppercase tracking-[0.2em] italic">
-                          <Check size={12} strokeWidth={3} /> {t}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  
-                  <button
-                    onClick={() => handlePayment(tier)}
-                    disabled={loading === tier.id}
-                    className={`w-full py-2.5 rounded-xl font-black text-[9px] uppercase tracking-[0.2em] transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-3 ${
-                      tier.popular 
-                        ? 'bg-gradient-to-r from-indigo-600 to-emerald-500 text-white shadow-lg' 
-                        : (isDark ? 'bg-white/5 text-white border border-white/10' : 'bg-slate-900 text-white shadow-md')
-                    }`}
-                  >
-                    {loading === tier.id ? (
-                      <div className="w-5 h-5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
-                    ) : (
-                      tier.cta
-                    )}
-                  </button>
-                </div>
-              </motion.div>
-            );
-          })}
-        </div>
-
-        {/* Footer info */}
-        <div className="mt-24 text-center space-y-6">
-          <p className="text-slate-500 text-sm font-bold uppercase tracking-[0.3em]">
-            Need custom solutions? <Link href="/contact" className="text-indigo-400 hover:text-emerald-400 underline decoration-indigo-400/30 underline-offset-8 transition-all">Contact Enterprise Sales</Link>
-          </p>
-          <div className="flex items-center justify-center gap-12 opacity-40 grayscale hover:grayscale-0 transition-all duration-700">
-            {/* Trust symbols */}
-            <div className="flex flex-col items-center gap-1">
-              <Shield size={24} />
-              <span className="text-[8px] font-black uppercase">Secure SSL</span>
-            </div>
-            <div className="flex flex-col items-center gap-1">
-              <Sparkles size={24} />
-              <span className="text-[8px] font-black uppercase">AI Certified</span>
-            </div>
-            <div className="flex flex-col items-center gap-1">
-              <Users size={24} />
-              <span className="text-[8px] font-black uppercase">Community Verified</span>
-            </div>
+            <span className="text-xl font-black italic tracking-tighter">StarterScope</span>
+          </Link>
+          <div className="flex items-center gap-6 text-xs font-black uppercase tracking-widest">
+            <Link href="/dashboard" className="opacity-70 hover:opacity-100 transition-opacity">{t('nav_dashboard')}</Link>
           </div>
         </div>
-      </div>
+      </nav>
+
+      <main className="pt-32 pb-24 px-4 relative">
+        <div className="max-w-7xl mx-auto">
+          {/* Strategic Header */}
+          <div className="text-center space-y-6 mb-16 relative z-10">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 text-xs font-black uppercase tracking-[0.2em]"
+            >
+              <Sparkles size={14} className="animate-pulse" />
+              {t('pricing_badge')}
+            </motion.div>
+            <h1 className="text-5xl md:text-7xl font-black tracking-tighter leading-none italic uppercase">
+              {t('pricing_title')}
+            </h1>
+            <p className="text-lg md:text-xl opacity-70 max-w-2xl mx-auto font-medium">
+              Join 1,000+ entrepreneurs building with AI precision.
+            </p>
+
+            {/* Toggle Billing Cycle */}
+            <div className="flex items-center justify-center gap-4 mt-10">
+              <span className={`text-sm font-bold ${billingCycle === 'monthly' ? 'text-emerald-500' : 'opacity-40'}`}>Monthly</span>
+              <button 
+                onClick={() => setBillingCycle(billingCycle === 'monthly' ? 'yearly' : 'monthly')}
+                className={`w-14 h-7 rounded-full relative transition-colors ${isDark ? 'bg-white/10' : 'bg-slate-200'} border border-white/10`}
+              >
+                <div className={`absolute top-1 left-1 bottom-1 w-5 bg-emerald-500 rounded-full transition-all ${billingCycle === 'yearly' ? 'translate-x-7' : ''}`} />
+              </button>
+              <div className="flex items-center gap-2">
+                <span className={`text-sm font-bold ${billingCycle === 'yearly' ? 'text-emerald-500' : 'opacity-40'}`}>Yearly</span>
+                <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-500 text-[10px] font-black rounded uppercase">Save 30%</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="grid lg:grid-cols-2 gap-8 max-w-4xl mx-auto relative z-10">
+            {tiers.map((tier) => (
+              <motion.div
+                key={tier.id}
+                whileHover={{ y: -10 }}
+                className={`p-8 rounded-3xl border ${tier.popular ? 'border-emerald-500/50 scale-[1.02] shadow-2xl shadow-emerald-500/10' : isDark ? 'border-white/5 shadow-xl shadow-black/20' : 'border-slate-200 shadow-xl'} ${isDark ? 'bg-white/5' : 'bg-white'} backdrop-blur-xl relative flex flex-col`}
+              >
+                {tier.popular && (
+                  <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest rounded-full shadow-lg shadow-emerald-500/40 animate-pulse">
+                    MOST POPULAR
+                  </div>
+                )}
+                
+                <div className="space-y-6 flex-grow">
+                  <div className="flex items-center justify-between">
+                    <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${tier.color} flex items-center justify-center text-white shadow-lg`}>
+                      {tier.icon}
+                    </div>
+                    {tier.popular && <Crown size={20} className="text-emerald-500" />}
+                  </div>
+                  
+                  <div>
+                    <h3 className="text-2xl font-black uppercase tracking-tight">{tier.name}</h3>
+                    <p className="text-sm opacity-60 font-medium">{tier.tagline}</p>
+                  </div>
+
+                  <div className="py-2 border-y border-white/5">
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-4xl font-black italic">₹{billingCycle === 'monthly' ? tier.monthPrice : tier.yearPrice}</span>
+                      <span className="text-xs opacity-50 font-bold uppercase tracking-widest">/ {billingCycle === 'monthly' ? 'mo' : 'yr'}</span>
+                    </div>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-[10px] line-through opacity-40">₹{billingCycle === 'monthly' ? tier.originalMonth : tier.originalYear}</span>
+                      <span className="text-[10px] font-black text-emerald-500 uppercase">{tier.dailyLabel}</span>
+                    </div>
+                  </div>
+
+                  <ul className="space-y-4">
+                    {tier.features.map((feature, fIdx) => (
+                      <li key={fIdx} className={`flex items-center gap-3 text-sm ${feature.active ? 'opacity-100' : 'opacity-30'}`}>
+                        {feature.active ? (
+                          <div className="p-0.5 bg-emerald-500/20 text-emerald-500 rounded">
+                            <Check size={14} strokeWidth={4} />
+                          </div>
+                        ) : (
+                          <X size={14} strokeWidth={4} className="text-slate-500" />
+                        )}
+                        <span className="font-bold tracking-tight">{feature.text}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+
+                <div className="mt-10">
+                  <button 
+                    onClick={() => handlePayment(tier)}
+                    disabled={loading !== null}
+                    className={`w-full py-4 rounded-2xl font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 ${tier.popular ? 'bg-emerald-500 hover:bg-emerald-400 text-white shadow-lg shadow-emerald-500/20' : isDark ? 'bg-white/10 hover:bg-white/20' : 'bg-slate-900 hover:bg-slate-800 text-white shadow-xl'} ${loading === tier.id ? 'animate-pulse scale-95 opacity-70' : ''}`}
+                  >
+                    {loading === tier.id ? (
+                      <div className="w-5 h-5 border-2 border-white/50 border-t-white rounded-full animate-spin" />
+                    ) : (
+                      <>
+                        Upgrade Now <ArrowRight size={16} />
+                      </>
+                    )}
+                  </button>
+                  <p className="text-[9px] text-center mt-4 opacity-40 font-black uppercase tracking-[0.2em] flex items-center justify-center gap-2">
+                    <ShieldCheck size={14} /> Dodo Encrypted Transaction
+                  </p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+
+          <p className="text-center mt-12 opacity-30 text-xs font-black uppercase tracking-widest">
+            Institutional Encryption Active • 24/7 Priority Support
+          </p>
+        </div>
+      </main>
 
       <AnimatePresence>
         {showSuccessModal && (
           <PaymentSuccessModal 
             isOpen={showSuccessModal} 
-            onClose={() => setShowSuccessModal(false)} 
+            onClose={() => {
+              setShowSuccessModal(false);
+              router.push('/dashboard');
+            }} 
             paymentData={paymentDetails} 
           />
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+// 🏛️ Final Wrapper with Suspense Boundary for Vercel Static Building (V7.5)
+export default function AcquisitionTiers() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#020617] flex items-center justify-center flex-col gap-6">
+        <div className="relative">
+          <div className="w-16 h-16 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin" />
+          <Zap size={24} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-emerald-500 animate-pulse" />
+        </div>
+        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-500 animate-pulse">Initializing Strategic Tiers...</p>
+      </div>
+    }>
+      <AcquisitionTiersContent />
+    </Suspense>
   );
 }
