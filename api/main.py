@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Depends, HTTPException, Request, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, Depends, HTTPException, Request, WebSocket, WebSocketDisconnect, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
@@ -142,17 +142,34 @@ def system_health_check():
 # ═══════════════════════════════════════════════════
 # CONTACT & SUPPORT SYSTEM
 # ═══════════════════════════════════════════════════
+def send_support_email(host, port, user, password, recipient, subject, html_content, sender_name):
+    """Sends support email in background thread."""
+    try:
+        msg = MIMEMultipart()
+        msg["From"] = str(user)
+        msg["To"] = str(recipient)
+        msg["Subject"] = f"StarterScope: {subject} (from {sender_name})"
+        msg.attach(MIMEText(html_content, "html"))
+
+        with smtplib.SMTP(str(host), int(port)) as server:
+            server.starttls()
+            server.login(str(user), str(password))
+            server.send_message(msg)
+        logging.info(f"✅ Neural transmission delivered to {recipient}")
+    except Exception as e:
+        logging.error(f"❌ Neural transmission failed in background: {str(e)}")
+
 @app.post("/api/contact")
-async def contact_form_submission(contact: ContactRequest):
+async def contact_form_submission(contact: ContactRequest, background_tasks: BackgroundTasks):
     """
-    Receives contact form submissions and sends them to StarterScope7@gmail.com.
+    Receives contact form submissions and triggers background neural transmission to StarterScope7@gmail.com.
     """
     try:
-        # 1. Environment Variables for Email (Add these to api/.env)
+        # 1. Environment Variables for Email
         EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.gmail.com")
         EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))
-        EMAIL_USER = os.getenv("EMAIL_USER") # e.g., starterscope@gmail.com
-        EMAIL_PASS = os.getenv("EMAIL_PASS") # APP PASSWORD
+        EMAIL_USER = os.getenv("EMAIL_USER")
+        EMAIL_PASS = os.getenv("EMAIL_PASS")
         TARGET_EMAIL = "StarterScope7@gmail.com"
 
         # ═══════════════════════════════════════════════════
@@ -204,35 +221,29 @@ async def contact_form_submission(contact: ContactRequest):
         </html>
         """
 
+        request_id = str(hashlib.md5(f"{contact.email}{time.time()}".encode()).hexdigest())[:8]
+
         # ═══════════════════════════════════════════════════
-        # SENDING LOGIC
+        # BACKGROUND TRANSMISSION
         # ═══════════════════════════════════════════════════
         if not EMAIL_USER or not EMAIL_PASS:
             logging.warning("⚠️ SMTP Credentials missing! Logging message to terminal instead.")
             print(f"📬 FORM SUBMISSION: {contact.name} ({contact.email}) | Sub: {contact.subject}")
             print(f"💬 MESSAGE: {contact.message}")
-            request_id = str(hashlib.md5(str(time.time()).encode()).hexdigest())[:8]
-            return {"status": "success", "message": "Feedback logged (SMTP not configured)", "id": request_id}
+            return {"status": "success", "message": "Feedback logged locally", "id": request_id}
 
-        msg = MIMEMultipart()
-        msg["From"] = str(EMAIL_USER)
-        msg["To"] = str(TARGET_EMAIL)
-        msg["Subject"] = f"StarterScope: {contact.subject} (from {contact.name})"
-        msg.attach(MIMEText(html_content, "html"))
+        # Queue the email send so we can respond to the user IMMEDIATELY
+        background_tasks.add_task(
+            send_support_email, 
+            EMAIL_HOST, EMAIL_PORT, EMAIL_USER, EMAIL_PASS, 
+            TARGET_EMAIL, contact.subject, html_content, contact.name
+        )
 
-        # Send using SMTP
-        with smtplib.SMTP(str(EMAIL_HOST), int(EMAIL_PORT)) as server:
-            server.starttls()
-            server.login(str(EMAIL_USER), str(EMAIL_PASS))
-            server.send_message(msg)
-
-        request_id = str(hashlib.md5(str(time.time()).encode()).hexdigest())[:8]
-        return {"status": "success", "message": "Neural transmission complete", "id": request_id}
+        return {"status": "success", "message": "Neural transmission initiated", "id": request_id}
 
     except Exception as e:
         logging.error(f"❌ Contact processing failed: {str(e)}")
-        # Return partial success to frontend to avoid user panic, but log real error
-        return {"status": "error", "message": "Transmission interrupted"}
+        return {"status": "error", "message": "Transmission protocol failed"}
 
 @app.get("/api/info")
 async def api_info():
