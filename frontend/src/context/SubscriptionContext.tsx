@@ -54,20 +54,20 @@ const themes: Record<SubscriptionPlan, SubscriptionTheme> = {
     glow: 'shadow-[0_0_30px_-5px_rgba(100,116,139,0.3)]'
   },
   starter: {
-    primary: '#0891b2', // Cyan (Branding)
-    secondary: '#06b6d4',
-    accent: '#0e7490',
-    gradient: 'from-cyan-600 to-cyan-500',
-    badge: 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20',
-    glow: 'shadow-[0_0_30px_-5px_rgba(6,182,212,0.4)]'
-  },
-  professional: {
     primary: '#2563eb', // Royal Blue
     secondary: '#3b82f6',
     accent: '#1d4ed8',
     gradient: 'from-blue-600 to-blue-500',
     badge: 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20',
     glow: 'shadow-[0_0_30px_-5px_rgba(37,99,235,0.4)]'
+  },
+  professional: {
+    primary: '#059669', // Emerald/Teal (Premium Brand Color)
+    secondary: '#10b981',
+    accent: '#047857',
+    gradient: 'from-emerald-600 to-emerald-500',
+    badge: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
+    glow: 'shadow-[0_0_30px_-5px_rgba(16,185,129,0.4)]'
   }
 };
 
@@ -125,29 +125,23 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   // Ensure plan is always valid
   const validPlan = plan && ['free', 'starter', 'professional'].includes(plan) ? plan : 'free';
 
-  // Fetch subscription plan from the authoritative profile endpoint
-  const fetchSubscriptionPlan = async (): Promise<SubscriptionPlan | null> => {
-    if (!session?.user?.email) return null;
-    
-    const email = session.user.email.toLowerCase().trim();
-    const apiUrl = getApiUrl();
-    
-    console.log('🔗 Subscription API URL:', apiUrl);
-    console.log('👤 Fetching subscription for:', email);
-    
-    try {
-      // Use the profile endpoint which reconciles payment history (source of truth)
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+    // Fetch subscription plan with retry logic for production robustness (Render cold starts)
+    const fetchSubscriptionPlan = async (retryCount = 0): Promise<SubscriptionPlan | null> => {
+      if (!session?.user?.email) return null;
       
-      const response = await fetch(`${apiUrl}/api/subscriptions/${email}`, {
-        signal: controller.signal,
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      });
+      const email = session.user.email.toLowerCase().trim();
+      const apiUrl = getApiUrl();
       
-      clearTimeout(timeoutId);
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout for Render cold start
+        
+        const response = await fetch(`${apiUrl}/api/subscriptions/${email}`, {
+          signal: controller.signal,
+          headers: { 'Content-Type': 'application/json' }
+        });
+        
+        clearTimeout(timeoutId);
       
       if (response.ok) {
         const data = await response.json();
@@ -196,10 +190,16 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
         }
       }
     } catch (error: any) {
+      if (retryCount < 2) {
+        console.warn(`🔄 Subscription fetch attempt ${retryCount + 1} failed, retrying in 2s...`);
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        return fetchSubscriptionPlan(retryCount + 1);
+      }
+
       if (error.name === 'AbortError') {
-        console.warn('⚠️ Subscription fetch timed out, using cached plan');
+        console.warn('⚠️ Subscription fetch timed out after retries, using cached plan');
       } else {
-        console.warn('⚠️ Subscription fetch failed, using cached plan:', error.message);
+        console.warn('⚠️ Subscription fetch failed after retries, using cached plan:', error.message);
       }
       
       // Try to use cached plan on error

@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useEffect, Suspense } from "react";
-import { 
-  Check, X, Crown, Zap, Rocket, 
-  ArrowRight, ShieldCheck, Sparkles 
+import {
+  Check, X, Crown, Zap, Rocket,
+  ArrowRight, ShieldCheck, Sparkles
 } from "lucide-react";
 import { useNotifications } from "@/context/NotificationContext";
 import { motion, AnimatePresence } from "framer-motion";
@@ -19,7 +19,7 @@ function AcquisitionTiersContent() {
   const searchParams = useSearchParams();
   const { resolvedTheme } = useTheme();
   const { addNotification } = useNotifications();
-  
+
   const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("yearly");
   const [loading, setLoading] = useState<string | null>(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -30,25 +30,26 @@ function AcquisitionTiersContent() {
   useEffect(() => {
     const paymentStatus = searchParams.get('payment');
     const planId = searchParams.get('plan');
-    const paymentId = searchParams.get('payment_id'); // Dodo returns this
-    const status = searchParams.get('status'); // Dodo returns this
-    const email = searchParams.get('email'); // Dodo returns this
-    
-    console.log('🔍 Checking URL params:', { paymentStatus, planId, paymentId, status, email });
-    
+    const paymentId = searchParams.get('payment_id') || searchParams.get('checkout_id');
+    const status = searchParams.get('status');
+    const cycleParam = searchParams.get('cycle');
+    const amountParam = searchParams.get('amount');
+
+    console.log('🔍 Checking URL params:', { paymentStatus, planId, paymentId, status });
+
     if ((paymentStatus === 'success' || status === 'succeeded') && planId) {
       console.log('✅ Payment success detected from Dodo redirect');
-      
+
       setPaymentDetails({
         payment_id: paymentId || 'DODO_' + Date.now(),
         order_id: 'ORDER_' + Date.now(),
         plan: planId,
-        amount: planId === 'starter' ? '199' : '499',
+        amount: amountParam || (planId === 'starter' ? (cycleParam === 'yearly' ? '1799' : '199') : (cycleParam === 'yearly' ? '4499' : '499')),
         currency: 'INR',
-        billing: billingCycle
+        billing: cycleParam || billingCycle
       });
       setShowSuccessModal(true);
-      
+
       // Clean up URL params
       const newUrl = window.location.pathname;
       window.history.replaceState({}, '', newUrl);
@@ -62,11 +63,11 @@ function AcquisitionTiersContent() {
     }
 
     setLoading(tier.id);
-    
+
     try {
       const apiUrl = getApiUrl();
       console.log('🔗 Using API URL:', apiUrl);
-      
+
       // Test API connectivity first
       try {
         const testResponse = await fetch(`${apiUrl}/api/test-cors`);
@@ -79,11 +80,11 @@ function AcquisitionTiersContent() {
       } catch (testError) {
         console.error('❌ API connectivity test error:', testError);
       }
-      
-      // Map tier IDs to Dodo product IDs
+
+      // Map tier IDs to Dodo product IDs (Updated with user's specific live IDs)
       const dodoProductIdMap: Record<string, string> = {
-        'starter': process.env.NEXT_PUBLIC_DODO_STARTER_ID || 'prod_starter_199',
-        'professional': process.env.NEXT_PUBLIC_DODO_PROFESSIONAL_ID || 'prod_professional_499'
+        'starter': process.env.NEXT_PUBLIC_DODO_STARTER_ID || 'pdt_0NbF7kyfPVbNBhxmWQHp5',
+        'professional': process.env.NEXT_PUBLIC_DODO_PROFESSIONAL_ID || 'pdt_0NbF8QfBIb551VXZMggGQ'
       };
 
       const productId = dodoProductIdMap[tier.id];
@@ -112,7 +113,7 @@ function AcquisitionTiersContent() {
           quantity: 1,
           email: session.user.email,
           name: session.user.name || 'TrendAI Customer',
-          return_url: `${window.location.origin}/acquisition-tiers?payment=success&plan=${tier.id}&checkout_id=`,
+          return_url: `${window.location.origin}/acquisition-tiers?payment=success&plan=${tier.id}&cycle=${billingCycle}&amount=${amount}&checkout_id=`,
           amount: amount,
           billing_cycle: billingCycle
         }),
@@ -124,22 +125,30 @@ function AcquisitionTiersContent() {
       if (!resSession.ok) {
         const errorData = await resSession.json().catch(() => ({}));
         console.error('❌ Dodo session creation failed:', errorData);
-        
+
         // Provide more specific error messages
-        if (resSession.status === 401) {
-          throw new Error('Payment service authentication failed. Please contact support.');
-        } else if (resSession.status === 500) {
-          throw new Error('Payment service is temporarily unavailable. Please try again in a few minutes.');
-        } else if (resSession.status >= 400) {
-          throw new Error(errorData.detail || `Payment initialization failed (Error ${resSession.status})`);
+        let alertMessage = `Payment initialization failed (Error ${resSession.status})`;
+
+        if (errorData.detail) {
+          if (typeof errorData.detail === 'string') {
+            alertMessage = errorData.detail;
+          } else if (errorData.detail.message) {
+            alertMessage = errorData.detail.message;
+          } else if (errorData.detail.error) {
+            alertMessage = errorData.detail.error;
+          }
+        } else if (resSession.status === 401) {
+          alertMessage = 'Payment service authentication failed. Please contact support.';
+        } else if (resSession.status === 500 && !errorData.detail) {
+          alertMessage = 'Payment service is temporarily unavailable. Please try again in a few minutes.';
         }
-        
-        throw new Error(errorData.detail || `Failed to create checkout session (${resSession.status})`);
+
+        throw new Error(alertMessage);
       }
 
       const sessionData = await resSession.json();
       console.log('✅ Dodo session created:', sessionData);
-      
+
       if (sessionData?.checkout_url) {
         console.log('🔄 Redirecting to Dodo checkout...');
         window.location.href = sessionData.checkout_url;
@@ -149,15 +158,15 @@ function AcquisitionTiersContent() {
 
     } catch (error: any) {
       console.error('❌ Payment Error:', error);
-      
+
       let errorMessage = 'Failed to initialize payment. Please try again.';
-      
+
       if (error.name === 'AbortError') {
         errorMessage = 'Payment request timed out. Please check your connection and try again.';
       } else if (error.message) {
         errorMessage = error.message;
       }
-      
+
       addNotification({
         type: 'alert',
         title: 'Payment Error',
@@ -216,12 +225,12 @@ function AcquisitionTiersContent() {
 
   return (
     <div className={`min-h-screen ${isDark ? 'bg-[#020617] text-white' : 'bg-slate-50 text-slate-900'} transition-colors duration-500 overflow-x-hidden`}>
-     
+
 
       <main className="pt-32 pb-24 px-4 relative">
         <div className="max-w-7xl mx-auto">
           {/* Strategic Header */}
-          <div className="text-center space-y-6 mb-16 relative z-10">
+          <div className="text-center space-y-6 mb-12 relative z-10">
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -240,7 +249,7 @@ function AcquisitionTiersContent() {
             {/* Toggle Billing Cycle */}
             <div className="flex items-center justify-center gap-4 mt-10">
               <span className={`text-sm font-bold ${billingCycle === 'monthly' ? 'text-emerald-500' : 'opacity-40'}`}>Monthly</span>
-              <button 
+              <button
                 onClick={() => setBillingCycle(billingCycle === 'monthly' ? 'yearly' : 'monthly')}
                 className={`w-14 h-7 rounded-full relative transition-colors ${isDark ? 'bg-white/10' : 'bg-slate-200'} border border-white/10`}
               >
@@ -253,36 +262,36 @@ function AcquisitionTiersContent() {
             </div>
           </div>
 
-          <div className="grid lg:grid-cols-2 gap-8 max-w-4xl mx-auto relative z-10">
+          <div className="grid lg:grid-cols-2 gap-6 max-w-3xl mx-auto relative z-10">
             {tiers.map((tier) => (
               <motion.div
                 key={tier.id}
-                whileHover={{ y: -10 }}
-                className={`p-8 rounded-3xl border ${tier.popular ? 'border-emerald-500/50 scale-[1.02] shadow-2xl shadow-emerald-500/10' : isDark ? 'border-white/5 shadow-xl shadow-black/20' : 'border-slate-200 shadow-xl'} ${isDark ? 'bg-white/5' : 'bg-white'} backdrop-blur-xl relative flex flex-col`}
+                whileHover={{ y: -8 }}
+                className={`p-6 rounded-3xl border ${tier.popular ? 'border-emerald-500/50 scale-[1.01] shadow-2xl shadow-emerald-500/10' : isDark ? 'border-white/5 shadow-xl shadow-black/20' : 'border-slate-200 shadow-xl'} ${isDark ? 'bg-white/5' : 'bg-white'} backdrop-blur-xl relative flex flex-col`}
               >
                 {tier.popular && (
                   <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest rounded-full shadow-lg shadow-emerald-500/40 animate-pulse">
                     MOST POPULAR
                   </div>
                 )}
-                
-                <div className="space-y-6 flex-grow">
+
+                <div className="space-y-4 flex-grow">
                   <div className="flex items-center justify-between">
-                    <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${tier.color} flex items-center justify-center text-white shadow-lg`}>
+                    <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${tier.color} flex items-center justify-center text-white shadow-lg`}>
                       {tier.icon}
                     </div>
-                    {tier.popular && <Crown size={20} className="text-emerald-500" />}
-                  </div>
-                  
-                  <div>
-                    <h3 className="text-2xl font-black uppercase tracking-tight">{tier.name}</h3>
-                    <p className="text-sm opacity-60 font-medium">{tier.tagline}</p>
+                    {tier.popular && <Crown size={18} className="text-emerald-500" />}
                   </div>
 
-                  <div className="py-2 border-y border-white/5">
+                  <div>
+                    <h3 className="text-xl font-black uppercase tracking-tight">{tier.name}</h3>
+                    <p className="text-xs opacity-60 font-medium">{tier.tagline}</p>
+                  </div>
+
+                  <div className="py-1.5 border-y border-white/5">
                     <div className="flex items-baseline gap-2">
-                      <span className="text-4xl font-black italic">₹{billingCycle === 'monthly' ? tier.monthPrice : tier.yearPrice}</span>
-                      <span className="text-xs opacity-50 font-bold uppercase tracking-widest">/ {billingCycle === 'monthly' ? 'mo' : 'yr'}</span>
+                      <span className="text-3xl font-black italic">₹{billingCycle === 'monthly' ? tier.monthPrice : tier.yearPrice}</span>
+                      <span className="text-[10px] opacity-50 font-bold uppercase tracking-widest">/ {billingCycle === 'monthly' ? 'mo' : 'yr'}</span>
                     </div>
                     <div className="flex items-center gap-2 mt-1">
                       <span className="text-[10px] line-through opacity-40">₹{billingCycle === 'monthly' ? tier.originalMonth : tier.originalYear}</span>
@@ -290,7 +299,7 @@ function AcquisitionTiersContent() {
                     </div>
                   </div>
 
-                  <ul className="space-y-4">
+                  <ul className="space-y-3">
                     {tier.features.map((feature, fIdx) => (
                       <li key={fIdx} className={`flex items-center gap-3 text-sm ${feature.active ? 'opacity-100' : 'opacity-30'}`}>
                         {feature.active ? (
@@ -306,11 +315,11 @@ function AcquisitionTiersContent() {
                   </ul>
                 </div>
 
-                <div className="mt-10">
-                  <button 
+                <div className="mt-8">
+                  <button
                     onClick={() => handlePayment(tier)}
                     disabled={loading !== null}
-                    className={`w-full py-4 rounded-2xl font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 ${tier.popular ? 'bg-emerald-500 hover:bg-emerald-400 text-white shadow-lg shadow-emerald-500/20' : isDark ? 'bg-white/10 hover:bg-white/20' : 'bg-slate-900 hover:bg-slate-800 text-white shadow-xl'} ${loading === tier.id ? 'animate-pulse scale-95 opacity-70' : ''}`}
+                    className={`w-full py-3.5 rounded-2xl font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 ${tier.popular ? 'bg-emerald-500 hover:bg-emerald-400 text-white shadow-lg shadow-emerald-500/20' : isDark ? 'bg-white/10 hover:bg-white/20' : 'bg-slate-900 hover:bg-slate-800 text-white shadow-xl'} ${loading === tier.id ? 'animate-pulse scale-95 opacity-70' : ''}`}
                   >
                     {loading === tier.id ? (
                       <div className="w-5 h-5 border-2 border-white/50 border-t-white rounded-full animate-spin" />
@@ -336,13 +345,13 @@ function AcquisitionTiersContent() {
 
       <AnimatePresence>
         {showSuccessModal && (
-          <PaymentSuccessModal 
-            isOpen={showSuccessModal} 
+          <PaymentSuccessModal
+            isOpen={showSuccessModal}
             onClose={() => {
               setShowSuccessModal(false);
               router.push('/dashboard');
-            }} 
-            paymentData={paymentDetails} 
+            }}
+            paymentData={paymentDetails}
           />
         )}
       </AnimatePresence>

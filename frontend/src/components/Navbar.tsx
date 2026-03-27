@@ -104,7 +104,8 @@ export default function Navbar() {
               </span>
               {plan !== 'free' && (
                 <span
-                  className="text-[7px] sm:text-[8px] font-black uppercase tracking-widest opacity-90 text-blue-600 dark:text-blue-400"
+                  className="text-[7px] sm:text-[8px] font-black uppercase tracking-widest opacity-90 transition-colors"
+                  style={{ color: subscriptionTheme.primary }}
                 >
                   {actualPlanName || planFeatures.planName}
                 </span>

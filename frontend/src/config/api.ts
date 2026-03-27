@@ -7,8 +7,23 @@ export const API_CONFIG = {
 };
 
 export const getApiUrl = () => {
-  // Use localhost for development
-  return 'http://127.0.0.1:8000';
+  // Check if we're in a browser environment
+  if (typeof window !== 'undefined') {
+    const hostname = window.location.hostname;
+    const searchParams = new URLSearchParams(window.location.search);
+    
+    // Check for explicit local API override (e.g., ?api=local)
+    if (searchParams.get('api') === 'local') {
+      return 'http://localhost:8000';
+    }
+
+    // Default to production Render backend even on localhost 
+    // to ensure the UI works without running the backend locally.
+    // If you WANT to use the local backend, add ?api=local to the URL.
+    return API_CONFIG.baseURL;
+  }
+  
+  return API_CONFIG.baseURL;
 };
 
 

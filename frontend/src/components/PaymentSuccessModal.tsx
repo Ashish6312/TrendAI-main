@@ -60,29 +60,27 @@ export default function PaymentSuccessModal({ isOpen, onClose, paymentData, isPa
 
   // Plan features for display
   const planFeaturesDetails = {
-    'Market Explorer': {
+    'Explorer': {
       analyses: 5,
       features: ['Basic Analytics', 'Email Support', 'Standard Reports'],
+      color: '#64748b'
+    },
+    'Starter': {
+      analyses: 100,
+      features: ['100 Analysis Actions', 'Priority Insights', 'Alpha Vault Storage', 'Community Access'],
+      color: '#2563eb'
+    },
+    'Professional': {
+      analyses: -1,
+      features: ['Unlimited Strategic Scans', 'Neural Profit Engine', '24/7 Priority Support', 'Strategic Roadmaps', 'Full API Access', 'Custom Reports'],
       color: '#10b981'
-    },
-    'Growth Architect': {
-      analyses: 50,
-      features: ['Advanced Analytics', 'Priority Support', 'Custom Reports', 'API Access'],
-      color: '#3b82f6'
-    },
-    'Territorial Dominance': {
-      analyses: -1,
-      features: ['Unlimited Analytics', '24/7 Premium Support', 'White-label Reports', 'Full API Access', 'Custom Integrations', 'Dedicated Account Manager'],
-      color: '#8b5cf6'
-    },
-    'Enterprise Dominance': {
-      analyses: -1,
-      features: ['Unlimited Analytics', '24/7 Premium Support', 'White-label Reports', 'Full API Access', 'Custom Integrations', 'Dedicated Account Manager'],
-      color: '#8b5cf6'
     }
   };
 
-  const currentPlanFeatures = planFeaturesDetails[planParam as keyof typeof planFeaturesDetails] || planFeaturesDetails['Territorial Dominance'];
+  const currentPlanFeatures = (planFeaturesDetails[planParam as keyof typeof planFeaturesDetails] || 
+                             (planParam?.includes('professional') ? planFeaturesDetails['Professional'] : 
+                              planParam?.includes('starter') ? planFeaturesDetails['Starter'] : 
+                              planFeaturesDetails['Professional']));
 
   useEffect(() => {
     if (isOpen) {

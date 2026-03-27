@@ -1034,12 +1034,12 @@ export default function BusinessDetailsPage() {
           >
             {plan !== 'professional' ? (
               <div className="glass-card p-12 sm:p-20 text-center relative overflow-hidden bg-slate-100/50 dark:bg-white/5 border-2 border-dashed border-slate-300 dark:border-white/10 rounded-[3rem]">
-                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-purple-500 to-transparent opacity-50" />
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-emerald-500 to-transparent opacity-50" />
                 <div className="relative z-10 max-w-2xl mx-auto space-y-8">
                   <div className="relative inline-block">
-                    <div className="absolute inset-0 bg-purple-500 blur-[80px] opacity-20 animate-pulse" />
-                    <div className="w-24 h-24 sm:w-32 sm:h-32 mx-auto rounded-[2rem] bg-white dark:bg-slate-900 border border-purple-500/20 shadow-2xl flex items-center justify-center relative z-10">
-                      <Cpu size={48} className="text-purple-500 animate-pulse" />
+                    <div className="absolute inset-0 bg-emerald-500 blur-[80px] opacity-20 animate-pulse" />
+                    <div className="w-24 h-24 sm:w-32 sm:h-32 mx-auto rounded-[2rem] bg-white dark:bg-slate-900 border border-emerald-500/20 shadow-2xl flex items-center justify-center relative z-10">
+                      <Cpu size={48} className="text-emerald-500 animate-pulse" />
                     </div>
                   </div>
                   

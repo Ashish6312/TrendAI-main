@@ -753,7 +753,7 @@ function ProfilePageContent() {
     exit: { opacity: 0, y: -20 }
   };
   return (
-    <div className="min-h-screen bg-white dark:bg-[#020617] relative transition-colors duration-500">
+    <div className="min-h-screen bg-white dark:bg-[#020617] relative transition-colors duration-500 pt-20 sm:pt-28 lg:pt-36">
       {/* Animated Background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute inset-0 bg-grid-white/[0.02]" />
@@ -788,7 +788,7 @@ function ProfilePageContent() {
         </div>
       </div>
 
-      <div className="relative z-10 responsive-container py-4 md:py-6">
+      <div className="relative z-10 responsive-container py-8 lg:py-12">
         {/* Header - More Compact & Premium */}
         <motion.div 
           initial={{ opacity: 0, y: -20 }}
@@ -2240,16 +2240,20 @@ function ProfilePageContent() {
                                     className="group hover:bg-slate-50 dark:hover:bg-white/5 transition-all duration-300"
                                     whileHover={{ scale: 1.01 }}
                                   >
-                                    <td className="py-4 font-mono text-xs text-slate-600 dark:text-slate-300 italic">
-                                      {payment.dodo_payment_id?.slice(0, 24)}...
+                                    <td className="py-4 font-mono text-[10px] text-slate-600 dark:text-slate-400 italic">
+                                      {payment.dodo_payment_id?.split('_').slice(-1)[0].toUpperCase().slice(0, 10) || payment.id}
                                     </td>
                                     <td className="py-4 text-xs font-black text-slate-600 dark:text-slate-400 uppercase tracking-tighter">
-                                      {new Date(payment.created_at || payment.payment_date).toLocaleDateString()}
+                                      {new Date(payment.created_at || payment.payment_date).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
                                     </td>
                                     <td className="py-4">
-                                      <span className="text-[10px] font-black text-slate-900 dark:text-white uppercase italic tracking-widest">{payment.plan_id?.split('_').join(' ') || getProfessionalPlanName(payment.plan_name)}</span>
+                                      <span className="text-[10px] font-black text-slate-900 dark:text-white uppercase italic tracking-widest">
+                                        {payment.plan_name?.toLowerCase().includes('professional') || payment.plan_id?.toLowerCase().includes('professional') ? 'Professional' : 
+                                         payment.plan_name?.toLowerCase().includes('starter') || payment.plan_id?.toLowerCase().includes('starter') ? 'Starter' : 
+                                         (payment.plan_name || 'Explorer')}
+                                      </span>
                                     </td>
-                                    <td className="py-4 text-xs font-black text-slate-900 dark:text-white tracking-widest">₹{payment.amount}</td>
+                                    <td className="py-4 text-xs font-black text-slate-900 dark:text-white tracking-widest">₹{parseFloat(payment.amount).toLocaleString()}</td>
                                     <td className="py-4 text-center">
                                       <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-tighter ${
                                         payment.status?.toLowerCase() === 'captured' || payment.status?.toLowerCase() === 'success'

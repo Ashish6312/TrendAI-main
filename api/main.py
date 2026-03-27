@@ -14,6 +14,7 @@ pwd_context = CryptContext(
 )
 import os
 import asyncio
+import time
 import urllib.parse
 from dotenv import load_dotenv
 load_dotenv()
@@ -2089,104 +2090,71 @@ async def test_dodo_import():
 
 @app.post("/api/dodo/create-session")
 async def create_dodo_checkout_session(request: DodoCheckoutRequest):
-    """Create a Dodo Payments checkout session using official SDK"""
+    """Integrate with Dodo Payments using their official Python SDK"""
     api_key = os.getenv("DODO_PAYMENTS_API_KEY")
     if not api_key:
-        logger.error("❌ Dodo API Key missing.")
+        logger.error("❌ Dodo API Key is missing from environment variables")
         raise HTTPException(status_code=401, detail="Dodo API Key missing. Please check your .env file.")
     
     try:
-        logger.info(f"🔄 Creating Dodo session for {request.email} with product {request.product_id}")
+        # Configuration
+        product_id = request.product_id
+        email = request.email
+        return_url = request.return_url
+        
+        logger.info(f"🔄 Creating Dodo session for {email} with product {product_id}")
         
         # Determine environment
         env = "test_mode" if "test" in api_key.lower() or os.getenv("DODO_ENVIRONMENT") == "test" else "live_mode"
         
+        # Initialize official Dodo SDK
+        # Some versions use api_key, others bearer_token. We use the keyword found in the current environment's SDK.
         client = DodoPayments(
-            bearer_token=api_key,
+            api_key=api_key,
             environment=env
         )
         
-        # Create session using official SDK
-        session = client.checkout_sessions.create(
-            product_cart=[
-                {
-                    "product_id": request.product_id,
-                    "quantity": request.quantity or 1
-                }
-            ],
-            customer={
-                "email": request.email,
-                "name": request.name
-            },
-            return_url=request.return_url
-        )
+        # Create checkout session using SDK
+        # We use product_cart for newer SDK versions or direct product_id for older ones
+        try:
+            session = client.checkout_sessions.create(
+                product_cart=[{"product_id": product_id, "quantity": request.quantity or 1}],
+                customer={"email": email, "name": request.name},
+                return_url=return_url
+            )
+        except (TypeError, AttributeError):
+            # Fallback for older SDK version structure
+            session = client.checkout_sessions.create(
+                product_id=product_id,
+                customer={"email": email},
+                return_url=return_url
+            )
         
-        logger.info(f"✅ Dodo session created: {session.id}")
         # Log the response structure for debugging
         logger.info(f"✅ Dodo SDK response received. Keys: {dir(session)}")
         
-        # Safely get ID and URL
-        checkout_id = getattr(session, "id", getattr(session, "checkout_id", None))
+        # Safely get ID and URL (SDK version compatibility)
+        checkout_id = getattr(session, "id", getattr(session, "checkout_id", "DODO_" + str(int(time.time()))))
         checkout_url = getattr(session, "checkout_url", None)
         
+        if not checkout_url:
+            raise HTTPException(status_code=500, detail="Dodo SDK failed to provide a checkout URL")
+            
         return {
             "checkout_url": checkout_url,
             "session_id": checkout_id
         }
                 
-    except Exception as e:
-        error_msg = str(e)
+    except Exception as sdk_error:
+        error_msg = str(sdk_error)
         logger.error(f"❌ Dodo SDK Request failed: {error_msg}")
         logger.error(f"❌ Traceback: {traceback.format_exc()}")
         
-        # Fallback to manual HTTP for compatibility if SDK fails 
-        # (Though SDK is preferred, keeping fallback for production stability)
-        try:
-            headers = {
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json"
-            }
-            # Standard Dodo payload
-            payload = {
-                "product_cart": [{"product_id": request.product_id, "quantity": request.quantity or 1}],
-                "customer": {"email": request.email, "name": request.name},
-                "return_url": request.return_url
-            }
-            
-            async with httpx.AsyncClient() as h_client:
-                # Try test then live (or vice versa depending on key)
-                base_urls = ["https://test.dodopayments.com", "https://api.dodopayments.com"]
-                if "live" in api_key.lower():
-                    base_urls = ["https://api.dodopayments.com", "https://test.dodopayments.com"]
-                
-                for base_url in base_urls:
-                    try:
-                        logger.info(f"🔄 Attempting manual fallback to {base_url}...")
-                        response = await h_client.post(f"{base_url}/checkouts", headers=headers, json=payload, timeout=10.0)
-                        
-                        if response.status_code in [200, 201]:
-                            data = response.json()
-                            logger.info(f"✅ Manual fallback successful: {data.get('id')}")
-                            return {
-                                "checkout_url": data.get("checkout_url"),
-                                "session_id": data.get("id")
-                            }
-                        else:
-                            resp_text = response.text
-                            logger.warning(f"⚠️ Manual fallback to {base_url} failed with status {response.status_code}: {resp_text}")
-                            error_msg = f"Dodo API Error ({response.status_code}): {resp_text}"
-                    except Exception as fallback_e:
-                        logger.warning(f"⚠️ Manual fallback request to {base_url} failed: {fallback_e}")
-                        continue
-        except Exception as outer_fallback_e:
-            logger.error(f"❌ Outer fallback logic failed: {outer_fallback_e}")
-            
         raise HTTPException(
             status_code=500, 
             detail={
                 "error": "Failed to create checkout session",
-                "message": error_msg,
-                "product_id": request.product_id
+                "message": error_msg
             }
         )
 
