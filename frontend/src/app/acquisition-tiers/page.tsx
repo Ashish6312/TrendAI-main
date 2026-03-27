@@ -87,7 +87,7 @@ function AcquisitionTiersContent() {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
 
-      const resSession = await fetch(`${apiUrl}/api/dodo/create-session`, {
+      const resSession = await fetch(`${apiUrl}/api/dodo/create-session-mock`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

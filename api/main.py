@@ -2097,6 +2097,20 @@ async def test_dodo_import():
             "error": f"Other error: {str(e)}"
         }
 
+@app.post("/api/dodo/create-session-mock")
+async def create_mock_checkout_session(request: DodoCheckoutRequest):
+    """Mock Dodo Payments checkout session for testing"""
+    try:
+        # Generate a mock checkout URL that redirects back with success
+        mock_session_id = f"mock_session_{int(datetime.now().timestamp())}"
+        mock_checkout_url = f"{request.return_url}&payment=success&plan={request.product_id.replace('prod_', '').replace('_199', '').replace('_499', '')}&payment_id=mock_{mock_session_id}&status=succeeded&email={request.email}"
+        
+        logger.info(f"✅ Mock Dodo session created: {mock_session_id}")
+        return {"checkout_url": mock_checkout_url, "session_id": mock_session_id}
+    except Exception as e:
+        logger.error(f"❌ Mock Dodo Request failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.post("/api/dodo/create-session")
 async def create_dodo_checkout_session(request: DodoCheckoutRequest):
     """Create a Dodo Payments checkout session using standard SDK"""
