@@ -2,7 +2,7 @@
 
 import { useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { 
   User, Phone, FileText, Loader2, Save, CheckCircle2, ArrowLeft, ArrowRight,
   ShieldCheck, Crown, Zap, Star, Settings, Calendar, 
@@ -36,9 +36,15 @@ const getProfessionalPlanName = (name: string): string => {
 
 export default function ProfilePage() {
   return (
-    <ProtectedRoute>
-      <ProfilePageContent />
-    </ProtectedRoute>
+    <Suspense fallback={
+      <div className="min-h-screen bg-white dark:bg-[#020617] flex items-center justify-center transition-colors duration-500">
+         <div className="w-20 h-20 border-4 border-blue-500/10 border-t-blue-500 rounded-full animate-spin" />
+      </div>
+    }>
+      <ProtectedRoute>
+        <ProfilePageContent />
+      </ProtectedRoute>
+    </Suspense>
   );
 }
 

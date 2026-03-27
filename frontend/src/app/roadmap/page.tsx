@@ -761,10 +761,10 @@ function RoadmapContent() {
 export default function RoadmapPage() {
   const { t } = useLanguage();
   return (
-    <ProtectedRoute>
-      <Suspense fallback={<div className="flex h-screen items-center justify-center flex-col gap-8 text-gray-500 font-black animate-pulse uppercase tracking-[0.4em] text-xs"><Loader2 className="animate-spin mb-4 w-12 h-12" /> {t("road_loading_strat")}</div>}>
+    <Suspense fallback={<div className="flex h-screen items-center justify-center flex-col gap-8 text-gray-500 font-black animate-pulse uppercase tracking-[0.4em] text-xs"><Loader2 className="animate-spin mb-4 w-12 h-12" /> {t("road_loading_strat")}</div>}>
+      <ProtectedRoute>
         <RoadmapContent />
-      </Suspense>
-    </ProtectedRoute>
+      </ProtectedRoute>
+    </Suspense>
   );
 }
