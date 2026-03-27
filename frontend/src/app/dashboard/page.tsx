@@ -82,7 +82,9 @@ const renderFormattedText = (text: string) => {
   );
 };
 
-function Dashboard() {
+import { Suspense } from "react";
+
+function DashboardContent() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const { language, t } = useLanguage();
@@ -511,40 +513,36 @@ function Dashboard() {
   // Loading state
   if (status === "loading") {
     return (
-      <ProtectedRoute>
-        <div className="flex h-screen items-center justify-center bg-white dark:bg-[#020617] relative overflow-hidden transition-colors duration-500">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(16,185,129,0.05),transparent_70%)]" />
-          <div className="relative">
-            <motion.div 
-              animate={{ rotate: 360 }}
-              transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
-              className="w-32 h-32 border-4 border-emerald-500/10 border-t-emerald-500 rounded-full shadow-[0_0_50px_rgba(16,185,129,0.2)]" 
-            />
-            <div className="absolute inset-0 flex items-center justify-center">
-              <motion.div
-                animate={{ scale: [1, 1.2, 1], opacity: [0.5, 1, 0.5] }}
-                transition={{ duration: 2, repeat: Infinity }}
-              >
-                <Target className="text-emerald-500" size={40} />
-              </motion.div>
-            </div>
-          </div>
+      <div className="flex h-screen items-center justify-center bg-white dark:bg-[#020617] relative overflow-hidden transition-colors duration-500">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(16,185,129,0.05),transparent_70%)]" />
+        <div className="relative">
           <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="absolute bottom-12 text-[10px] font-black uppercase tracking-[0.4em] text-emerald-500/40 italic"
-          >
-            Loading Dashboard...
-          </motion.div>
+            animate={{ rotate: 360 }}
+            transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+            className="w-32 h-32 border-4 border-emerald-500/10 border-t-emerald-500 rounded-full shadow-[0_0_50px_rgba(16,185,129,0.2)]" 
+          />
+          <div className="absolute inset-0 flex items-center justify-center">
+            <motion.div
+              animate={{ scale: [1, 1.2, 1], opacity: [0.5, 1, 0.5] }}
+              transition={{ duration: 2, repeat: Infinity }}
+            >
+              <Target className="text-emerald-500" size={40} />
+            </motion.div>
+          </div>
         </div>
-      </ProtectedRoute>
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="absolute bottom-12 text-[10px] font-black uppercase tracking-[0.4em] text-emerald-500/40 italic"
+        >
+          Loading Dashboard...
+        </motion.div>
+      </div>
     );
   }
-  // Main dashboard render
+
   return (
-    <ProtectedRoute>
-      <div className="bg-white dark:bg-[#020617] min-h-screen text-slate-900 dark:text-white transition-all duration-500 relative">
-        {/* Theme-aware Background with Glow */}
+    <div className="bg-white dark:bg-[#020617] min-h-screen text-slate-900 dark:text-white transition-all duration-500 relative">
         <div className="absolute inset-0 bg-gradient-to-br from-indigo-50/20 via-white to-emerald-50/20 dark:from-[#020617] dark:via-[#0f172a] dark:to-[#1e1b4b] pointer-events-none" />
         <div className="absolute top-0 left-0 w-full h-[500px] bg-emerald-500/[0.03] dark:bg-emerald-500/5 blur-[120px] pointer-events-none" />
         
@@ -1704,8 +1702,38 @@ function Dashboard() {
           paymentData={paymentDetails}
         />
       </div>
-    </ProtectedRoute>
   );
 }
 
-export default Dashboard;
+export default function Dashboard() {
+  return (
+    <ProtectedRoute>
+      <Suspense fallback={
+        <div className="flex h-screen items-center justify-center bg-white dark:bg-[#020617] relative overflow-hidden">
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(168,85,247,0.05),transparent_70%)]" />
+          <div className="relative flex flex-col items-center gap-6">
+            <div className="relative">
+              <div className="w-20 h-20 border-4 border-purple-500/10 border-t-purple-500 rounded-full animate-spin" />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <Cpu className="text-purple-500 animate-pulse" size={24} />
+              </div>
+            </div>
+            <div className="space-y-2 text-center">
+              <p className="text-[10px] font-black uppercase tracking-[0.5em] text-purple-500/60 animate-pulse">Initializing Strategic Dashboard</p>
+              <div className="h-1 w-48 bg-purple-500/5 rounded-full overflow-hidden">
+                <motion.div 
+                  initial={{ x: "-100%" }}
+                  animate={{ x: "100%" }}
+                  transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                  className="h-full w-full bg-gradient-to-r from-transparent via-purple-500 to-transparent"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      }>
+        <DashboardContent />
+      </Suspense>
+    </ProtectedRoute>
+  );
+}
