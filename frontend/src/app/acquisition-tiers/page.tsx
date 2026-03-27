@@ -83,6 +83,10 @@ function AcquisitionTiersContent() {
         returnUrl: `${window.location.origin}/acquisition-tiers?payment=success&plan=${tier.id}`
       });
 
+      // Add timeout to prevent hanging requests
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+
       const resSession = await fetch(`${apiUrl}/api/dodo/create-session`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -92,12 +96,25 @@ function AcquisitionTiersContent() {
           email: session.user.email,
           name: session.user.name || 'TrendAI Customer',
           return_url: `${window.location.origin}/acquisition-tiers?payment=success&plan=${tier.id}&checkout_id=`
-        })
+        }),
+        signal: controller.signal
       });
+
+      clearTimeout(timeoutId);
 
       if (!resSession.ok) {
         const errorData = await resSession.json().catch(() => ({}));
         console.error('❌ Dodo session creation failed:', errorData);
+        
+        // Provide more specific error messages
+        if (resSession.status === 401) {
+          throw new Error('Payment service authentication failed. Please contact support.');
+        } else if (resSession.status === 500) {
+          throw new Error('Payment service is temporarily unavailable. Please try again in a few minutes.');
+        } else if (resSession.status >= 400) {
+          throw new Error(errorData.detail || `Payment initialization failed (Error ${resSession.status})`);
+        }
+        
         throw new Error(errorData.detail || `Failed to create checkout session (${resSession.status})`);
       }
 
@@ -113,10 +130,19 @@ function AcquisitionTiersContent() {
 
     } catch (error: any) {
       console.error('❌ Payment Error:', error);
+      
+      let errorMessage = 'Failed to initialize payment. Please try again.';
+      
+      if (error.name === 'AbortError') {
+        errorMessage = 'Payment request timed out. Please check your connection and try again.';
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      
       addNotification({
         type: 'alert',
         title: 'Payment Error',
-        message: error.message || 'Failed to initialize payment. Please try again.',
+        message: errorMessage,
         priority: 'high'
       });
     } finally {

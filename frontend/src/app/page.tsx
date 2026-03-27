@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState, useEffect } from "react";
 import { locationAPI } from "@/utils/locationAPI";
+import { getApiUrl } from "@/config/api";
 
 import {
   ArrowRight, Zap, Rocket,
@@ -28,8 +29,19 @@ export default function Home() {
       // 1. Try to get saved location from profile if logged in
       if (session?.user?.email) {
         try {
-          const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-          const profileRes = await fetch(`${apiUrl}/api/users/${session.user.email}/profile`);
+          const apiUrl = getApiUrl();
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second timeout
+          
+          const profileRes = await fetch(`${apiUrl}/api/users/${session.user.email}/profile`, {
+            signal: controller.signal,
+            headers: {
+              'Content-Type': 'application/json',
+            }
+          });
+          
+          clearTimeout(timeoutId);
+          
           if (profileRes.ok) {
             const profileData = await profileRes.json();
             if (profileData.user?.location) {
@@ -45,15 +57,24 @@ export default function Home() {
               return; // EXIT EARLY - Found saved location
             }
           }
-        } catch (e) {
-          console.warn('Failed to fetch profile location, falling back to auto-detect:', e);
+        } catch (e: any) {
+          if (e.name === 'AbortError') {
+            console.warn('Backend location proxy timed out, trying fallbacks...');
+          } else {
+            console.warn('Backend location proxy failed, trying fallbacks...');
+          }
         }
       }
 
       // 2. Fallback to GPS/IP detection
-      const loc = await locationAPI.detectUserLocation();
-      if (loc) {
-        setDetectedLocation({ city: loc.city, country: loc.country });
+      try {
+        const loc = await locationAPI.detectUserLocation();
+        if (loc) {
+          setDetectedLocation({ city: loc.city, country: loc.country });
+        }
+      } catch (e) {
+        console.warn('Location detection failed, using default');
+        setDetectedLocation({ city: 'Global', country: 'Worldwide' });
       }
     };
     detect();

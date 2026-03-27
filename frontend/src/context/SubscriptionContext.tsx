@@ -130,11 +130,21 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     if (!session?.user?.email) return null;
     
     const email = session.user.email.toLowerCase().trim();
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:8000';
+    const apiUrl = getApiUrl();
     
     try {
       // Use the profile endpoint which reconciles payment history (source of truth)
-      const response = await fetch(`${apiUrl}/api/subscriptions/${email}`);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      
+      const response = await fetch(`${apiUrl}/api/subscriptions/${email}`, {
+        signal: controller.signal,
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+      
+      clearTimeout(timeoutId);
       
       if (response.ok) {
         const data = await response.json();
@@ -173,9 +183,28 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
         localStorage.setItem(`subscription_${email}`, planToSet);
         localStorage.setItem(`subscription_name_${email}`, actualName);
         return planToSet;
+      } else {
+        console.warn(`⚠️ Subscription API returned ${response.status}, using cached plan`);
+        // Try to use cached plan
+        const cachedPlan = localStorage.getItem(`subscription_${email}`) as SubscriptionPlan;
+        if (cachedPlan && ['free', 'starter', 'professional'].includes(cachedPlan)) {
+          setPlanState(cachedPlan);
+          return cachedPlan;
+        }
       }
-    } catch (error) {
-      console.error('❌ Subscription fetch error:', error);
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        console.warn('⚠️ Subscription fetch timed out, using cached plan');
+      } else {
+        console.warn('⚠️ Subscription fetch failed, using cached plan:', error.message);
+      }
+      
+      // Try to use cached plan on error
+      const cachedPlan = localStorage.getItem(`subscription_${email}`) as SubscriptionPlan;
+      if (cachedPlan && ['free', 'starter', 'professional'].includes(cachedPlan)) {
+        setPlanState(cachedPlan);
+        return cachedPlan;
+      }
     }
     
     return null;

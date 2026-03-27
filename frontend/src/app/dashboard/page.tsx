@@ -22,6 +22,7 @@ import PaymentSuccessModal from "../../components/PaymentSuccessModal";
 import UniformCard from "@/components/UniformCard";
 import AIAnalysisCanvas from "@/components/AIAnalysisCanvas";
 import AIAnalysisWidget from "@/components/AIAnalysisWidget";
+import AnimationTestButton from "@/components/AnimationTestButton";
 import { useTheme } from "next-themes";
 import { getApiUrl } from "@/config/api";
 
@@ -1701,6 +1702,9 @@ function DashboardContent() {
           onClose={() => setShowSuccessModal(false)}
           paymentData={paymentDetails}
         />
+        
+        {/* Animation Test Button - Only in development */}
+        {process.env.NODE_ENV === 'development' && <AnimationTestButton />}
       </div>
   );
 }

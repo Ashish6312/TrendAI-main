@@ -10,6 +10,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useNotifications } from "@/context/NotificationContext";
 import { useSubscription, SubscriptionPlan } from "@/context/SubscriptionContext";
 import { useSession } from "next-auth/react";
+import { useAnimation } from "@/context/AnimationContext";
 
 interface PaymentSuccessModalProps {
   isOpen: boolean;
@@ -29,6 +30,7 @@ export default function PaymentSuccessModal({ isOpen, onClose, paymentData, isPa
   const { data: session } = useSession();
   const { addNotification } = useNotifications();
   const { setPlan, theme } = useSubscription();
+  const { triggerPaymentAnimation } = useAnimation();
   const [showConfetti, setShowConfetti] = useState(true);
   const [currentStep, setCurrentStep] = useState(0);
   const hasProcessed = useRef(false);
@@ -86,6 +88,9 @@ export default function PaymentSuccessModal({ isOpen, onClose, paymentData, isPa
 
   useEffect(() => {
     if (isOpen) {
+      // Trigger the global payment animation immediately when modal opens
+      triggerPaymentAnimation();
+      
       const stepTimers = [
         setTimeout(() => setCurrentStep(1), 2000),
         setTimeout(() => setCurrentStep(2), 4000),
@@ -99,7 +104,7 @@ export default function PaymentSuccessModal({ isOpen, onClose, paymentData, isPa
         clearTimeout(confettiTimer);
       };
     }
-  }, [isOpen]);
+  }, [isOpen, triggerPaymentAnimation]);
 
   useEffect(() => {
     if (!isOpen || hasProcessed.current || !session?.user?.email || !payment_id) return;
@@ -107,7 +112,7 @@ export default function PaymentSuccessModal({ isOpen, onClose, paymentData, isPa
     const processPayment = async () => {
       hasProcessed.current = true;
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://trendai-api.onrender.com';
         const payload = {
           user_email: session?.user?.email || "",
           payment_id: payment_id,

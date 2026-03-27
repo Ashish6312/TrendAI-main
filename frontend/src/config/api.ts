@@ -1,8 +1,8 @@
 // API Configuration - Centralized API URL management
-// Version: 1.1 - Fixed subscription theme errors
+// Version: 1.2 - Fixed API URL to point to correct Render deployment
 export const API_CONFIG = {
   // Always use Render backend in production
-  baseURL: 'https://starterscope-api.onrender.com',
+  baseURL: 'https://trendai-api.onrender.com',
   timeout: 30000,
 };
 
@@ -27,7 +27,7 @@ export const getApiUrl = () => {
     return process.env.NEXT_PUBLIC_API_URL;
   }
   
-  return 'https://starterscope-api.onrender.com';
+  return 'https://trendai-api.onrender.com';
 };
 
 
