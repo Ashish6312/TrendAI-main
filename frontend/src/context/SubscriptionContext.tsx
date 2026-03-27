@@ -318,13 +318,8 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     return currentCount >= maxAnalyses;
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-500"></div>
-      </div>
-    );
-  }
+  // Performance Optimization: We no longer block the whole app with a global loader.
+  // The app will render immediately using cached state, then quietly update once API returns.
 
   return (
     <SubscriptionContext.Provider value={{

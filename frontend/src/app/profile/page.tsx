@@ -1471,13 +1471,14 @@ function ProfilePageContent() {
                           </Link>
                         </div>
                       </div>
-                    ) : loadingVault ? (
-                      <div className="py-20 text-center">
-                        <Loader2 className="w-12 h-12 text-slate-300 animate-spin mx-auto mb-4" />
-                        <p className="text-sm font-black text-slate-500 uppercase tracking-widest italic">Synchronizing with Node...</p>
-                      </div>
-                    ) : savedBusinesses.length > 0 ? (
+                    ) : (savedBusinesses.length > 0) ? (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
+                        {loadingVault && (
+                          <div className="col-span-full flex items-center justify-center gap-3 py-4 bg-emerald-500/5 rounded-2xl border border-emerald-500/10 animate-pulse">
+                            <RefreshCw className="w-4 h-4 text-emerald-500 animate-spin" />
+                            <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest italic">Synchronizing Core Nodes...</span>
+                          </div>
+                        )}
                         {savedBusinesses.map((item, idx) => (
                           <motion.div 
                             key={item.id}
