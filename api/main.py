@@ -2107,23 +2107,9 @@ async def test_dodo_import():
             "error": f"Other error: {str(e)}"
         }
 
-@app.post("/api/dodo/create-session-mock")
-async def create_mock_checkout_session(request: DodoCheckoutRequest):
-    """Mock Dodo Payments checkout session for testing"""
-    try:
-        # Generate a mock checkout URL that redirects back with success
-        mock_session_id = f"mock_session_{int(datetime.now().timestamp())}"
-        mock_checkout_url = f"{request.return_url}&payment=success&plan={request.product_id.replace('prod_', '').replace('_199', '').replace('_499', '')}&payment_id=mock_{mock_session_id}&status=succeeded&email={request.email}"
-        
-        logger.info(f"✅ Mock Dodo session created: {mock_session_id}")
-        return {"checkout_url": mock_checkout_url, "session_id": mock_session_id}
-    except Exception as e:
-        logger.error(f"❌ Mock Dodo Request failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
 @app.post("/api/dodo/create-session")
 async def create_dodo_checkout_session(request: DodoCheckoutRequest):
-    """Create a Dodo Payments checkout session using standard SDK"""
+    """Create a Dodo Payments checkout session using direct HTTP API"""
     api_key = os.getenv("DODO_PAYMENTS_API_KEY")
     if not api_key:
         logger.error("❌ Dodo API Key missing.")
@@ -2132,28 +2118,86 @@ async def create_dodo_checkout_session(request: DodoCheckoutRequest):
     try:
         logger.info(f"🔄 Creating Dodo session for {request.email} with product {request.product_id}")
         
-        from dodopayments import DodoPayments
+        # Use direct HTTP API call to Dodo Payments
+        import httpx
         
-        # SDK automatically handles test/live environments based on the key
-        client = DodoPayments(
-            bearer_token=api_key,
-            environment='test_mode'  # Will auto-detect based on API key
-        )
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Content-Type": "application/json"
+        }
         
-        session = client.checkout_sessions.create(
-            product_cart=[{"product_id": request.product_id, "quantity": request.quantity}],
-            customer={"email": request.email, "name": request.name},
-            return_url=request.return_url,
-        )
+        # Create a simple product on-the-fly instead of using pre-created product IDs
+        amount_map = {
+            "prod_starter_199": 199,
+            "prod_professional_499": 499,
+            "starter": 199,
+            "professional": 499
+        }
         
-        logger.info(f"✅ Dodo session created: {session.session_id}")
-        return {"checkout_url": session.checkout_url, "session_id": session.session_id}
-    except ImportError as e:
-        logger.error(f"❌ Dodo library import failed: {e}")
-        raise HTTPException(status_code=500, detail=f"Dodo Payments library not available: {str(e)}")
-    except AttributeError as e:
-        logger.error(f"❌ Dodo API method error: {e}")
-        raise HTTPException(status_code=500, detail=f"Dodo API method error: {str(e)}")
+        amount = amount_map.get(request.product_id, 199)
+        
+        payload = {
+            "amount": amount * 100,  # Convert to cents/paise
+            "currency": "INR",
+            "customer": {
+                "email": request.email,
+                "name": request.name
+            },
+            "return_url": request.return_url,
+            "metadata": {
+                "plan": request.product_id,
+                "quantity": request.quantity
+            }
+        }
+        
+        logger.info(f"🔄 Dodo payload: {payload}")
+        
+        async with httpx.AsyncClient() as client:
+            # Try the checkout sessions endpoint
+            response = await client.post(
+                "https://api.dodopayments.com/v1/checkout-sessions",
+                headers=headers,
+                json=payload,
+                timeout=30.0
+            )
+            
+            logger.info(f"🔄 Dodo response status: {response.status_code}")
+            logger.info(f"🔄 Dodo response: {response.text}")
+            
+            if response.status_code == 200 or response.status_code == 201:
+                session_data = response.json()
+                logger.info(f"✅ Dodo session created via HTTP: {session_data}")
+                return {
+                    "checkout_url": session_data.get("checkout_url") or session_data.get("url"),
+                    "session_id": session_data.get("session_id") or session_data.get("id")
+                }
+            else:
+                error_text = response.text
+                logger.error(f"❌ Dodo HTTP API failed: {response.status_code} - {error_text}")
+                
+                # Try alternative endpoint structure
+                if response.status_code == 404:
+                    # Try different endpoint
+                    response2 = await client.post(
+                        "https://api.dodopayments.com/v1/payments",
+                        headers=headers,
+                        json=payload,
+                        timeout=30.0
+                    )
+                    
+                    if response2.status_code in [200, 201]:
+                        session_data = response2.json()
+                        logger.info(f"✅ Dodo payment created via alternative endpoint: {session_data}")
+                        return {
+                            "checkout_url": session_data.get("checkout_url") or session_data.get("url"),
+                            "session_id": session_data.get("id")
+                        }
+                
+                raise HTTPException(status_code=response.status_code, detail=f"Dodo API error: {error_text}")
+                
+    except httpx.RequestError as e:
+        logger.error(f"❌ Dodo HTTP request failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Network error connecting to Dodo: {str(e)}")
     except Exception as e:
         logger.error(f"❌ Dodo Request failed: {e}")
         logger.error(f"❌ Full traceback: {traceback.format_exc()}")
