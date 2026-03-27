@@ -2427,7 +2427,7 @@ function ProfilePageContent() {
         payment={selectedPayment}
         userData={{
           name: formData.name || session?.user?.name || "Premium User",
-          email: session?.user?.email || "billing@starterscope.ai",
+          email: session?.user?.email || "StarterScope7@gmail.com",
           company: formData.company,
           location: formData.location
         }}

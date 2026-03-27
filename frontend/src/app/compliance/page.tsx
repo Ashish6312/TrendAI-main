@@ -68,7 +68,7 @@ export default function CompliancePage() {
 
           <div className="pt-8 border-t border-slate-200 dark:border-white/5 text-center">
             <p className="text-sm text-slate-500 dark:text-gray-500 font-medium">
-              Need more info? Contact us at <span className="text-emerald-600 dark:text-emerald-400 font-bold">legal@starterscope.ai</span>
+              Need more info? Contact us at <span className="text-emerald-600 dark:text-emerald-400 font-bold">StarterScope7@gmail.com</span>
             </p>
           </div>
         </motion.div>

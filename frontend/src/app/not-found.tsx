@@ -128,7 +128,7 @@ export default function NotFound() {
           {/* Footer Assistance */}
           <div className="pt-8 border-t border-slate-200 dark:border-slate-800">
              <p className="text-sm font-medium text-slate-500 dark:text-slate-400">
-               Need assistance? <a href="mailto:support@starterscope.ai" className="text-emerald-600 dark:text-emerald-400 font-bold hover:underline">Contact Support</a>
+               Need assistance? <a href="mailto:StarterScope7@gmail.com" className="text-emerald-600 dark:text-emerald-400 font-bold hover:underline">Contact Support</a>
              </p>
           </div>
         </motion.div>

@@ -52,7 +52,7 @@ export default function TermsPage() {
 
             <section>
               <h2 className="text-2xl font-black text-slate-900 dark:text-white mb-4 uppercase tracking-tight">{t('terms_section_5')}</h2>
-              <p>{t('terms_content_5')} <span className="text-emerald-600 dark:text-emerald-400 font-bold">legal@starterscope.ai</span></p>
+              <p>{t('terms_content_5')} <span className="text-emerald-600 dark:text-emerald-400 font-bold">StarterScope7@gmail.com</span></p>
             </section>
           </div>
         </motion.div>

@@ -329,7 +329,7 @@ export default function PaymentSuccessModal({ isOpen, onClose, paymentData, isPa
                <Shield size={12} className="text-emerald-500" />
                <span>Institutional Encryption Active</span>
              </div>
-             <p>Support: support@starterscope.ai</p>
+             <p>Support: StarterScope7@gmail.com</p>
           </div>
         </div>
       </motion.div>

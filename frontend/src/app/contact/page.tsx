@@ -15,7 +15,7 @@ export default function ContactPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    
+
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://trendai-api.onrender.com';
       const response = await fetch(`${apiUrl}/api/contact`, {
@@ -32,7 +32,7 @@ export default function ContactPage() {
 
       const result = await response.json();
       console.log("Transmission Result:", result);
-      
+
       alert(t('contact_success'));
       setFormData({ name: "", email: "", subject: "", message: "" });
     } catch (error) {
@@ -60,10 +60,10 @@ export default function ContactPage() {
   return (
     <div className="min-h-screen bg-white dark:bg-[#020617] text-slate-900 dark:text-white transition-colors duration-500">
       <div className="max-w-6xl mx-auto px-6 py-12">
-        <motion.button 
+        <motion.button
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
-          onClick={() => router.back()} 
+          onClick={() => router.back()}
           className="flex items-center gap-2 px-4 py-2 rounded-xl bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-500 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white transition-all group mb-12 font-black uppercase tracking-widest text-[10px]"
         >
           <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" />
@@ -105,60 +105,60 @@ export default function ContactPage() {
             className="p-8 sm:p-10 rounded-3xl bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 shadow-2xl relative"
           >
             <div className="absolute top-0 right-0 p-3">
-               <MessageSquare className="text-slate-200 dark:text-white/5 w-16 h-16" />
+              <MessageSquare className="text-slate-200 dark:text-white/5 w-16 h-16" />
             </div>
-            
+
             <form onSubmit={handleSubmit} className="space-y-6 relative z-10">
               <div className="grid sm:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-500 dark:text-gray-500 uppercase tracking-widest pl-1">{t('contact_form_name')}</label>
-                  <input 
+                  <input
                     required
-                    type="text" 
+                    type="text"
                     value={formData.name}
-                    onChange={(e) => setFormData({...formData, name: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     placeholder={t('contact_id_self')}
                     className="w-full px-5 py-4 bg-white dark:bg-black/20 border-2 border-slate-200 dark:border-white/5 rounded-2xl focus:border-emerald-500 dark:focus:border-emerald-500 transition-all outline-none text-sm font-bold"
                   />
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-500 dark:text-gray-500 uppercase tracking-widest pl-1">{t('contact_form_email')}</label>
-                  <input 
+                  <input
                     required
-                    type="email" 
+                    type="email"
                     value={formData.email}
-                    onChange={(e) => setFormData({...formData, email: e.target.value})}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     placeholder="name@email.com"
                     className="w-full px-5 py-4 bg-white dark:bg-black/20 border-2 border-slate-200 dark:border-white/5 rounded-2xl focus:border-emerald-500 dark:focus:border-emerald-500 transition-all outline-none text-sm font-bold"
                   />
                 </div>
               </div>
-              
+
               <div className="space-y-2">
-                 <label className="text-[10px] font-black text-slate-500 dark:text-gray-500 uppercase tracking-widest pl-1">{t('contact_form_subject')}</label>
-                 <input 
-                   required
-                   type="text" 
-                   value={formData.subject}
-                   onChange={(e) => setFormData({...formData, subject: e.target.value})}
-                   placeholder={t('contact_obj')}
-                   className="w-full px-5 py-4 bg-white dark:bg-black/20 border-2 border-slate-200 dark:border-white/5 rounded-2xl focus:border-emerald-500 dark:focus:border-emerald-500 transition-all outline-none text-sm font-bold"
-                 />
+                <label className="text-[10px] font-black text-slate-500 dark:text-gray-500 uppercase tracking-widest pl-1">{t('contact_form_subject')}</label>
+                <input
+                  required
+                  type="text"
+                  value={formData.subject}
+                  onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+                  placeholder={t('contact_obj')}
+                  className="w-full px-5 py-4 bg-white dark:bg-black/20 border-2 border-slate-200 dark:border-white/5 rounded-2xl focus:border-emerald-500 dark:focus:border-emerald-500 transition-all outline-none text-sm font-bold"
+                />
               </div>
 
               <div className="space-y-2">
-                 <label className="text-[10px] font-black text-slate-500 dark:text-gray-500 uppercase tracking-widest pl-1">{t('contact_form_message')}</label>
-                 <textarea 
-                   required
-                   rows={4}
-                   value={formData.message}
-                   onChange={(e) => setFormData({...formData, message: e.target.value})}
-                   placeholder={t('contact_msg_dir')}
-                   className="w-full px-5 py-4 bg-white dark:bg-black/20 border-2 border-slate-200 dark:border-white/5 rounded-2xl focus:border-emerald-500 dark:focus:border-emerald-500 transition-all outline-none text-sm font-bold resize-none"
-                 />
+                <label className="text-[10px] font-black text-slate-500 dark:text-gray-500 uppercase tracking-widest pl-1">{t('contact_form_message')}</label>
+                <textarea
+                  required
+                  rows={4}
+                  value={formData.message}
+                  onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                  placeholder={t('contact_msg_dir')}
+                  className="w-full px-5 py-4 bg-white dark:bg-black/20 border-2 border-slate-200 dark:border-white/5 rounded-2xl focus:border-emerald-500 dark:focus:border-emerald-500 transition-all outline-none text-sm font-bold resize-none"
+                />
               </div>
 
-              <button 
+              <button
                 type="submit"
                 disabled={isSubmitting}
                 className="w-full py-5 bg-gradient-to-r from-emerald-600 to-emerald-700 hover:from-emerald-700 hover:to-emerald-800 text-white font-black uppercase tracking-[0.2em] rounded-2xl transition-all shadow-xl shadow-emerald-600/20 active:scale-95 disabled:opacity-50 flex items-center justify-center gap-3 italic"
@@ -177,12 +177,12 @@ export default function ContactPage() {
         </div>
 
         <div className="mt-20 pt-10 border-t border-slate-100 dark:border-white/5 grid grid-cols-2 md:grid-cols-4 gap-8">
-           {stats.map((stat, i) => (
-             <div key={i} className="text-center">
-                <div className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">{stat.label}</div>
-                <div className={`text-sm font-black italic ${stat.color}`}>{stat.val}</div>
-             </div>
-           ))}
+          {stats.map((stat, i) => (
+            <div key={i} className="text-center">
+              <div className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">{stat.label}</div>
+              <div className={`text-sm font-black italic ${stat.color}`}>{stat.val}</div>
+            </div>
+          ))}
         </div>
       </div>
     </div>

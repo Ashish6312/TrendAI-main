@@ -52,7 +52,7 @@ export default function PrivacyPage() {
 
             <section>
               <h2 className="text-2xl font-black text-slate-900 dark:text-white mb-4 uppercase tracking-tight">{t('priv_section_5')}</h2>
-              <p>{t('priv_content_5')} <span className="text-emerald-600 dark:text-emerald-400 font-bold">privacy@starterscope.ai</span></p>
+              <p>{t('priv_content_5')} <span className="text-emerald-600 dark:text-emerald-400 font-bold">StarterScope7@gmail.com</span></p>
             </section>
           </div>
         </motion.div>
