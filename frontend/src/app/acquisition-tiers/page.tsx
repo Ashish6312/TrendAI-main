@@ -227,10 +227,10 @@ function AcquisitionTiersContent() {
     <div className={`min-h-screen ${isDark ? 'bg-[#020617] text-white' : 'bg-slate-50 text-slate-900'} transition-colors duration-500 overflow-x-hidden`}>
 
 
-      <main className="pt-32 pb-24 px-4 relative">
+      <main className="pt-14 pb-24 px-4 relative">
         <div className="max-w-7xl mx-auto">
           {/* Strategic Header */}
-          <div className="text-center space-y-6 mb-12 relative z-10">
+          <div className="text-center space-y-6 mb-8 relative z-10">
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}

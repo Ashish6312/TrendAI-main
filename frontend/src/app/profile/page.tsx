@@ -753,7 +753,7 @@ function ProfilePageContent() {
     exit: { opacity: 0, y: -20 }
   };
   return (
-    <div className="min-h-screen bg-white dark:bg-[#020617] relative transition-colors duration-500 pt-12 sm:pt-16 lg:pt-20">
+    <div className="min-h-screen bg-white dark:bg-[#020617] relative transition-colors duration-500 pt-6 sm:pt-8 lg:pt-10">
       {/* Animated Background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute inset-0 bg-grid-white/[0.02]" />
@@ -788,12 +788,12 @@ function ProfilePageContent() {
         </div>
       </div>
 
-      <div className="relative z-10 responsive-container py-8 lg:py-12">
+      <div className="relative z-10 responsive-container py-4 lg:py-6">
         {/* Header - More Compact & Premium */}
         <motion.div 
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-4 lg:mb-6"
+          className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-2 lg:mb-4"
         >
           <div className="flex items-center gap-4">
             <button 
