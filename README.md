@@ -102,21 +102,64 @@ REDDIT_CLIENT_SECRET=your_reddit_client_secret
 - **Location Intelligence**: GPS-based location detection and analysis
 - **Real-time Data**: Integration with multiple APIs for current market data
 
-## 🔄 Core Intelligence Architecture
+## 🧠 Neural Architecture: High-Fidelity Intelligence Stack
 
-### 🧠 Backend: The Analysis Cluster (FastAPI)
-The backend functions as a high-density intelligence refinery, employing a multi-layered RAG (Retrieval-Augmented Generation) strategy:
-- **Neural Analysis Engine**: Powered by `Pollinations AI`, the engine synthesizes market gaps and venture roadmaps using real-time economic indicators.
-- **Scouting Swarm**: Parallelizes data gathering across `Tavily`, `Exa`, `Serper`, and `Firecrawl` to ensure zero-stale market reasoning.
-- **Data Persistence**: Uses a hardened PostgreSQL (Neon) layer with `SQLAlchemy` for mission-critical storage of search history, user metrics, and the 'Alpha Vault'.
-- **Operational Resilience**: Features adaptive connection pooling (`pool_pre_ping`) and extended 60s neural timeouts to process complex metropolitan nodes like Karnataka and Mumbai.
+The platform operates on a 5-layer architecture designed for real-time market reconnaissance and high-fidelity strategic synthesis.
 
-### 🌐 Frontend: The Reconnaissance Dashboard (Next.js)
-The frontend is a high-performance command center built for real-time visualization:
-- **Kinetic Reconnaissance Interface**: Implements `framer-motion` for ultra-smooth glassmorphic transitions and tactile feedback.
-- **RealBusiness Scouting Engine**: Races `Overpass API` and `Nominatim` via secure backend proxies. Adheres to a strict **Zero-Fallback Policy**, ensuring every business record displayed is a verifiable real-world entity.
-- **State Management**: Orchestrates complex reconnaissance flows using React Context and `sessionStorage` to maintain intelligence continuity during deep-scouting sessions.
-- **Intelligence Archival**: Features a proprietary PDF generation suite that recursively sanitizes modern CSS v4 color functions (oklch/oklab) for stable archival generation.
+```mermaid
+graph TD
+    subgraph "1. KINETIC FRONTEND (Next.js 14)"
+        A1[Reconnaissance Dashboard] --> A2[State Management: Context/sessionStorage]
+        A2 --> A3[RealBusiness API: Secure Proxy Race]
+        A3 --> A4[Intelligence Archival: CSS Sanitized PDF]
+    end
+
+    subgraph "2. API GATEWAY (FastAPI)"
+        B1[Secure Proxy Middlewares] --> B2[Intelligence API Endpoints]
+        B2 --> B3[Scouting Swarm Controller]
+        B3 --> B4[Adaptive Neural Timeouts: 60s]
+    end
+
+    subgraph "3. RAG SCOUTING SWARM (Real-Time)"
+        C1[Tavily: AI Search] --- C2[Exa: Neural Discovery]
+        C2 --- C3[Serper: Google Meta]
+        C3 --- C4[Firecrawl/Apify: Deep Extraction]
+    end
+
+    subgraph "4. REASONING CLUSTER (Intel Core)"
+        D1[Pollinations AI: RAG Synthesis] --> D2[Venture Identity Roadmap]
+        D2 --> D3[Neural Data Hardening: Zero-Fallback]
+        D3 --> D4[Identity Refinement: Indian Rupee ₹ Prep]
+    end
+
+    subgraph "5. PERSISTENCE LAYER (Hardened)"
+        E1[Neon PostgreSQL] --- E2[Search History Cache]
+        E2 --- E3[Alpha Vault: Saved Nodes]
+        E3 --- E4[User Operational Metadata]
+    end
+
+    A3 -.-> B1
+    B3 -.-> C1
+    C4 -.-> D1
+    D4 -.-> E1
+```
+
+### 🧠 High-Fidelity Workflow Execution
+
+1.  **Reconnaissance Trigger**: User initiates a strategic scan for a specific location (e.g., *Karnataka, India*).
+2.  **Scouting Swarm Activation**: The backend controller parallelizes market gathering across the **Scouting Swarm**, racing multiple neural search providers to bypass stale data.
+3.  **Neural Synthesis**: The **Reasoning Cluster** processes the raw search signals using a high-fidelity RAG block. It performs a 5-layer analysis (Extraction, Mapping, Branding, Financials, and Risk Mitigation).
+4.  **Zero-Fallback Verification**: Every recommendation is validated against real-world business data from the **OSM Overpass API** to ensure 100% verifiable market fidelity.
+5.  **Alpha Vault Archival**: Validated intelligence nodes are stored in the **Persistence Layer**, allowing users to secure their strategic assets for future execution.
+
+## 🔄 Deployment Status & Health
+
+- **Intelligence Engine**: Operational (RAG Cluster Hardened)
+- **Reconnaissance Engine**: High-Fidelity (Overpass/Nominatim Active)
+- **Security Protocols**: CSS v4 recursive sanitization enabled
+- **Vault Integrity**: PostgreSQL (pg8000) connection pooling optimized
+
+## 🔄 Core Intelligence Architecture (Operational Logic)
 
 ## 🔄 API Configuration
 
