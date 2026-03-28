@@ -57,16 +57,6 @@ manager = ConnectionManager()
 from integrated_business_intelligence import register_ws_pusher
 register_ws_pusher(manager.broadcast)
 
-@app.websocket("/ws/analysis")
-async def websocket_endpoint(websocket: WebSocket):
-    await manager.connect(websocket)
-    try:
-        while True:
-            # We just need to hold the connection open.
-            # Real-time messages are broadcast from the AI engine.
-            await websocket.receive_text()
-    except WebSocketDisconnect:
-        manager.disconnect(websocket)
 
 class OverpassQuery(BaseModel):
     query: str
