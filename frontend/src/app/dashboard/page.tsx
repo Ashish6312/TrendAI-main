@@ -233,6 +233,37 @@ function DashboardContent() {
 
   const [paymentDetails, setPaymentDetails] = useState<any>(null);
 
+  // Load state from localStorage on mount
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedResult = localStorage.getItem('last_analysis_result');
+      if (savedResult) {
+        try {
+          const parsed = JSON.parse(savedResult);
+          // Only load if it's recent (less than 1 hour old)
+          const timestamp = parsed.timestamp_added_to_storage || 0;
+          if (Date.now() - timestamp < 3600000) {
+             setResult(parsed);
+             if (parsed.area) setArea(parsed.area);
+          }
+        } catch (e) {
+          console.error("Failed to load saved result", e);
+        }
+      }
+    }
+  }, []);
+
+  // Save result to localStorage when it changes
+  useEffect(() => {
+    if (result && typeof window !== 'undefined') {
+      const resultToSave = {
+        ...result,
+        timestamp_added_to_storage: Date.now()
+      };
+      localStorage.setItem('last_analysis_result', JSON.stringify(resultToSave));
+    }
+  }, [result]);
+
   useEffect(() => {
     const isPaymentSuccess = searchParams.get('payment_success') === 'true';
     const paymentId = searchParams.get('payment_id');
@@ -358,6 +389,28 @@ function DashboardContent() {
       const historyList = Array.isArray(data.history) ? data.history : (Array.isArray(data) ? data : []);
       setHistory(historyList);
       setAnalysisCount(historyList.length);
+
+      // 🔄 AUTO-PERSISTENCE: Load the absolute latest history item if no active result exists
+      if (!result && historyList.length > 0 && !loading) {
+        const latest = historyList[0];
+        console.log("♻️ Auto-loading latest history into terminal:", latest.area);
+        
+        // We need the full result (with analysis), but history only has recommendations.
+        // However, loading it from history will trigger a refresh or show what we have.
+        // For a true persistence, we should have the full result but searchHistory has it in 'analysis' field.
+        
+        // Re-construct the result object
+        const reconstructedResult = {
+          id: latest.id,
+          area: latest.area,
+          recommendations: typeof latest.recommendations === 'string' ? JSON.parse(latest.recommendations) : latest.recommendations,
+          analysis: typeof latest.analysis === 'string' ? JSON.parse(latest.analysis) : latest.analysis,
+          cached: true,
+          timestamp: latest.created_at
+        };
+        setResult(reconstructedResult);
+        setArea(latest.area);
+      }
     } catch (e) {
       console.error("Failed to fetch history, retrying in 5s...", e);
       setTimeout(fetchHistory, 5000); 
@@ -405,6 +458,11 @@ function DashboardContent() {
     setLoadingProgress(0);
     setLoadingMessage("Waking up Intelligence Cluster...");
     setResult(null);
+    
+    // 🔐 STRATEGIC LOCK: Prevent accidental page cycles during active reconnaissance
+    if (typeof window !== 'undefined') {
+      sessionStorage.setItem('active_reconnaissance', 'true');
+    }
 
     // Initialize WebSocket for real-time progress updates
     let socket: WebSocket | null = null;
@@ -472,6 +530,11 @@ function DashboardContent() {
         clearInterval(progressInterval);
         setLoading(false);
         
+        // 🔐 UNLOCK: Ready for next reconnaissance
+        if (typeof window !== 'undefined') {
+          sessionStorage.removeItem('active_reconnaissance');
+        }
+
         if (session?.user?.email) {
           const locationSource = data.using_profile_location ? ' (from your profile)' : ' (custom search)';
           addNotification({
@@ -488,6 +551,11 @@ function DashboardContent() {
       if (socket) socket.close();
       clearInterval(progressInterval);
       setLoading(false);
+      
+      // 🚨 EMERGENCY UNLOCK: Reset state on reconnaissance failure
+      if (typeof window !== 'undefined') {
+        sessionStorage.removeItem('active_reconnaissance');
+      }
       
       addNotification({
         type: 'alert',

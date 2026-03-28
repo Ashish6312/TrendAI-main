@@ -456,18 +456,26 @@ except Exception as e:
     def check_db_connection():
         return False
 
-# Initialize database if available
-if db_available:
-    try:
-        init_database()
-        db_status = check_db_connection()
-        if not db_status:
-            logger.warning("Database connection test failed")
-        else:
-            logger.info("✅ Database connection successful")
-    except Exception as e:
-        logger.error(f"⚠️ Database initialization failed: {e}")
-        db_available = False
+# Database initialization moved to startup event for non-blocking boot
+@app.on_event("startup")
+async def startup_db_init():
+    if db_available:
+        try:
+            logger.info("🚀 Starting Database Initialization (Neural Link)...")
+            # Run blocking init in a thread to keep the event loop alive
+            success = await asyncio.to_thread(init_database)
+            if success:
+                db_status = await asyncio.to_thread(check_db_connection)
+                if not db_status:
+                    logger.warning("⚠️ Database connection test failed")
+                else:
+                    logger.info("✅ Database connection successful and tables ready")
+            else:
+                logger.error("❌ Database initialization failed")
+        except Exception as e:
+            logger.error(f"⚠️ Critical database startup error: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
 
 # Try to import models
 try:
@@ -1266,10 +1274,10 @@ async def get_recommendations(request: RecommendationRequest, db: Session = Depe
             is_generic_placeholder = "Strategic Market Opportunity" in cache_str or "₹5L-₹15L" in cache_str
             is_generic_template = any(t in cache_str for t in ["Local Digital Solutions", "Hyper-Local Logistics", "Eco-Smart Retail Hub"])
             
-            # STRICT COUNT VALIDATION: The V4.2 Strategic Engine MUST return 12-15 items. 
-            # If the cache has fewer than 12, it's definitely legacy data and MUST be refreshed.
+            # STRICT COUNT VALIDATION: The V4.2 Strategic Engine SHOULD return 12-15 items. 
+            # If the cache has fewer than 10, it's definitely legacy data and MUST be refreshed.
             rec_count = len(cached_recs) if isinstance(cached_recs, list) else 0
-            is_legacy_count = rec_count < 12
+            is_legacy_count = rec_count < 10
             
             # ADDRESS IN TITLE DETECTION: If any recommendation title is low-fidelity
             is_bad_naming = False
@@ -1282,7 +1290,8 @@ async def get_recommendations(request: RecommendationRequest, db: Session = Depe
                             print(f"⚠️  Detected low-fidelity naming in cached title: '{title}'. Forcing refresh...")
                             break
             
-            is_valid_cache = isinstance(cached_recs, list) and rec_count >= 15 and not is_generic_placeholder and not is_generic_template and not is_bad_naming and not is_legacy_count
+            # Use 10 as the baseline for "valid enough and fast"
+            is_valid_cache = isinstance(cached_recs, list) and rec_count >= 10 and not is_generic_placeholder and not is_generic_template and not is_bad_naming and not is_legacy_count
             
             if is_valid_cache:
                 # Deep validation: ensuring the structure has actual business titles, not empty shells
