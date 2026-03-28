@@ -139,6 +139,9 @@ class IntegratedBusinessIntelligence:
         print(f"💎 [QUANTUM RACE] Deploying Gemini & AIC Overlord Parallel Swarm...")
         await push_ws_status("Quantum Search Active: Parallel Intelligence Swarm...")
         
+        print(f"🚀 [QUANTUM RACE] Starting High-Fidelity Swarm Intelligence for: {area}...")
+        
+        pending = []
         try:
             # We use wait with FIRST_COMPLETED to beat the Render 30s timeout
             tasks = [
@@ -152,17 +155,21 @@ class IntegratedBusinessIntelligence:
                 timeout=25.0 # Max wait for the primary swarm
             )
             
-            for task in done:
-                res = task.result()
-                if res.get("success"):
-                    # Cancel pending tasks to save resources
-                    for p in pending: p.cancel()
-                    return res
+            if done:
+                for task in done:
+                    res = task.result()
+                    if res.get("success"):
+                        print(f"✨ [QUANTUM RACE SUCCESS] {res.get('layer', 'Core Layer')} delivered the strategy!")
+                        # Cancel pending tasks to save resources
+                        for p in pending: p.cancel()
+                        return res
             
-            # Cancel anything still running
-            for p in pending: p.cancel()
+            print("⚠️ [QUANTUM RACE TIMEOUT/FAIL] Primary swarm failed, falling back to Layer 3 (DeepSeek Guard)...")
         except Exception as e:
             print(f"⚠️ Quantum Race Exception: {e}")
+        finally:
+            # Cancel anything still running
+            for p in pending: p.cancel()
 
         # 3. LAYER 3: SEARCH-GPT (The Knight - Neural Sourcing)
         await push_ws_status("Secondary Swarm Active: SearchGPT...")
