@@ -102,22 +102,34 @@ REDDIT_CLIENT_SECRET=your_reddit_client_secret
 - **Location Intelligence**: GPS-based location detection and analysis
 - **Real-time Data**: Integration with multiple APIs for current market data
 
-## 🔄 API Endpoints
+## 🔄 Core Intelligence Architecture
 
-### Authentication
-- `POST /api/auth/signup` - User registration
-- `POST /api/auth/signin` - User login
-- `POST /api/users/sync` - Sync user data
+### 🧠 Backend: The Analysis Cluster (FastAPI)
+The backend functions as a high-density intelligence refinery, employing a multi-layered RAG (Retrieval-Augmented Generation) strategy:
+- **Neural Analysis Engine**: Powered by `Pollinations AI`, the engine synthesizes market gaps and venture roadmaps using real-time economic indicators.
+- **Scouting Swarm**: Parallelizes data gathering across `Tavily`, `Exa`, `Serper`, and `Firecrawl` to ensure zero-stale market reasoning.
+- **Data Persistence**: Uses a hardened PostgreSQL (Neon) layer with `SQLAlchemy` for mission-critical storage of search history, user metrics, and the 'Alpha Vault'.
+- **Operational Resilience**: Features adaptive connection pooling (`pool_pre_ping`) and extended 60s neural timeouts to process complex metropolitan nodes like Karnataka and Mumbai.
 
-### Business Intelligence
-- `POST /api/recommendations` - Get business recommendations
-- `POST /api/business-plan` - Generate business plan
-- `POST /api/roadmap` - Create strategic roadmap
+### 🌐 Frontend: The Reconnaissance Dashboard (Next.js)
+The frontend is a high-performance command center built for real-time visualization:
+- **Kinetic Reconnaissance Interface**: Implements `framer-motion` for ultra-smooth glassmorphic transitions and tactile feedback.
+- **RealBusiness Scouting Engine**: Races `Overpass API` and `Nominatim` via secure backend proxies. Adheres to a strict **Zero-Fallback Policy**, ensuring every business record displayed is a verifiable real-world entity.
+- **State Management**: Orchestrates complex reconnaissance flows using React Context and `sessionStorage` to maintain intelligence continuity during deep-scouting sessions.
+- **Intelligence Archival**: Features a proprietary PDF generation suite that recursively sanitizes modern CSS v4 color functions (oklch/oklab) for stable archival generation.
 
-### User Management
-- `GET /api/users/{email}` - Get user information
-- `PUT /api/users/{email}` - Update user profile
-- `GET /api/subscriptions/{email}` - Get user subscription
+## 🔄 API Configuration
+
+### Intelligence & Reconnaissance
+- `POST /api/recommendations` - Initiates the 5-layer neural analysis cluster.
+- `POST /api/businesses/search` - Proxy for secure OSM reconnaissance.
+- `POST /api/businesses/scrape` - Deep-extraction of business metadata via Apify.
+- `POST /api/business-plan` - Strategic blueprint generation.
+
+### Security & Vault Operations
+- `GET /api/users/profile` - Fetches the user's operational status and metadata.
+- `GET /api/saved-businesses` - Retrieves archived nodes from the Alpha Vault.
+- `POST /api/contact` - Mission-critical support pipeline with background SMTP transmission.
 
 ## 📄 License
 
