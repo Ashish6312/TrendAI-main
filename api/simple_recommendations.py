@@ -242,7 +242,7 @@ def get_real_time_market_data(area: str) -> str:
     """Fetch real-time market data and news using DuckDuckGo Search"""
     try:
         # Dynamic import to avoid startup crashes
-        from duckduckgo_search import DDGS
+        from ddgs import DDGS
         
         with DDGS() as ddgs:
             # Search for business opportunities and market trends

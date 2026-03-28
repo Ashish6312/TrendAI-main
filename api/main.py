@@ -1460,8 +1460,9 @@ def get_user_history(email: str, db: Session = Depends(get_db)):
                     ids_to_purge.append(r.id)
             except: ids_to_purge.append(r.id)
             
+        deleted_count = 0
         if ids_to_purge:
-            db.query(models.SearchHistory).filter(models.SearchHistory.id.in_(ids_to_purge)).delete(synchronize_session=False)
+            deleted_count = db.query(models.SearchHistory).filter(models.SearchHistory.id.in_(ids_to_purge)).delete(synchronize_session=False)
         
         db.commit()
             

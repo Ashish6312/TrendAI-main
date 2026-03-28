@@ -9,7 +9,7 @@ pyjwt>=2.8.0
 passlib[bcrypt]>=1.7.4
 pg8000>=1.30.3
 textblob>=0.17.0
-duckduckgo-search>=3.9.0
+ddgs>=6.0.0
 praw>=7.7.0
 standardwebhooks
 dodopayments
