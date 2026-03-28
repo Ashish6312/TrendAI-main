@@ -233,24 +233,10 @@ function DashboardContent() {
 
   const [paymentDetails, setPaymentDetails] = useState<any>(null);
 
-  // Load state from localStorage on mount
+  // Auto-persistence removed to maintain a clean default state as requested.
+  // Results are only loaded when explicitly searched or selected from history.
   useEffect(() => {
-    if (typeof window !== 'undefined') {
-      const savedResult = localStorage.getItem('last_analysis_result');
-      if (savedResult) {
-        try {
-          const parsed = JSON.parse(savedResult);
-          // Only load if it's recent (less than 1 hour old)
-          const timestamp = parsed.timestamp_added_to_storage || 0;
-          if (Date.now() - timestamp < 3600000) {
-             setResult(parsed);
-             if (parsed.area) setArea(parsed.area);
-          }
-        } catch (e) {
-          console.error("Failed to load saved result", e);
-        }
-      }
-    }
+    // Only load if it's explicitly required for a deep link or similar.
   }, []);
 
   // Save result to localStorage when it changes
@@ -389,28 +375,7 @@ function DashboardContent() {
       const historyList = Array.isArray(data.history) ? data.history : (Array.isArray(data) ? data : []);
       setHistory(historyList);
       setAnalysisCount(historyList.length);
-
-      // 🔄 AUTO-PERSISTENCE: Load the absolute latest history item if no active result exists
-      if (!result && historyList.length > 0 && !loading) {
-        const latest = historyList[0];
-        console.log("♻️ Auto-loading latest history into terminal:", latest.area);
-        
-        // We need the full result (with analysis), but history only has recommendations.
-        // However, loading it from history will trigger a refresh or show what we have.
-        // For a true persistence, we should have the full result but searchHistory has it in 'analysis' field.
-        
-        // Re-construct the result object
-        const reconstructedResult = {
-          id: latest.id,
-          area: latest.area,
-          recommendations: typeof latest.recommendations === 'string' ? JSON.parse(latest.recommendations) : latest.recommendations,
-          analysis: typeof latest.analysis === 'string' ? JSON.parse(latest.analysis) : latest.analysis,
-          cached: true,
-          timestamp: latest.created_at
-        };
-        setResult(reconstructedResult);
-        setArea(latest.area);
-      }
+      // Auto-persistence removed to stay clean until user interacts.
     } catch (e) {
       console.error("Failed to fetch history, retrying in 5s...", e);
       setTimeout(fetchHistory, 5000); 
@@ -1137,22 +1102,7 @@ function DashboardContent() {
                             </span>
                           )}
                         </p>
-                                             {/* Action Group: Play, Share, Download */}
-                        <div className="flex flex-wrap items-center gap-4">
-                          {/* PRIMARY: PLAY / START */}
-                          <Link 
-                            href={`/roadmap?area=${encodeURIComponent(area)}&title=${encodeURIComponent(result.recommendations?.[0]?.title || "New Business")}&desc=${encodeURIComponent(
-                              (typeof result.analysis === 'object' ? result.analysis?.executive_summary : result.analysis) || "Market Opportunity"
-                            )}&lang=${language}`} 
-                            className="flex items-center gap-2 px-4 py-2 bg-[#10b981] hover:bg-[#059669] text-white rounded-lg font-black text-sm transition-all shadow-[0_8px_30px_rgb(16,185,129,0.3)] hover:shadow-[0_8px_30px_rgb(16,185,129,0.4)] hover:scale-[1.05] active:scale-95 group"
-                          >
-                            <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center group-hover:bg-white/30 transition-colors">
-                              <Play size={18} fill="currentColor" className="ml-0.5" />
-                            </div>
-                            <span>Launch Roadmap</span>
-                          </Link>
-                        </div>
-                      </div>
+                                             </div>
                     </UniformCard>
 
                     {/* Analysis Summary */}
@@ -1172,9 +1122,13 @@ function DashboardContent() {
                             ))}
                           </div>
                           <div className="prose prose-sm prose-slate dark:prose-invert max-w-none overflow-y-auto max-h-[250px] pr-2 custom-scrollbar">
-                            {renderFormattedText(typeof result.analysis === 'object' 
-                              ? (result.analysis?.executive_summary || result.analysis?.market_overview) 
-                              : (result.analysis || "Market analysis in progress..."))}
+                            {renderFormattedText((() => {
+                              const a = result.analysis;
+                              if (!a) return "Market analysis in progress...";
+                              if (typeof a === 'string') return a;
+                              return a.executive_summary || a.market_overview || a.overview || 
+                                     (Object.keys(a).length ? JSON.stringify(a) : "Market analysis in progress...");
+                            })())}
                           </div>
                         </div>
                       </UniformCard>
@@ -1194,7 +1148,9 @@ function DashboardContent() {
                               </div>
                               <div className="text-xs font-bold text-slate-500 dark:text-gray-500 uppercase tracking-widest mb-1">Success Rate</div>
                               <div className="text-3xl lg:text-4xl font-black text-emerald-500 tracking-tighter tabular-nums drop-shadow-sm">{
-                                (typeof result.analysis === 'object' ? result.analysis?.confidence_score : "85%")
+                                ((typeof result.analysis === 'object' && result.analysis?.confidence_score) 
+                                  ? result.analysis.confidence_score 
+                                  : "85%")
                               }</div>
                               <div className="mt-2 text-[10px] font-bold text-emerald-600/60 dark:text-emerald-400/40 uppercase">High Potential</div>
                             </div>
@@ -1208,7 +1164,9 @@ function DashboardContent() {
                               <div className="text-xs font-bold text-slate-500 dark:text-gray-500 uppercase tracking-widest mb-1">Market Gap</div>
                               <div className="text-2xl lg:text-3xl font-black text-blue-500 tracking-tighter drop-shadow-sm break-words line-clamp-2 min-h-[3rem] flex items-center justify-center leading-tight">
                                 {
-                                  (typeof result.analysis === 'object' ? result.analysis?.market_gap_intensity : "High")
+                                  ((typeof result.analysis === 'object' && result.analysis?.market_gap_intensity) 
+                                    ? result.analysis.market_gap_intensity 
+                                    : "High")
                                 }
                               </div>
                               <div className="mt-2 text-[10px] font-bold text-blue-600/60 dark:text-blue-400/40 uppercase">Unsaturated</div>

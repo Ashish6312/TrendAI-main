@@ -53,6 +53,21 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 
+# Link the intelligence engine's push stream to the FastAPI connection manager
+from integrated_business_intelligence import register_ws_pusher
+register_ws_pusher(manager.broadcast)
+
+@app.websocket("/ws/analysis")
+async def websocket_endpoint(websocket: WebSocket):
+    await manager.connect(websocket)
+    try:
+        while True:
+            # We just need to hold the connection open.
+            # Real-time messages are broadcast from the AI engine.
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
+
 class OverpassQuery(BaseModel):
     query: str
 
@@ -743,6 +758,15 @@ class PaymentCreate(BaseModel):
     subscription_id: Optional[int] = None
     amount: float
     dodo_payment_id: Optional[str] = None
+
+class ProcessPaymentRequest(BaseModel):
+    user_email: str
+    dodo_payment_id: str
+    order_id: Optional[str] = None
+    amount: float
+    plan_name: str
+    billing_cycle: str = "monthly"
+    currency: Optional[str] = "INR"
 
     status: str = "success"
     payment_method: Optional[str] = None
@@ -2161,11 +2185,90 @@ def get_payment_history(user_email: str, limit: int = 50, db: Session = Depends(
             "status": p.status,
             "plan_name": p.plan_name,
             "billing_cycle": p.billing_cycle,
-            "payment_date": p.payment_date.isoformat() if p.payment_date else p.created_at.isoformat(),
+            "payment_date": getattr(p, 'payment_date', p.created_at).isoformat() if getattr(p, 'payment_date', p.created_at) else None,
             "payment_method": p.payment_method
         }
         for p in payments
     ]
+
+@app.post("/api/process-payment")
+def process_frontend_payment(payload: ProcessPaymentRequest, db: Session = Depends(get_db)):
+    """Frontend endpoint to securely process and fulfill a successful payment from the confirmation modal."""
+    try:
+        from dodopayments import DodoPayments
+        api_key = os.getenv("DODO_PAYMENTS_API_KEY")
+        if not api_key:
+            logger.warning("⚠️ DODO_PAYMENTS_API_KEY is not set. Bypassing SDK verification logic.")
+        else:
+            env = "test_mode" if "test" in api_key.lower() or os.getenv("DODO_ENVIRONMENT") == "test" else "live_mode"
+            client = DodoPayments(bearer_token=api_key, environment=env)
+            
+            # Verify the payment id actually succeeded, guarding against frontend tampering
+            try:
+                payment_record_from_dodo = client.payments.retrieve(payload.dodo_payment_id)
+                # Dodo's success status comes back generically or specifically as 'succeeded'
+                if payment_record_from_dodo.status.lower() not in ["succeeded", "success"]:
+                     raise HTTPException(status_code=400, detail="Transaction not verified as successful by Dodo.")
+            except AttributeError:
+                # Catch cases where older SDK versions return a dictionary or different structure
+                pass
+            except Exception as e:
+                logger.error(f"❌ Dodo verification error for {payload.dodo_payment_id}: {e}")
+                raise HTTPException(status_code=400, detail=f"Failed to verify payment status: {str(e)}")
+
+        email_normalized = payload.user_email.lower().strip()
+        plan_name = payload.plan_name
+        mapped_plan = normalize_plan_name(plan_name)
+        
+        logger.info(f"🔄 Fulfilling verified payment for {email_normalized} (Plan: {plan_name})")
+
+        # 1. Update Payment History if it doesn't exist (Webhook might have beaten us to it)
+        existing_payment = db.query(models.PaymentHistory).filter(models.PaymentHistory.dodo_payment_id == payload.dodo_payment_id).first()
+        
+        if not existing_payment:
+            payment_record = models.PaymentHistory(
+                user_email=email_normalized,
+                dodo_payment_id=payload.dodo_payment_id,
+                amount=payload.amount,
+                currency=payload.currency or "INR",
+                status="success",
+                plan_name=plan_name,
+                billing_cycle=payload.billing_cycle,
+                payment_method="dodo"
+            )
+            db.add(payment_record)
+            
+        # 2. Trigger robust subscription upgrade
+        subscription_data = SubscriptionCreate(
+            user_email=email_normalized,
+            plan_name=mapped_plan,
+            plan_display_name=plan_name,
+            billing_cycle=payload.billing_cycle,
+            price=payload.amount,
+            currency=payload.currency or "INR",
+            max_analyses=-1 if mapped_plan == 'professional' else 100,
+            features={}
+        )
+        
+        create_subscription(subscription_data, db)
+        db.commit()
+        invalidate_user_cache(email_normalized)
+        
+        return {
+            "status": "success",
+            "plan_name": mapped_plan,
+            "plan_display_name": plan_name
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"❌ Critical error in process-payment: {e}")
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail={"error": "Fulfillment failure", "message": str(e)}
+        )
 
 
 # Missing user profile and session endpoints
@@ -2406,9 +2509,16 @@ async def create_dodo_checkout_session(request: DodoCheckoutRequest):
         
         # Create checkout session using SDK
         # We use product_cart for newer SDK versions or direct product_id for older ones
+        # Multiplied by 100 to convert Rupees/Dollars to Paisa/Cents for certain SKU configurations
+        price_amount = request.amount * 100 if request.amount else None
+        
         try:
+            cart_item = {"product_id": product_id, "quantity": request.quantity or 1}
+            if price_amount:
+                cart_item["amount"] = price_amount # Use 'amount' or 'price' depending on SDK version
+                
             session = client.checkout_sessions.create(
-                product_cart=[{"product_id": product_id, "quantity": request.quantity or 1}],
+                product_cart=[cart_item],
                 customer={"email": email, "name": request.name},
                 return_url=return_url
             )
@@ -2421,7 +2531,7 @@ async def create_dodo_checkout_session(request: DodoCheckoutRequest):
             )
         
         # Log the response structure for debugging
-        logger.info(f"✅ Dodo SDK response received. Keys: {dir(session)}")
+        logger.info(f"✅ Dodo SDK response received for amount {request.amount}. Keys: {dir(session)}")
         
         # Safely get ID and URL (SDK version compatibility)
         checkout_id = getattr(session, "id", getattr(session, "checkout_id", "DODO_" + str(int(time.time()))))

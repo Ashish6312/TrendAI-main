@@ -26,7 +26,6 @@ function AcquisitionTiersContent() {
   const [paymentDetails, setPaymentDetails] = useState<any>(null);
   const isDark = resolvedTheme !== 'light';
 
-  // Check for successful payment in URL on mount - Dodo returns payment details as query params
   useEffect(() => {
     const paymentStatus = searchParams.get('payment');
     const planId = searchParams.get('plan');
@@ -35,11 +34,7 @@ function AcquisitionTiersContent() {
     const cycleParam = searchParams.get('cycle');
     const amountParam = searchParams.get('amount');
 
-    console.log('🔍 Checking URL params:', { paymentStatus, planId, paymentId, status });
-
     if ((paymentStatus === 'success' || status === 'succeeded') && planId) {
-      console.log('✅ Payment success detected from Dodo redirect');
-
       setPaymentDetails({
         payment_id: paymentId || 'DODO_' + Date.now(),
         order_id: 'ORDER_' + Date.now(),
@@ -49,8 +44,6 @@ function AcquisitionTiersContent() {
         billing: cycleParam || billingCycle
       });
       setShowSuccessModal(true);
-
-      // Clean up URL params
       const newUrl = window.location.pathname;
       window.history.replaceState({}, '', newUrl);
     }
@@ -63,47 +56,15 @@ function AcquisitionTiersContent() {
     }
 
     setLoading(tier.id);
-
     try {
       const apiUrl = getApiUrl();
-      console.log('🔗 Using API URL:', apiUrl);
-
-      // Test API connectivity first
-      try {
-        const testResponse = await fetch(`${apiUrl}/api/test-cors`);
-        if (testResponse.ok) {
-          const testData = await testResponse.json();
-          console.log('✅ API connectivity test passed:', testData);
-        } else {
-          console.warn('⚠️ API connectivity test failed:', testResponse.status);
-        }
-      } catch (testError) {
-        console.error('❌ API connectivity test error:', testError);
-      }
-
-      // Map tier IDs to Dodo product IDs (Updated with user's specific live IDs)
       const dodoProductIdMap: Record<string, string> = {
         'starter': process.env.NEXT_PUBLIC_DODO_STARTER_ID || 'pdt_0NbF7kyfPVbNBhxmWQHp5',
         'professional': process.env.NEXT_PUBLIC_DODO_PROFESSIONAL_ID || 'pdt_0NbF8QfBIb551VXZMggGQ'
       };
 
       const productId = dodoProductIdMap[tier.id];
-      if (!productId) {
-        throw new Error(`Product ID not found for tier: ${tier.id}`);
-      }
-
-      console.log('🔄 Creating Dodo checkout session...', {
-        productId,
-        email: session.user.email,
-        returnUrl: `${window.location.origin}/acquisition-tiers?payment=success&plan=${tier.id}`
-      });
-
-      // Calculate correct amount based on billing cycle
       const amount = billingCycle === 'monthly' ? tier.monthPrice : tier.yearPrice;
-
-      // Add timeout to prevent hanging requests
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
 
       const resSession = await fetch(`${apiUrl}/api/dodo/create-session`, {
         method: 'POST',
@@ -116,63 +77,14 @@ function AcquisitionTiersContent() {
           return_url: `${window.location.origin}/acquisition-tiers?payment=success&plan=${tier.id}&cycle=${billingCycle}&amount=${amount}&checkout_id=`,
           amount: amount,
           billing_cycle: billingCycle
-        }),
-        signal: controller.signal
+        })
       });
 
-      clearTimeout(timeoutId);
-
-      if (!resSession.ok) {
-        const errorData = await resSession.json().catch(() => ({}));
-        console.error('❌ Dodo session creation failed:', errorData);
-
-        // Provide more specific error messages
-        let alertMessage = `Payment initialization failed (Error ${resSession.status})`;
-
-        if (errorData.detail) {
-          if (typeof errorData.detail === 'string') {
-            alertMessage = errorData.detail;
-          } else if (errorData.detail.message) {
-            alertMessage = errorData.detail.message;
-          } else if (errorData.detail.error) {
-            alertMessage = errorData.detail.error;
-          }
-        } else if (resSession.status === 401) {
-          alertMessage = 'Payment service authentication failed. Please contact support.';
-        } else if (resSession.status === 500 && !errorData.detail) {
-          alertMessage = 'Payment service is temporarily unavailable. Please try again in a few minutes.';
-        }
-
-        throw new Error(alertMessage);
-      }
-
+      if (!resSession.ok) throw new Error('Payment initialization failed');
       const sessionData = await resSession.json();
-      console.log('✅ Dodo session created:', sessionData);
-
-      if (sessionData?.checkout_url) {
-        console.log('🔄 Redirecting to Dodo checkout...');
-        window.location.href = sessionData.checkout_url;
-      } else {
-        throw new Error('Checkout URL not received from Dodo Payments');
-      }
-
+      if (sessionData?.checkout_url) window.location.href = sessionData.checkout_url;
     } catch (error: any) {
-      console.error('❌ Payment Error:', error);
-
-      let errorMessage = 'Failed to initialize payment. Please try again.';
-
-      if (error.name === 'AbortError') {
-        errorMessage = 'Payment request timed out. Please check your connection and try again.';
-      } else if (error.message) {
-        errorMessage = error.message;
-      }
-
-      addNotification({
-        type: 'alert',
-        title: 'Payment Error',
-        message: errorMessage,
-        priority: 'high'
-      });
+      addNotification({ type: 'alert', title: 'Payment Error', message: error.message || 'Failed to initialize payment.', priority: 'high' });
     } finally {
       setLoading(null);
     }
@@ -181,14 +93,13 @@ function AcquisitionTiersContent() {
   const tiers = [
     {
       id: "starter",
-      name: "Starter",
+      name: "STARTER",
       tagline: "Basic analytics for beginners",
       monthPrice: 199,
       yearPrice: 1799,
       originalMonth: 299,
-      originalYear: 2999,
-      dailyLabel: "Only ₹6/day",
-      icon: <Zap className="w-6 h-6" />,
+      dailyLabel: "ONLY ₹6/DAY",
+      icon: <Zap className="w-5 h-5 text-white" />,
       color: "from-blue-500 to-cyan-400",
       popular: false,
       features: [
@@ -202,14 +113,13 @@ function AcquisitionTiersContent() {
     },
     {
       id: "professional",
-      name: "Professional",
+      name: "PROFESSIONAL",
       tagline: "Full-scale intelligence for growth",
       monthPrice: 499,
       yearPrice: 4499,
       originalMonth: 699,
-      originalYear: 6999,
-      dailyLabel: "Only ₹12/day",
-      icon: <Rocket className="w-6 h-6" />,
+      dailyLabel: "ONLY ₹12/DAY",
+      icon: <Rocket className="w-5 h-5 text-white" />,
       color: "from-emerald-500 to-teal-400",
       popular: true,
       features: [
@@ -224,122 +134,105 @@ function AcquisitionTiersContent() {
   ];
 
   return (
-    <div className={`min-h-screen ${isDark ? 'bg-[#020617] text-white' : 'bg-slate-50 text-slate-900'} transition-colors duration-500 overflow-x-hidden`}>
-
-
-      <main className="pt-14 pb-24 px-4 relative">
-        <div className="max-w-7xl mx-auto">
-          {/* Strategic Header */}
-          <div className="text-center space-y-6 mb-8 relative z-10">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 text-xs font-black uppercase tracking-[0.2em]"
+    <div className={`min-h-screen ${isDark ? 'bg-[#020617] text-white' : 'bg-slate-50 text-slate-900'} transition-colors duration-500`}>
+      <main className="pt-24 pb-24 px-4 max-w-7xl mx-auto">
+        <div className="text-center space-y-4 mb-16 italic uppercase text-5xl md:text-7xl font-black tracking-tighter leading-none">
+          Acquisition Tiers
+          <div className="mt-4 flex items-center justify-center gap-4 not-italic normal-case text-lg opacity-60 font-medium tracking-normal leading-normal">
+            Join 1,000+ entrepreneurs building with AI precision.
+          </div>
+          
+          <div className="flex items-center justify-center gap-4 mt-8 not-italic normal-case text-base tracking-normal">
+            <span className={`text-sm font-bold ${billingCycle === 'monthly' ? 'text-emerald-500' : 'opacity-40'}`}>Monthly</span>
+            <button
+               onClick={() => setBillingCycle(billingCycle === 'monthly' ? 'yearly' : 'monthly')}
+               className={`w-12 h-6 rounded-full relative transition-colors ${isDark ? 'bg-white/10' : 'bg-slate-200'} border border-white/10`}
             >
-              <Sparkles size={14} className="animate-pulse" />
-              PRICING PLANS
-            </motion.div>
-            <h1 className="text-5xl md:text-7xl font-black tracking-tighter leading-none italic uppercase">
-              ACQUISITION TIERS
-            </h1>
-            <p className="text-lg md:text-xl opacity-70 max-w-2xl mx-auto font-medium">
-              Join 1,000+ entrepreneurs building with AI precision.
-            </p>
+              <div className={`absolute top-1 left-1 bottom-1 w-4 bg-emerald-500 rounded-full transition-all ${billingCycle === 'yearly' ? 'translate-x-6' : ''}`} />
+            </button>
+            <span className={`text-sm font-bold ${billingCycle === 'yearly' ? 'text-emerald-500' : 'opacity-40'}`}>Yearly (Save 30%)</span>
+          </div>
+        </div>
 
-            {/* Toggle Billing Cycle */}
-            <div className="flex items-center justify-center gap-4 mt-10">
-              <span className={`text-sm font-bold ${billingCycle === 'monthly' ? 'text-emerald-500' : 'opacity-40'}`}>Monthly</span>
-              <button
-                onClick={() => setBillingCycle(billingCycle === 'monthly' ? 'yearly' : 'monthly')}
-                className={`w-14 h-7 rounded-full relative transition-colors ${isDark ? 'bg-white/10' : 'bg-slate-200'} border border-white/10`}
-              >
-                <div className={`absolute top-1 left-1 bottom-1 w-5 bg-emerald-500 rounded-full transition-all ${billingCycle === 'yearly' ? 'translate-x-7' : ''}`} />
-              </button>
-              <div className="flex items-center gap-2">
-                <span className={`text-sm font-bold ${billingCycle === 'yearly' ? 'text-emerald-500' : 'opacity-40'}`}>Yearly</span>
-                <span className="px-2 py-0.5 bg-emerald-500/20 text-emerald-500 text-[10px] font-black rounded uppercase">Save 30%</span>
+        <div className="grid lg:grid-cols-2 gap-8 max-w-5xl mx-auto relative z-10">
+          {tiers.map((tier) => (
+            <motion.div
+              key={tier.id}
+              whileHover={{ y: -5 }}
+              className={`p-10 rounded-[2.5rem] border ${tier.popular ? 'border-emerald-500 shadow-[0_0_50px_rgba(16,185,129,0.1)]' : 'border-white/5'} ${isDark ? 'bg-[#0b1120]' : 'bg-white'} relative overflow-hidden flex flex-col`}
+            >
+              {tier.popular && (
+                <div className="absolute top-0 right-0 left-0 h-40 bg-gradient-to-b from-emerald-500/10 to-transparent pointer-events-none" />
+              )}
+              
+              {tier.popular && (
+                <div className="absolute top-0 left-1/2 -translate-x-1/2 px-8 py-2 bg-emerald-500 text-white text-[10px] font-black uppercase tracking-[0.3em] rounded-b-2xl shadow-lg shadow-emerald-500/20">
+                  MOST POPULAR
+                </div>
+              )}
+
+              <div className="relative z-10 space-y-8 flex-grow">
+                <div className="flex items-center justify-between">
+                  <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${tier.color} flex items-center justify-center shadow-lg transform rotate-3`}>
+                    {tier.icon}
+                  </div>
+                  {tier.popular && (
+                    <div className="p-2 rounded-full bg-emerald-500/10 text-emerald-500">
+                      <Crown size={20} />
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-1">
+                  <h3 className="text-3xl font-black tracking-tight">{tier.name}</h3>
+                  <p className="text-sm opacity-60 font-medium">{tier.tagline}</p>
+                </div>
+
+                <div className="py-6 border-y border-white/5">
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-5xl font-black italic tracking-tighter">₹{billingCycle === 'monthly' ? tier.monthPrice : tier.yearPrice}</span>
+                    <span className="text-sm opacity-50 font-bold uppercase tracking-widest">/ {billingCycle === 'monthly' ? 'MO' : 'YR'}</span>
+                  </div>
+                  <div className="flex items-center gap-3 mt-2">
+                    <span className="text-xs line-through opacity-30">₹{billingCycle === 'monthly' ? tier.originalMonth : tier.originalMonth * tier.monthPrice}</span>
+                    <span className="text-xs font-black text-emerald-500 uppercase">{tier.dailyLabel}</span>
+                  </div>
+                </div>
+
+                <ul className="space-y-4">
+                  {tier.features.map((feature, fIdx) => (
+                    <li key={fIdx} className={`flex items-center gap-4 transition-opacity ${feature.active ? 'opacity-100' : 'opacity-20'}`}>
+                      <div className={`p-1 rounded-lg ${feature.active ? 'bg-emerald-500/20 text-emerald-500' : 'bg-slate-500/10 text-slate-500'}`}>
+                        {feature.active ? <Check size={14} strokeWidth={4} /> : <X size={14} strokeWidth={4} />}
+                      </div>
+                      <span className="font-bold text-base tracking-tight">{feature.text}</span>
+                    </li>
+                  ))}
+                </ul>
               </div>
-            </div>
-          </div>
 
-          <div className="grid lg:grid-cols-2 gap-4 max-w-2xl mx-auto relative z-10">
-            {tiers.map((tier) => (
-              <motion.div
-                key={tier.id}
-                whileHover={{ y: -8 }}
-                className={`p-5 rounded-3xl border ${tier.popular ? 'border-emerald-500/50 scale-[1.01] shadow-2xl shadow-emerald-500/10' : isDark ? 'border-white/5 shadow-xl shadow-black/20' : 'border-slate-200 shadow-xl'} ${isDark ? 'bg-white/5' : 'bg-white'} backdrop-blur-xl relative flex flex-col`}
-              >
-                {tier.popular && (
-                  <div className="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest rounded-full shadow-lg shadow-emerald-500/40 animate-pulse">
-                    MOST POPULAR
-                  </div>
-                )}
-
-                <div className="space-y-3 flex-grow">
-                  <div className="flex items-center justify-between">
-                    <div className={`w-8 h-8 rounded-lg bg-gradient-to-br ${tier.color} flex items-center justify-center text-white shadow-lg`}>
-                      {tier.icon}
-                    </div>
-                    {tier.popular && <Crown size={16} className="text-emerald-500" />}
-                  </div>
-
-                  <div>
-                    <h3 className="text-lg font-black uppercase tracking-tight">{tier.name}</h3>
-                    <p className="text-[10px] opacity-60 font-medium">{tier.tagline}</p>
-                  </div>
-
-                  <div className="py-1 border-y border-white/5">
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-2xl font-black italic">₹{billingCycle === 'monthly' ? tier.monthPrice : tier.yearPrice}</span>
-                      <span className="text-[9px] opacity-50 font-bold uppercase tracking-widest">/ {billingCycle === 'monthly' ? 'mo' : 'yr'}</span>
-                    </div>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <span className="text-[9px] line-through opacity-40">₹{billingCycle === 'monthly' ? tier.originalMonth : tier.originalYear}</span>
-                      <span className="text-[9px] font-black text-emerald-500 uppercase">{tier.dailyLabel}</span>
-                    </div>
-                  </div>
-
-                  <ul className="space-y-2">
-                    {tier.features.map((feature, fIdx) => (
-                      <li key={fIdx} className={`flex items-center gap-3 text-sm ${feature.active ? 'opacity-100' : 'opacity-30'}`}>
-                        {feature.active ? (
-                          <div className="p-0.5 bg-emerald-500/20 text-emerald-500 rounded">
-                            <Check size={14} strokeWidth={4} />
-                          </div>
-                        ) : (
-                          <X size={14} strokeWidth={4} className="text-slate-500" />
-                        )}
-                        <span className="font-bold tracking-tight">{feature.text}</span>
-                      </li>
-                    ))}
-                  </ul>
+              <div className="mt-12 space-y-6 relative z-10">
+                <button
+                  onClick={() => handlePayment(tier)}
+                  disabled={loading !== null}
+                  className={`w-full py-5 rounded-3xl font-black uppercase tracking-[0.3em] transition-all flex items-center justify-center gap-3 ${tier.popular ? 'bg-emerald-500 hover:bg-emerald-400 text-white shadow-[0_10px_40px_rgba(16,185,129,0.3)]' : 'bg-[#1e293b] hover:bg-[#334155] text-white shadow-xl'} ${loading === tier.id ? 'opacity-50' : ''}`}
+                >
+                  {loading === tier.id ? (
+                    <div className="w-5 h-5 border-2 border-white/50 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <>
+                      UPGRADE NOW <ArrowRight size={20} />
+                    </>
+                  )}
+                </button>
+                
+                <div className="flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-[0.2em] opacity-40">
+                   <ShieldCheck size={14} />
+                   DODO ENCRYPTED TRANSACTION
                 </div>
-
-                <div className="mt-6">
-                  <button
-                    onClick={() => handlePayment(tier)}
-                    disabled={loading !== null}
-                    className={`w-full py-2.5 rounded-2xl font-black uppercase tracking-[0.2em] transition-all flex items-center justify-center gap-2 ${tier.popular ? 'bg-emerald-500 hover:bg-emerald-400 text-white shadow-lg shadow-emerald-500/20' : isDark ? 'bg-white/10 hover:bg-white/20' : 'bg-slate-900 hover:bg-slate-800 text-white shadow-xl'} ${loading === tier.id ? 'animate-pulse scale-95 opacity-70' : ''}`}
-                  >
-                    {loading === tier.id ? (
-                      <div className="w-5 h-5 border-2 border-white/50 border-t-white rounded-full animate-spin" />
-                    ) : (
-                      <>
-                        Upgrade Now <ArrowRight size={16} />
-                      </>
-                    )}
-                  </button>
-                  <p className="text-[9px] text-center mt-4 opacity-40 font-black uppercase tracking-[0.2em] flex items-center justify-center gap-2">
-                    <ShieldCheck size={14} /> Dodo Encrypted Transaction
-                  </p>
-                </div>
-              </motion.div>
-            ))}
-          </div>
-
-          <p className="text-center mt-12 opacity-30 text-xs font-black uppercase tracking-widest">
-            Institutional Encryption Active • 24/7 Priority Support
-          </p>
+              </div>
+            </motion.div>
+          ))}
         </div>
       </main>
 
@@ -347,10 +240,7 @@ function AcquisitionTiersContent() {
         {showSuccessModal && (
           <PaymentSuccessModal
             isOpen={showSuccessModal}
-            onClose={() => {
-              setShowSuccessModal(false);
-              router.push('/dashboard');
-            }}
+            onClose={() => { setShowSuccessModal(false); router.push('/dashboard'); }}
             paymentData={paymentDetails}
           />
         )}
@@ -359,16 +249,11 @@ function AcquisitionTiersContent() {
   );
 }
 
-// 🏛️ Final Wrapper with Suspense Boundary for Vercel Static Building (V7.5)
 export default function AcquisitionTiers() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-[#020617] flex items-center justify-center flex-col gap-6">
-        <div className="relative">
-          <div className="w-16 h-16 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin" />
-          <Zap size={24} className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-emerald-500 animate-pulse" />
-        </div>
-        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-500 animate-pulse">Initializing Strategic Tiers...</p>
+      <div className="min-h-screen bg-[#020617] flex items-center justify-center">
+        <div className="w-16 h-16 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin" />
       </div>
     }>
       <AcquisitionTiersContent />

@@ -263,10 +263,10 @@ export default function EnhancedRecommendationCard({
                 <div className="pt-6 border-t border-slate-200 dark:border-white/10 flex flex-col sm:flex-row gap-3">
                   <button
                     onClick={() => onViewDetails(recommendation)}
-                    className="flex-1 py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-black rounded-2xl text-[10px] uppercase tracking-[0.2em] shadow-xl hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3 italic"
+                    className="flex-1 py-3.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-lg text-[10px] uppercase tracking-[0.15em] border border-slate-700 hover:border-slate-500 shadow-none transition-all flex items-center justify-center gap-2"
                   >
-                    <Rocket size={16} />
-                    View Strategy & Full Market Report
+                    <Rocket size={14} className="text-emerald-500" />
+                    Market Report
                   </button>
                   <button
                     onClick={() => {
@@ -276,10 +276,10 @@ export default function EnhancedRecommendationCard({
                             onViewDetails(recommendation);
                         }
                     }}
-                    className="flex-1 py-4 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-2xl text-[10px] uppercase tracking-[0.2em] shadow-xl hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-3 italic"
+                    className="flex-1 py-3.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-lg text-[10px] uppercase tracking-[0.15em] border border-slate-700 hover:border-slate-500 shadow-none transition-all flex items-center justify-center gap-2"
                   >
-                    <CalendarIcon size={16} />
-                    Implementation Roadmap
+                    <CalendarIcon size={14} className="text-blue-500" />
+                    Roadmap
                   </button>
                 </div>
               )}
@@ -301,10 +301,10 @@ export default function EnhancedRecommendationCard({
       {/* Expand/Collapse Button */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full p-4 bg-slate-50 dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors border-t border-slate-100 dark:border-white/5 flex items-center justify-center gap-2 text-sm font-medium text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white"
+        className="w-full p-3 bg-slate-900/40 hover:bg-slate-800/60 transition-colors border-t border-slate-800 dark:border-white/5 flex items-center justify-center gap-2 text-sm font-medium text-slate-400 hover:text-slate-200 uppercase tracking-widest text-[10px]"
       >
         <span>{isExpanded ? 'Show Less' : 'Show More Details'}</span>
-        {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+        {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
       </button>
     </motion.div>
   );
