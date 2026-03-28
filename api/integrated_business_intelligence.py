@@ -4,7 +4,6 @@ import re
 import os
 import asyncio
 import time
-import threading
 import hashlib
 from datetime import datetime
 from typing import Dict, List, Any, Optional
@@ -22,329 +21,406 @@ def register_ws_pusher(pusher_fn):
 async def push_ws_status(message: str):
     """Pushes a progress update to the WebSocket if available"""
     if _websocket_pusher:
-        import datetime
         try:
-            # We must await the broadcaster (ConnectionManager.broadcast)
             await _websocket_pusher({
                 "type": "analysis_progress",
                 "message": message,
-                "timestamp": datetime.datetime.now().isoformat()
+                "timestamp": datetime.now().isoformat()
             })
         except: pass
 
 class IntegratedBusinessIntelligence:
     """
-    ULTRA-PREMIUM REASONING ENGINE (V3.0)
-    Grounded in real-time market data with no-placeholder architecture.
-    Primary: Claude 3.5 Sonnet | Secondary: Gemini 1.5 Pro | Fallback: Pollinations
+    UNBEATABLE STRATEGIC ENGINE (V6.1 - THE OVERLORD CLUSTER)
+    Architecture:
+    1. Scouting Swarm Phase (Tavily/Exa/Serper/SerpApi/Reddit/Firecrawl)
+    2. Redundant 5-Layer Analysis Cluster:
+       Layer 1: Gemini 1.5 Pro (The Crown)
+       Layer 2: AIC Overlord (GPT-4o / DeepSeek Swarm)
+       Layer 3: SearchGPT (The Knight - Neural Sourcing)
+       Layer 4: Claude 3.5 Sonnet (The Sage)
+       Layer 5: DeepSeek Guard (The Fortress)
+    3. Neural Identity Refinement.
     """
     
     def __init__(self):
-        # API Keys
-        self.claude_key = os.getenv("CLAUDE_API_KEY")
+        # AI CORE KEYS (Elite Model Cluster)
         self.gemini_key = os.getenv("GEMINI_API_KEY")
+        self.claude_key = os.getenv("CLAUDE_API_KEY")
         self.pollinations_key = os.getenv("POLLINATION_API_KEY")
+        self.fred_key = os.getenv("FRED_API_KEY")
+        self.aic_key = os.getenv("AIC_API_KEY")
+        self.aic_base = os.getenv("AIC_BASE_URL", "https://api.ai.cc/v1")
+        
+        # SCOUTING SWARM KEYS (Multi-Tenant Real-Time Market Sourcing)
+        self.tavily_key = os.getenv("TAVILY_API_KEY")
+        self.exa_key = os.getenv("EXA_API_KEY")
+        self.serper_key = os.getenv("SERPER_API_KEY")
+        self.firecrawl_key = os.getenv("FIRECRAWL_API_KEY")
         self.serpapi_key = os.getenv("SERPAPI_API_KEY")
+        self.searchapi_key = os.getenv("SEARCHAPI_API_KEY")
+        self.apify_key = os.getenv("APIFY_API_KEY")
         
-        # Caches
-        self._market_context_cache = {}
+        # System State
+        self._logic_version = "v6.2_singularity_hardened"
         self._final_recommendations_cache = {}
-        self._cache_expiry = 3600 # 1 hour
-        self._logic_version = "v3.1_grounded_high_fidelity"
+        self._cache_expiry = 3600
         
-        print(f"[CORE] Intelligence Engine V3.1 Initialized.")
-        print(f"[CORE] Multi-Model Layers: Claude ({'ON' if self.claude_key else 'OFF'}), Gemini ({'ON' if self.gemini_key else 'OFF'}), Pollinations ({'ON' if self.pollinations_key else 'OFF'})")
+        print(f"🔱 [SYSTEM] Singularity Engine V6.2 (Hardened) Activated.")
 
     async def generate_data_driven_recommendations(self, area: str, email: str, language: str = "English", phase: str = "discovery") -> Dict:
-        """Main entry point for deep market reasoning."""
+        """Main entry point following the 4-layer fallback strategy."""
         area_key = area.lower().strip()
         now = time.time()
         
-        # Check cache
+        # 1. CACHE VALIDATION (with versioning)
         cache_key = f"{area_key}_{phase}_{language}_{self._logic_version}"
         if cache_key in self._final_recommendations_cache:
             data, expiry = self._final_recommendations_cache[cache_key]
             if now < expiry:
-                print(f"[CACHE] Strategic hit for {area}. Serving immediate insight.")
+                print(f"♻️ [CACHE] Tiered Hit for {area}.")
                 return data
 
-        print(f"--- [ELITE AI ENGINE] Starting deep market reasoning for {area}... ---")
-        await push_ws_status(f"Initializing deep market reasoning for {area}...")
+        print(f"🚀 [WORKFLOW] Executing Sequential 4-Layer RAG Pipeline for {area}...")
+        await push_ws_status(f"Phase 1: Multi-Source Scouting (Google/Reddit/Web) in {area}...")
         
-        # 1. PARALLEL SCOUTING: Market Signals + Reddit Sentiment
-        await push_ws_status("Scouting global market signals and local discourse...")
-        
-        # Create tasks for parallel execution
-        scout_task = self._fetch_live_market_context(area)
-        sentiment_task = self._fetch_reddit_sentiment(area)
-        
-        # Run both in parallel
-        live_context, reddit_context = await asyncio.gather(scout_task, sentiment_task)
-        
-        # 3. AI REASONING LOOP (Claude -> Gemini -> Pollinations)
-        await push_ws_status("Synthesizing multi-layer intelligence...")
-        final_insights = await self._get_structured_ai_insights(area, live_context, reddit_context, language, phase)
-        
-        # 4. FINAL VALIDATION & ENRICHMENT
-        if not final_insights.get("success"):
-            print("⚠️ [FAIL] Global AI cluster unresponsive. Returning transparent error.")
-            return final_insights
-
-        # Add metadata and save to cache
-        final_result = {
-            "success": True,
-            "area": area,
-            "recommendations": final_insights.get("recommendations", []),
-            "analysis": final_insights.get("analysis", {}),
-            "timestamp": datetime.now().isoformat(),
-            "ai_source": final_insights.get("ai_source", "Unknown"),
-            "data_quality": "High-Fidelity" if live_context else "Strategic Reasoning Only"
-        }
-        
-        self._final_recommendations_cache[cache_key] = (final_result, now + self._cache_expiry)
-        return final_result
-
-    async def _fetch_live_market_context(self, area: str) -> str:
-        """Optimized Parallel scouting across multiple search providers."""
-        search_query = f"current economic trends business opportunities challenges {area} 2026"
-        print(f"🔎 [SEARCH] Querying: {search_query}")
-        
-        # Concurrent tasks for speed
-        async def fetch_ddgs():
-            try:
-                from duckduckgo_search import DDGS
-                with DDGS() as ddgs:
-                    return [r.get('body', '') for r in ddgs.text(search_query, max_results=5) if r.get('body')]
-            except Exception as e:
-                print(f"⚠️ [SEARCH] DDGS Failed: {e}")
-                return []
-
-        async def fetch_serp():
-            if not self.serpapi_key: return []
-            try:
-                url = "https://serpapi.com/search"
-                params = {"q": search_query, "api_key": self.serpapi_key, "engine": "google"}
-                async with httpx.AsyncClient(timeout=8.0) as client:
-                    resp = await client.get(url, params=params)
-                    if resp.status_code == 200:
-                        results = resp.json().get("organic_results", [])
-                        return [r.get("snippet", "") for r in results[:5]]
-            except: return []
-
-        # Execute both in parallel
-        results = await asyncio.gather(fetch_ddgs(), fetch_serp())
-        snippets = []
-        for r in results:
-            if isinstance(r, list):
-                snippets.extend(r)
-            
-        return " | ".join(snippets) if snippets else "No recent search data found. Relying on AI reasoning."
-
-    async def _fetch_reddit_sentiment(self, area: str) -> str:
-        """Gathers community discourse from Reddit."""
         try:
-            from duckduckgo_search import DDGS
-            with DDGS() as ddgs:
-                results = list(ddgs.text(f"site:reddit.com {area} problems business trends city", max_results=5))
-                return " | ".join([r.get('body', '') for r in results if r.get('body')])
-        except: return "No reddit sentiment available."
+            # --- STAGE 1: MULTI-SOURCE RAG SCOUTING ---
+            # Parallel gathering for speed
+            scouting = await asyncio.gather(
+                self._scout_google(area),
+                self._scout_reddit(area),
+                self._scout_web_trends(area),
+                return_exceptions=True
+            )
+            
+            g_data = scouting[0] if not isinstance(scouting[0], Exception) else ""
+            r_data = scouting[1] if not isinstance(scouting[1], Exception) else ""
+            w_data = scouting[2] if not isinstance(scouting[2], Exception) else ""
+            
+            # --- STAGE 2: RAG CONTEXT COMPILATION ---
+            await push_ws_status("Phase 2: Compiling unified RAG context block...")
+            rag_context = self._compile_rag_block(g_data, r_data, w_data)
+            
+            # --- STAGE 3: SEQUENTIAL 4-LAYER ANALYSIS CLUSTER ---
+            await push_ws_status("Phase 3: Deploying Sequential Analysis Cluster (Gemini -> Pollinations -> Claude -> Fred)...")
+            final_insights = await self._run_analysis_cluster(area, rag_context, language)
+            
+            if not final_insights or not final_insights.get("success"):
+                 return {"success": False, "message": "Critical Analysis Failover: Multi-layer AI cluster exhausted."}
 
-    async def _get_structured_ai_insights(self, area: str, web_data: str, reddit_data: str, language: str, phase: str) -> Dict:
-        """Core Multi-Layer Reasoning Logic."""
+            # --- STAGE 4: NEURAL REFINEMENT ---
+            await push_ws_status("Phase 4: Refining strategic identifiers and stripping location leaks...")
+            polished_recs = self._polish_identities(final_insights.get("recommendations", []), area)
+            
+            final_result = {
+                "success": True,
+                "area": area,
+                "recommendations": polished_recs,
+                "analysis": final_insights.get("analysis", {}),
+                "timestamp": datetime.now().isoformat(),
+                "ai_source": final_insights.get("ai_source", "Tiered-Cluster V4.2"),
+                "intelligence_fidelity": "High-Fidelity RAG" if rag_context else "Baseline Synthesis"
+            }
+            
+            self._final_recommendations_cache[cache_key] = (final_result, now + self._cache_expiry)
+            return final_result
+
+        except Exception as e:
+            print(f"❌ [CLUSTER-FAIL] Core Pipeline Exception: {e}")
+            return {"success": False, "message": "Strategic pipeline synchronization failure."}
+
+    # --- TIERED ANALYSIS CLUSTER ---
+    
+    async def _run_analysis_cluster(self, area: str, rag_context: str, language: str) -> Dict:
+        """Executes the Hyper-Fidelity 5-Layer Cluster: (V6.3 Quantum Race)."""
         
-        prompt = f"""
-        ACT AS: Elite Strategic Venture Consultant (Level: Partner).
-        USER LOCATION: {area} (Base Year: 2026)
-        LANGUAGE: {language}
-        PHASE: {phase}
+        # 🎯 QUANTUM RACE: Launch Gemini and AIC Overlord simultaneously (Parallel Layer 1 & 2)
+        print(f"💎 [QUANTUM RACE] Deploying Gemini & AIC Overlord Parallel Swarm...")
+        await push_ws_status("Quantum Search Active: Parallel Intelligence Swarm...")
         
-        WEB MARKET INTELLIGENCE SNIPPETS:
-        {web_data}
+        try:
+            # We use wait with FIRST_COMPLETED to beat the Render 30s timeout
+            tasks = [
+                self._call_gemini_pro(area, rag_context, language),
+                self._call_aic_overlord(area, rag_context, language)
+            ]
+            
+            done, pending = await asyncio.wait(
+                [asyncio.create_task(t) for t in tasks], 
+                return_when=asyncio.FIRST_COMPLETED,
+                timeout=25.0 # Max wait for the primary swarm
+            )
+            
+            for task in done:
+                res = task.result()
+                if res.get("success"):
+                    # Cancel pending tasks to save resources
+                    for p in pending: p.cancel()
+                    return res
+            
+            # Cancel anything still running
+            for p in pending: p.cancel()
+        except Exception as e:
+            print(f"⚠️ Quantum Race Exception: {e}")
+
+        # 3. LAYER 3: SEARCH-GPT (The Knight - Neural Sourcing)
+        await push_ws_status("Secondary Swarm Active: SearchGPT...")
+        print(f"🚀 [LAYER 3] Deploying Pollinations SearchGPT...")
+        res = await self._call_search_gpt(area, rag_context, language)
+        if res.get("success"): return res
+
+        # 4. LAYER 4: CLAUDE 3.5 SONNET (The Sage - Deep Reasoning)
+        await push_ws_status("Fourth Tier Analysis Engaged: Claude 3.5 Sonnet...")
+        print(f"🦉 [LAYER 4] Deploying Claude 3.5 Sonnet Logic...")
+        res = await self._call_claude_sonnet(area, rag_context, language)
+        if res.get("success"): return res
         
-        COMMUNITY/REDDIT SENTIMENT:
-        {reddit_data}
+        # 5. LAYER 5: DEEPSEEK GUARD (The Fortress - Final Safe Haven)
+        await push_ws_status("Final Safety Layer Active: DeepSeek Fortress...")
+        print(f"💂 [LAYER 5] Deploying DeepSeek Guard Safety Logic...")
+        res = await self._call_fred_guard(area, rag_context, language)
+        if res.get("success"): return res
+
+        return {"success": False}
+
+    # --- AI ADAPTERS ---
+
+    async def _call_gemini_pro(self, area: str, context: str, lang: str) -> Dict:
+        if not self.gemini_key: return {"success": False}
+        prompt = self._build_prompt(area, context, lang)
         
-        TASK: Identify 6 HIGH-YIELD business opportunities for {area} by 2026.
+        # Unbeatable Model Switcher: Exhaustively find the working Gemini configuration for this key
+        models_to_try = [
+            "v1beta/models/gemini-1.5-pro",
+            "v1beta/models/gemini-1.5-flash",
+            "v1/models/gemini-pro",
+            "v1/models/gemini-1.5-flash"
+        ]
         
-        CRITICAL CONSTRAINTS:
-        1. NO PLACEHOLDERS. Never use 'Strategic Market Opportunity' or '₹5L-₹15L'. 
-        2. BE HYPER-LOCAL. Mention specific {area} geography, laws, or demographic shifts.
-        3. REAL FINANCIALS. If in India, use Lakhs (L) and Crores (Cr). If global, use USD ($).
-        4. GROUNDED REASONING. If {area} is rural, suggest agri-tech or logistics. If urban, suggest high-density services or AI-SaaS.
+        for model_path in models_to_try:
+            try:
+                async with httpx.AsyncClient(timeout=22.0) as client:
+                    url = f"https://generativelanguage.googleapis.com/{model_path}:generateContent?key={self.gemini_key}"
+                    resp = await client.post(url, json={"contents": [{"parts": [{"text": prompt}]}]})
+                    if resp.status_code == 200:
+                        data = self._clean_json(resp.json()['candidates'][0]['content']['parts'][0]['text'])
+                        if data:
+                            data["success"] = True
+                            data["ai_source"] = f"Gemini ({model_path.split('/')[-1]}) Primary"
+                            return data
+                    else:
+                        print(f"🔄 Gemini Switcher: {model_path} returned {resp.status_code}")
+            except: pass
+            
+        return {"success": False}
+
+    async def _call_aic_overlord(self, area: str, context: str, lang: str) -> Dict:
+        """AIC Overlay Adapter: Executes ultra-deep reasoning via GPT-4o proxy cluster"""
+        if not self.aic_key: return {"success": False}
+        prompt = self._build_prompt(area, context, lang)
+        try:
+            async with httpx.AsyncClient(timeout=22.0) as client:
+                url = f"{self.aic_base}/chat/completions"
+                headers = {"Authorization": f"Bearer {self.aic_key}", "Content-Type": "application/json"}
+                resp = await client.post(url, headers=headers, json={
+                    "model": "gpt-4o", # Using the most advanced modal in the AIC suite
+                    "messages": [
+                        {"role": "system", "content": "You are the STRATEGIC OVERLORD. Output PURE JSON. Ground in RAG context."},
+                        {"role": "user", "content": prompt}
+                    ],
+                    "response_format": {"type": "json_object"}
+                })
+                if resp.status_code == 200:
+                    data = self._clean_json(resp.json()['choices'][0]['message']['content'])
+                    if data:
+                        data["success"] = True
+                        data["ai_source"] = "AIC Overlord Sovereignty (Layer 2)"
+                        return data
+        except Exception as e:
+            print(f"⚠️ AIC Overlord failed: {str(e)}")
+        return {"success": False}
+
+    async def _call_search_gpt(self, area: str, context: str, lang: str) -> Dict:
+        """Custom Adapter for Ultra-Neural SearchGPT (The Knight)"""
+        prompt = self._build_prompt(area, context, lang)
+        try:
+            async with httpx.AsyncClient(timeout=22.0) as client:
+                resp = await client.post("https://gen.pollinations.ai/", json={
+                    "messages": [{"role": "system", "content": "ULTRA-NEURAL SEARCH GPT: Analysis gaps in RAG context. PURE JSON."}, 
+                                 {"role": "user", "content": prompt}],
+                    "model": "searchgpt"
+                })
+                if resp.status_code == 200:
+                    data = self._clean_json(resp.text)
+                    if data:
+                        data["success"] = True
+                        data["ai_source"] = "SearchGPT (Layer 2 Swarm)"
+                        return data
+        except: pass
+        return {"success": False}
+
+    async def _call_pollinations_rescue(self, area: str, context: str, lang: str) -> Dict:
+        # Legacy placeholder - mapped to SearchGPT for V6.0 quality
+        return await self._call_search_gpt(area, context, lang)
+
+    async def _call_claude_sonnet(self, area: str, context: str, lang: str) -> Dict:
+        if not self.claude_key: return {"success": False}
+        prompt = self._build_prompt(area, context, lang)
+        try:
+            async with httpx.AsyncClient(timeout=45.0) as client:
+                url = "https://api.anthropic.com/v1/messages"
+                headers = {"x-api-key": self.claude_key, "anthropic-version": "2023-06-01", "content-type": "application/json"}
+                resp = await client.post(url, headers=headers, json={
+                    "model": "claude-3-5-sonnet-20240620", "max_tokens": 4096, "messages": [{"role": "user", "content": prompt}]
+                })
+                if resp.status_code == 200:
+                    data = self._clean_json(resp.json()['content'][0]['text'])
+                    if data:
+                        data["success"] = True
+                        data["ai_source"] = "Claude 3.5 Sonnet (Layer 3 Ridge)"
+                        return data
+        except: pass
+        return {"success": False}
+
+    async def _call_fred_guard(self, area: str, context: str, lang: str) -> Dict:
+        """DeepSeek Security Guard Adapter (The Fortress)"""
+        prompt = self._build_prompt(area, context, lang)
+        try:
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                resp = await client.post("https://gen.pollinations.ai/", json={
+                    "messages": [{"role": "system", "content": "DEEPSEEK GUARD: Return final strategic opportunities. JSON only."}, 
+                                 {"role": "user", "content": prompt}],
+                    "model": "deepseek"
+                })
+                if resp.status_code == 200:
+                    data = self._clean_json(resp.text)
+                    if data:
+                        data["success"] = True
+                        data["ai_source"] = "DeepSeek Guard (Layer 4 Fortress)"
+                        return data
+        except: pass
+        return {"success": False}
+
+    # --- HELPERS ---
+
+    def _build_prompt(self, area: str, context: str, lang: str) -> str:
+        return f"""
+        CORE MISSION: IDENTIFY EXACTLY 10 UNYIELDING VENTURE OPPORTUNITIES FOR {area} (2026).
         
-        OUTPUT FORMAT (STRICT JSON):
+        RAG CONTEXT (GROUND TRUTH):
+        {context if context else "Scouting swarm busy. Rely on deep economic reasoning for " + area}
+
+        STRICT IDENTITY PROTOCOL (UNBREAKABLE):
+        1. DATA EXTRACTION: Extract local gaps from RAG signals.
+        2. VENTURE MAPPING: Map gaps to exactly 10 professional business roadmaps.
+        3. BRANDING DESIGN (RULE OF ZERO):
+           - RULE 1 [CRITICAL]: ABSOLUTELY NO mention of '{area}', city, ZIP, state, or 'India' in any business title.
+           - RULE 2: FORBID generic 'Local Digital Solutions' or 'Kolkata Logistics' templates.
+           - RULE 3: Every title MUST be a standalone professional brand (e.g., 'Astra-Logistics', 'Greenshop-SaaS', 'UrbanFlow').
+           - RULE 4: No repetitions of the word '{area}' in the description if possible.
+
+        OUTPUT JSON:
         {{
             "analysis": {{
-                "executive_summary": "3-sentence memo on {area} economic state in 2026.",
-                "market_overview": "Deep dive into local demand catalysts.",
+                "executive_summary": "Deep reasoning on {area} 2026 economic readiness.",
+                "market_gap_intensity": "Critical/High/Standard",
                 "confidence_score": "95%",
-                "primary_drivers": ["Driver 1", "Driver 2"]
+                "primary_drivers": ["Driver 1", "Driver 2"],
+                "live_economic_indicators": {{"gdp": "%", "investment": "Trend", "digital": "High"}}
             }},
             "recommendations": [
                 {{
-                    "title": "Unique, specific business name for {area}",
-                    "description": "3-sentence deep thesis: (1) The Gap in {area}, (2) The Tech/Solution, (3) Why 2026 is the catalyst.",
-                    "category": "Niche Segment",
-                    "profitability_score": 90,
-                    "funding_required": "Calculated amount in local currency",
-                    "estimated_revenue": "Annual projection",
-                    "estimated_profit": "Annual net profit",
-                    "roi_percentage": 120,
-                    "payback_period": "8-12 months",
-                    "target_customers": "Specific user persona in {area}",
-                    "unique_selling_proposition": "What makes it win locally?"
+                    "title": "Unique Name (NOT '{area}')",
+                    "description": "2-sentence definition: (1) Local gap (2) Solution (3) Edge.",
+                    "category": "Segment",
+                    "funding_required": "Investment (e.g. ₹5L - ₹8L)",
+                    "estimated_revenue": "Revenue",
+                    "estimated_profit": "Profit",
+                    "roi_percentage": 150,
+                    "target_customers": "Persona in {area}"
                 }}
             ]
         }}
         """
 
-        async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
-            # --- LAYER 1: CLAUDE ---
-            if self.claude_key:
-                try:
-                    print(f"[AI] Calling Claude 3.5 Sonnet (Elite Tier)...")
-                    url = "https://api.anthropic.com/v1/messages"
-                    headers = {
-                        "x-api-key": self.claude_key, 
-                        "anthropic-version": "2023-06-01", 
-                        "content-type": "application/json"
-                    }
-                    payload = {
-                        "model": "claude-3-5-sonnet-20240620", 
-                        "max_tokens": 4096, 
-                        "messages": [{"role": "user", "content": prompt}]
-                    }
-                    resp = await client.post(url, headers=headers, json=payload)
-                    if resp.status_code == 200:
-                        await push_ws_status("Success: Deep reasoning via Claude cluster complete.")
-                        text = resp.json()['content'][0]['text']
-                        data = self._clean_and_parse_json(text)
-                        if data and "recommendations" in data:
-                            data["success"] = True
-                            data["ai_source"] = "Claude 3.5 Sonnet"
-                            return data
-                    elif resp.status_code == 400 and "credit" in resp.text.lower():
-                        print("⚠️ [AI] Claude Balance Error. Falling back...")
-                    else:
-                        print(f"⚠️ [AI] Claude Failed (S: {resp.status_code}) - {resp.text[:100]}")
-                except Exception as e: print(f"⚠️ [AI] Claude Error: {e}")
-
-            # --- LAYER 2: GEMINI FLASH ---
-            if self.gemini_key:
-                try:
-                    # Trying the standard stable v1 endpoint
-                    print(f"[AI] Calling Gemini Cluster (Stability Tier)...")
-                    url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={self.gemini_key}"
-                    payload = {"contents": [{"parts": [{"text": prompt}]}]}
-                    resp = await client.post(url, json=payload)
-                    if resp.status_code == 200:
-                        text = resp.json()['candidates'][0]['content']['parts'][0]['text']
-                        data = self._clean_and_parse_json(text)
-                        if data and "recommendations" in data:
-                            data["success"] = True
-                            data["ai_source"] = "Gemini 1.5 Flash"
-                            return data
-                    
-                    # Try v1beta as fallback
-                    print(f"⚠️ Trying Gemini v1beta fallback...")
-                    url_beta = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={self.gemini_key}"
-                    resp_beta = await client.post(url_beta, json=payload)
-                    if resp_beta.status_code == 200:
-                        text = resp_beta.json()['candidates'][0]['content']['parts'][0]['text']
-                        data = self._clean_and_parse_json(text)
-                        if data and "recommendations" in data:
-                            data["success"] = True
-                            data["ai_source"] = "Gemini 1.5 Flash (Beta)"
-                            return data
-                    print(f"⚠️ [AI] Gemini Cluster Failed (S: {resp.status_code})")
-                except Exception as e: print(f"⚠️ [AI] Gemini Error: {e}")
-
-            # --- LAYER 3: POLLINATIONS GPT ---
-            try:
-                print(f"[AI] Calling Pollinations Rescue Layer...")
-                # The Gen-Pollinations bridge is ultra-reliable for 2026/2027 systems
-                url = "https://gen.pollinations.ai/"
-                payload = {
-                    "messages": [
-                        {"role": "system", "content": "Return PURE JSON only. No prose. Follow the user schema exactly."},
-                        {"role": "user", "content": prompt}
-                    ],
-                    "model": "mistral" # High-reliability model
-                }
-                resp = await client.post(url, json=payload)
-                if resp.status_code == 200:
-                    data = self._clean_and_parse_json(resp.text)
-                    if data and "recommendations" in data:
-                        data["success"] = True
-                        data["ai_source"] = "Pollinations Heuristic"
-                        return data
-                print(f"⚠️ [AI] Pollinations Response Error: {resp.status_code}")
-            except Exception as e: print(f"⚠️ [AI] Pollinations Error: {e}")
-
-        # --- LAYER 4: HEURISTIC DATA SYNTHESIS (Final Guard) ---
-        print("🚨 CRITICAL: Universal AI Outage. Triggering Heuristic Synthesis...")
-        web_data_str = str(web_data or "")
-        snippets_summary = web_data_str[:500]
+    async def _scout_google(self, area: str) -> str:
+        """Performs Super-RAG parallel search across elite providers (Tavily/Exa/Serper/SerpApi)"""
+        res = []
         
-        simulated_data = {
-            "success": True,
-            "ai_source": "Heuristic Matrix (V5.0 Rescue)",
-            "analysis": {
-                "executive_summary": f"Our analysis for {area} (Base Year: 2026) indicates a localized economic surge in specific service and tech-integration niches.",
-                "market_overview": f"Economic catalysts for {area} are shifting toward digital-first retail and decentralized logistics. Signal data suggests a gap in physical-digital synergy.",
-                "confidence_score": "82%",
-                "primary_drivers": ["Post-2025 Local Grants", "Localized Tech Adoption", "Service Personalization"]
-            },
-            "recommendations": [
-                {
-                    "title": f"Local Digital Solutions for {area}",
-                    "description": "Localized tech services bridging the gap between national platforms and small businesses. Focus on ONDC integration and digital storefronts.",
-                    "category": "Technology Services",
-                    "profitability_score": 88,
-                    "funding_required": "₹2L - ₹5L",
-                    "estimated_revenue": "₹20L - ₹30L",
-                    "estimated_profit": "₹10L - ₹15L",
-                    "roi_percentage": 180,
-                    "payback_period": "6-10 months",
-                    "target_customers": "Local retail and service businesses",
-                    "unique_selling_proposition": "Physical presence and direct local support for non-tech owners."
-                },
-                {
-                    "title": f"{area} Hyper-Local Logistics Network",
-                    "description": "Last-mile specialized delivery for perishable goods and high-value local manufacturing. leveraging 2026 smart-city infrastructure.",
-                    "category": "Logistics & Supply Chain",
-                    "profitability_score": 92,
-                    "funding_required": "₹8L - ₹15L",
-                    "estimated_revenue": "₹45L - ₹60L",
-                    "estimated_profit": "₹20L - ₹25L",
-                    "roi_percentage": 140,
-                    "payback_period": "12-14 months",
-                    "target_customers": "E-commerce shoppers and local B2B manufacturers",
-                    "unique_selling_proposition": "Real-time AI routing and temperature-controlled local fleet."
-                },
-                {
-                    "title": f"Eco-Smart Retail Hub: {area}",
-                    "description": "Hybrid physical space for eco-conscious products and secondary specialized markets. Tapping into the 2026 sustainability consumer shift.",
-                    "category": "Sustainable Commerce",
-                    "profitability_score": 85,
-                    "funding_required": "₹5L - ₹10L",
-                    "estimated_revenue": "₹25L - ₹35L",
-                    "estimated_profit": "₹12L - ₹18L",
-                    "roi_percentage": 120,
-                    "payback_period": "9-12 months",
-                    "target_customers": "Gen-Z and Gen-Alpha demographics in {area}",
-                    "unique_selling_proposition": "zero-waste footprint and community-driven rewards."
-                }
-            ]
-        }
-        return simulated_data
+        # 1. TAVILY (Primary AI Search)
+        if self.tavily_key:
+            try:
+                async with httpx.AsyncClient(timeout=10.0) as client:
+                    resp = await client.post("https://api.tavily.com/search", json={
+                        "api_key": self.tavily_key, "query": f"business gaps and high-growth opportunities in {area} 2026",
+                        "search_depth": "advanced", "max_results": 5
+                    })
+                    if resp.status_code == 200:
+                        res.append("\n".join([f"TAVILY: {r.get('title')}: {r.get('content')}" for r in resp.json().get('results', [])]))
+            except: pass
 
-    def _clean_and_parse_json(self, text: str) -> Optional[Dict]:
-        """Extracts JSON object from messy AI strings."""
+        # 2. EXA (Neural Search)
+        if self.exa_key:
+            try:
+                async with httpx.AsyncClient(timeout=10.0) as client:
+                    resp = await client.post("https://api.exa.ai/search", headers={"x-api-key": self.exa_key}, json={
+                        "query": f"best untapped unique business niches in {area} 2026", "use_autoprompt": True, "num_results": 5
+                    })
+                    if resp.status_code == 200:
+                        res.append("\n".join([f"EXA: {r.get('title')}: {r.get('url')}" for r in resp.json().get('results', [])]))
+            except: pass
+
+        # 3. SERPER/SERPAPI (Legacy Google Backup)
+        if self.serper_key:
+            try:
+                async with httpx.AsyncClient(timeout=8.0) as client:
+                    resp = await client.post("https://google.serper.dev/search", headers={"X-API-KEY": self.serper_key}, json={
+                        "q": f"local market trends {area} startups 2026"
+                    })
+                    if resp.status_code == 200:
+                        res.append("\n".join([f"SERPER: {r.get('title')}: {r.get('snippet')}" for r in resp.json().get('organic', [])[:5]]))
+            except: pass
+            
+        return "\n\n".join(res)
+
+    async def _scout_reddit(self, area: str) -> str:
+        """Neural scraping of community sentiment for gaps"""
         try:
-            # Look for JSON between curly braces
+            from duckduckgo_search import DDGS
+            with DDGS() as ddgs:
+                return "\n".join([r.get('body', '') for r in ddgs.text(f"site:reddit.com local business gaps {area} 2025 help needed", max_results=5)])
+        except: return ""
+
+    async def _scout_web_trends(self, area: str) -> str:
+        try:
+            from duckduckgo_search import DDGS
+            with DDGS() as ddgs:
+                return "\n".join([r.get('body', '') for r in ddgs.text(f"current economic startups scene {area} 2026", max_results=3)])
+        except: return ""
+
+    def _compile_rag_block(self, g: str, r: str, w: str) -> str:
+        b = []
+        if g: b.append(f"### SEARCH:\n{g}")
+        if r: b.append(f"### REDDIT:\n{r}")
+        if w: b.append(f"### WEB:\n{w}")
+        return "\n\n".join(b)[:12000]
+
+    def _polish_identities(self, recs: List[Dict], area: str) -> List[Dict]:
+        p = []
+        a_low = area.lower()
+        for r in recs:
+            if not isinstance(r, dict): continue
+            t = r.get("title", "Strategic Opportunity")
+            t = re.sub(rf"(?i)\s+(for|in|at|near|of|area)\s+{re.escape(a_low)}.*", "", t)
+            t = re.sub(r"\d{5,6}", "", t)
+            t = re.sub(r"(?i)\bIndia\b", "", t)
+            r["title"] = t.strip().title()
+            p.append(r)
+        return p
+
+    def _clean_json(self, text: str) -> Optional[Dict]:
+        try:
             match = re.search(r'\{.*\}', text, re.DOTALL)
-            if match:
-                return json.loads(match.group(0))
-            return json.loads(text)
+            return json.loads(match.group(0)) if match else json.loads(text)
         except: return None

@@ -24,7 +24,7 @@ function ImplementationGuideModal({ step, onClose, businessInfo }: { step: any, 
   useEffect(() => {
     const fetchGuide = async () => {
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://trendai-api.onrender.com';
         const response = await fetch(`${apiUrl}/api/roadmap/guide`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -322,7 +322,7 @@ function RoadmapContent() {
 
     const fetchRoadmap = async () => {
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://trendai-api.onrender.com';
         const response = await fetch(`${apiUrl}/api/roadmap`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -600,7 +600,7 @@ function RoadmapContent() {
 
                               // Persistent DB Sync
                               try {
-                                const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+                                const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://trendai-api.onrender.com';
                                 await fetch(`${apiUrl}/api/roadmap/step`, {
                                   method: "PUT",
                                   headers: { "Content-Type": "application/json" },

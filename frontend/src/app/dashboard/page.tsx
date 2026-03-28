@@ -106,6 +106,7 @@ function DashboardContent() {
 
   const [savingBusiness, setSavingBusiness] = useState<string | null>(null);
   const [vaultCount, setVaultCount] = useState(0);
+  const [showAllRecommendations, setShowAllRecommendations] = useState(false);
 
   const fetchVaultCount = async () => {
     if (!session?.user?.email) return;
@@ -267,10 +268,7 @@ function DashboardContent() {
             const data = await response.json();
             if (data.location) {
               setProfileLocation(data.location);
-              // Set as default if no area is already set
-              if (!area) {
-                setArea(data.location);
-              }
+              // Automatic pre-fill of search area removed to maintain a clean default state
               console.log('Profile location available:', data.location);
             }
           }
@@ -289,7 +287,8 @@ function DashboardContent() {
     const delayDebounceFn = setTimeout(async () => {
       if (area && showSuggestions && area.length > 2) {
         try {
-          const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(area)}&limit=5`);
+          // 💡 FIXED: Strict India-only location suggestions
+          const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(area)}&countrycodes=in&limit=5`);
           const data = await res.json();
           setSuggestions(data);
         } catch (e) {
@@ -309,31 +308,8 @@ function DashboardContent() {
   };
 
   // Sync user with backend when session is available
-  useEffect(() => {
-    const syncUser = async () => {
-      if (status === 'authenticated' && session?.user?.email && session?.user?.name) {
-        try {
-          const response = await fetch(`${apiUrl}/api/users/sync`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              email: session.user.email,
-              name: session.user.name,
-              image_url: session.user.image || ''
-            })
-          });
-          
-          if (response.ok) {
-            console.log('User synced successfully');
-          }
-        } catch (error) {
-          console.error('Error syncing user:', error);
-        }
-      }
-    };
-
-    syncUser();
-  }, [status, session?.user?.email, apiUrl]);
+  // 🔐 USER SYNC: Handled server-side in NextAuth signIn callback for optimal performance.
+  // The client-side sync was redundant and has been retired to prevent UI-level timeouts.
 
   
   // Fetch history function
@@ -356,22 +332,41 @@ function DashboardContent() {
       }
       
       const data = await response.json();
-      setHistory(data);
-      setAnalysisCount(data.length);
+      
+      // Handle automatic history maintenance notification
+      if (data.purged_count > 0) {
+        addNotification({
+          type: 'system',
+          title: 'History Maintenance',
+          message: `Automatically purged ${data.purged_count} records older than 7 days for performance.`,
+          priority: 'low'
+        });
+      }
+      
+      const historyList = Array.isArray(data.history) ? data.history : (Array.isArray(data) ? data : []);
+      setHistory(historyList);
+      setAnalysisCount(historyList.length);
     } catch (e) {
       console.error("Failed to fetch history, retrying in 5s...", e);
-      setTimeout(fetchHistory, 5000); // Retry once after 5s (handles Neon cold start)
+      setTimeout(fetchHistory, 5000); 
       setHistory([]);
       setAnalysisCount(0);
     }
   };
 
   // Handle analyze function
-  const handleAnalyze = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleAnalyze = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     
-    // Use profile location as fallback if no area is entered
-    const searchArea = area || profileLocation;
+    // Use profile location as fallback and ensure India-only search
+    let searchArea = area || profileLocation;
+    await performAnalysis(searchArea);
+  };
+
+  const performAnalysis = async (searchArea: string) => {
+    if (searchArea && !searchArea.toLowerCase().includes('india')) {
+        searchArea = `${searchArea}, India`;
+    }
     
     if (!searchArea) {
       addNotification({
@@ -402,7 +397,7 @@ function DashboardContent() {
     // Initialize WebSocket for real-time progress updates
     let socket: WebSocket | null = null;
     try {
-      const wsUrl = apiUrl.startsWith('http') ? apiUrl.replace(/^http/, 'ws') : `ws://${window.location.host}`;
+      const wsUrl = apiUrl.includes('https') ? apiUrl.replace(/^https/, 'wss') : apiUrl.replace(/^http/, 'ws');
       socket = new WebSocket(`${wsUrl}/ws/analysis`);
       
       socket.onopen = () => {
@@ -415,11 +410,13 @@ function DashboardContent() {
           const data = JSON.parse(event.data);
           if (data.type === 'analysis_progress') {
             setLoadingMessage(data.message);
-            // Gradually bump progress as we get specific milestones
+            // V6.1 Elite Swarm progress mapping
             setLoadingProgress(prev => {
-              if (data.message.includes('Searching')) return Math.max(prev, 25);
-              if (data.message.includes('Sentiment')) return Math.max(prev, 50);
+              if (data.message.includes('Scouting')) return Math.max(prev, 15);
+              if (data.message.includes('Swarm Active')) return Math.max(prev, 35);
+              if (data.message.includes('SearchGPT')) return Math.max(prev, 55);
               if (data.message.includes('Claude')) return Math.max(prev, 75);
+              if (data.message.includes('DeepSeek')) return Math.max(prev, 90);
               return prev;
             });
           }
@@ -490,24 +487,21 @@ function DashboardContent() {
     }
   };
 
-  const loadFromHistory = (item: any) => {
+  const loadFromHistory = async (item: any) => {
     try {
       setArea(item.area);
-      setResult({
-        area: item.area,
-        analysis: item.analysis,
-        recommendations: item.recommendations,
-        id: item.id
+      addNotification({
+        type: 'analysis',
+        title: 'Refreshing Analysis',
+        message: `Initiating fresh market logic for ${item.area}...`,
+        priority: 'low'
       });
+      
+      // Trigger a fresh search for this area
+      await performAnalysis(item.area);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (error) {
-      console.error('Error loading from history:', error);
-      addNotification({
-        type: 'alert',
-        title: 'Load Failed',
-        message: 'Failed to load historical data. Please try again.',
-        priority: 'medium'
-      });
+      console.error('Error refreshing from history:', error);
     }
   };
   // Loading state
@@ -554,7 +548,7 @@ function DashboardContent() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, ease: "easeOut" }}
-            className="mb-10 sm:mb-16 border-b border-slate-200 dark:border-white/5 pb-10"
+            className="mb-4 sm:mb-6 border-b border-slate-200 dark:border-white/5 pb-2"
           >
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
               <div className="space-y-4">
@@ -570,7 +564,7 @@ function DashboardContent() {
                     <span className="text-[10px] font-bold text-gray-500 uppercase tracking-tight">Active Scan</span>
                   </div>
                 </div>
-                <h1 className="text-4xl sm:text-5xl lg:text-7xl font-black text-slate-900 dark:text-white leading-none tracking-tight mb-4">
+                <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 dark:text-white leading-none tracking-tight mb-3">
                   {t('dash_ai_insights')}
                 </h1>
                 <p className="text-slate-600 dark:text-gray-400 text-base sm:text-xl max-w-2xl font-medium leading-relaxed">
@@ -578,7 +572,7 @@ function DashboardContent() {
                 </p>
                 
                 {/* Status Indicator Pills from Image */}
-                <div className="flex flex-wrap gap-3 pt-4">
+                <div className="flex flex-wrap gap-1.5 pt-2">
                   {[
                     { label: t('dash_vector_global'), active: true, icon: <TrendingUp size={12} /> },
                     profileLocation ? { 
@@ -593,7 +587,7 @@ function DashboardContent() {
                     <motion.div 
                       key={idx}
                       whileHover={{ scale: 1.05 }}
-                      className={`flex items-center gap-2 px-4 py-2 rounded-full border text-xs font-bold uppercase tracking-widest transition-all duration-300 whitespace-nowrap shrink-0 group ${
+                      className={`flex items-center gap-1.5 px-2 py-1 rounded-full border text-[9px] font-bold uppercase tracking-widest transition-all duration-300 whitespace-nowrap shrink-0 group ${
                         pill.active 
                         ? pill.special 
                           ? 'bg-blue-500/10 border-blue-500/30 text-blue-600 dark:text-blue-400 shadow-[0_0_15px_rgba(59,130,246,0.15)] animate-pulse-slow'
@@ -627,7 +621,7 @@ function DashboardContent() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, ease: "easeOut", delay: 0.1 }}
-            className="grid grid-cols-1 lg:grid-cols-12 gap-8 sm:gap-10"
+            className="grid grid-cols-1 lg:grid-cols-12 gap-3 sm:gap-4"
           >
             
             {/* Left Panel: SEARCH AREA */}
@@ -639,7 +633,7 @@ function DashboardContent() {
                 subtitle={t('dash_empty_desc')}
                 icon={<Target className="w-5 h-5 sm:w-6 sm:h-6" />}
                 variant="glass"
-                size="lg"
+                size="md"
                 className="shadow-xl border-2 border-slate-200/50 dark:border-white/10"
               >
                 <form onSubmit={handleAnalyze} className="space-y-6 sm:space-y-8">
@@ -674,13 +668,13 @@ function DashboardContent() {
                         onBlur={() => {
                           setTimeout(() => setShowSuggestions(false), 200);
                         }}
-                        className="w-full bg-slate-50 dark:bg-[#030612] border-2 border-slate-200 dark:border-slate-800 rounded-[1.5rem] py-5 sm:py-6 pl-14 sm:pl-16 pr-24 text-lg font-black tracking-tight text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-600 transition-all focus:border-emerald-500/50 focus:ring-[12px] focus:ring-emerald-500/10 focus:outline-none hover:border-slate-300 dark:hover:border-slate-700 shadow-xl"
-                        placeholder={profileLocation ? `Search any location (default: ${profileLocation.split(',')[0]})` : "Search any city or region..."}
+                        className="w-full bg-slate-50 dark:bg-[#030612] border-2 border-slate-200 dark:border-slate-800 rounded-[0.75rem] py-2 sm:py-3 pl-10 sm:pl-12 pr-16 text-base font-black tracking-tight text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-600 transition-all focus:border-emerald-500/50 focus:ring-[12px] focus:ring-emerald-500/10 focus:outline-none hover:border-slate-300 dark:hover:border-slate-700 shadow-xl"
+                        placeholder="Search city or region in India..."
                         autoComplete="off"
                         id="location-input"
                       />
                       
-                      <div className="absolute inset-y-0 right-0 pr-4 flex items-center gap-1.5 z-10">
+                      <div className="absolute inset-y-0 right-0 pr-3 flex items-center gap-1 z-10">
                         {profileLocation && (
                           <button
                             type="button"
@@ -731,35 +725,56 @@ function DashboardContent() {
                           </div>
                         )}
                       </div>
-                      
-                      {/* Location Suggestions Dropdown */}
+                                  {/* Location Suggestions Dropdown - Ultra Professional Redesign */}
                       <AnimatePresence>
                         {showSuggestions && suggestions.length > 0 && (
                           <motion.div 
-                            initial={{ opacity: 0, y: 10 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: 10 }}
-                            className="absolute z-50 w-full mt-3 bg-white dark:bg-[#0a0f25] border-2 border-slate-300 dark:border-slate-600 rounded-xl shadow-xl max-h-80 overflow-y-auto p-2"
+                            initial={{ opacity: 0, scale: 0.98, y: 10 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.98, y: 10 }}
+                            className="absolute z-[100] w-full mt-3 bg-white dark:bg-[#0a0f1d] border-2 border-slate-200 dark:border-white/10 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.2)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.4)] max-h-[400px] overflow-y-auto p-2 scrollbar-hide backdrop-blur-xl"
                           >
-                            <div className="text-xs font-bold text-slate-500 dark:text-gray-500 uppercase tracking-wider px-3 py-2 border-b border-slate-200 dark:border-slate-600">
-                              Location Suggestions
+                            <div className="flex items-center justify-between px-3 py-2 mb-2 border-b border-slate-100 dark:border-white/5">
+                              <div className="text-[10px] font-black text-slate-400 dark:text-gray-500 uppercase tracking-[0.2em]">Verified Locations</div>
+                              <div className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-[9px] font-black text-emerald-500 uppercase tracking-widest border border-emerald-500/20">India Only</div>
                             </div>
-                            {suggestions.map((s, i) => (
-                              <button
-                                key={i}
-                                type="button"
-                                onMouseDown={(e) => {
-                                  e.preventDefault();
-                                  handleSelectSuggestion(s);
-                                }}
-                                className="w-full text-left p-4 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 text-sm font-medium text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition-all border border-transparent hover:border-slate-300 dark:hover:border-slate-600 group"
-                              >
-                                <div className="flex items-center gap-3">
-                                  <MapPin size={14} className="text-slate-400 group-hover:text-emerald-500 transition-colors" />
-                                  <div className="truncate">{s.display_name}</div>
-                                </div>
-                              </button>
-                            ))}
+                            
+                            <div className="space-y-1">
+                              {suggestions.map((s, i) => {
+                                const parts = s.display_name.split(',');
+                                const primary = parts[0];
+                                const secondary = parts.slice(1).join(',').trim();
+                                
+                                return (
+                                  <button
+                                    key={i}
+                                    type="button"
+                                    onMouseDown={(e) => {
+                                      e.preventDefault();
+                                      handleSelectSuggestion(s);
+                                    }}
+                                    className="w-full text-left p-4 rounded-xl hover:bg-slate-50 dark:hover:bg-white/5 transition-all group border border-transparent hover:border-slate-200 dark:hover:border-white/10 flex items-center gap-4"
+                                  >
+                                    <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-slate-100 dark:bg-white/5 flex items-center justify-center group-hover:bg-emerald-500/10 group-hover:text-emerald-500 transition-all border border-transparent group-hover:border-emerald-500/20">
+                                      <MapPin size={18} className="text-slate-400 group-hover:text-emerald-500 transition-colors" />
+                                    </div>
+                                    
+                                    <div className="flex-grow min-w-0">
+                                      <div className="text-sm font-black text-slate-900 dark:text-white group-hover:text-emerald-500 transition-colors truncate">
+                                        {primary}
+                                      </div>
+                                      <div className="text-[11px] font-medium text-slate-500 dark:text-gray-400 truncate opacity-80 group-hover:opacity-100 transition-opacity">
+                                        {secondary}
+                                      </div>
+                                    </div>
+                                    
+                                    <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-all -translate-x-2 group-hover:translate-x-0">
+                                      <ChevronRight size={16} className="text-emerald-500" />
+                                    </div>
+                                  </button>
+                                );
+                              })}
+                            </div>
                           </motion.div>
                         )}
                       </AnimatePresence>
@@ -780,7 +795,7 @@ function DashboardContent() {
                     <button
                       type="submit"
                       disabled={loading || (!area && !profileLocation) || hasReachedAnalysisLimit(analysisCount)}
-                      className="w-full h-20 bg-gradient-to-br from-[#8A2BE2] via-[#a855f7] to-[#7c3aed] hover:brightness-110 text-white font-black rounded-3xl flex flex-col items-center justify-center gap-1 transition-all active:scale-[0.98] shadow-[0_20px_60px_-15px_rgba(168,85,247,0.4)] relative overflow-hidden group disabled:opacity-50 disabled:grayscale disabled:cursor-not-allowed"
+                      className="w-full h-12 bg-gradient-to-br from-[#8A2BE2] via-[#a855f7] to-[#7c3aed] hover:brightness-110 text-white font-black rounded-lg flex flex-col items-center justify-center gap-1 transition-all active:scale-[0.98] shadow-[0_10px_30px_-8px_rgba(168,85,247,0.4)] relative overflow-hidden group disabled:opacity-50 disabled:grayscale disabled:cursor-not-allowed"
                     >
                       <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
                       <div className="flex items-center gap-3">
@@ -816,13 +831,13 @@ function DashboardContent() {
                   {/* Recent Searches Card */}
                   <UniformCard 
                     title={t('dash_recent_searches')}
-                    icon={<Clock className="w-6 h-6" />}
+                    icon={<Clock className="w-4 h-4 sm:w-5 sm:h-5" />}
                     variant="default"
-                    size="lg"
+                    size="md"
                     className="shadow-lg border-2 border-slate-300 dark:border-white/10"
                   >
                     <div className="flex items-center justify-between mb-6">
-                      <span className="text-sm font-medium text-slate-600 dark:text-gray-400">{t('dash_history_desc')}</span>
+                      <span className="text-[11px] font-medium text-slate-600 dark:text-gray-400">{t('dash_history_desc')}</span>
                       <button
                         onClick={fetchHistory}
                         className="text-sm text-blue-500 hover:text-blue-600 dark:text-blue-400 dark:hover:text-blue-300 font-medium transition-colors"
@@ -839,7 +854,7 @@ function DashboardContent() {
                               key={i}
                               type="button"
                               onClick={() => loadFromHistory(item)}
-                              className="w-full p-4 rounded-xl bg-white dark:bg-white/5 border border-slate-300 dark:border-white/10 hover:border-blue-500/30 hover:bg-slate-50 dark:hover:bg-white/10 text-left group transition-all hover:shadow-md"
+                              className="w-full p-2.5 rounded-lg bg-white dark:bg-white/5 border border-slate-300 dark:border-white/10 hover:border-blue-500/30 hover:bg-slate-50 dark:hover:bg-white/10 text-left group transition-all hover:shadow-md"
                             >
                               <div className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 truncate mb-1">
                                 {item.area}
@@ -883,44 +898,42 @@ function DashboardContent() {
               <UniformCard 
                 title="AI Engine"
                 subtitle="Real-time market analysis"
-                icon={<Lightbulb className="w-6 h-6" />}
+                icon={<Lightbulb className="w-4 h-4 sm:w-5 sm:h-5" />}
                 variant="gradient"
-                size="lg"
+                size="md"
                 className="shadow-xl border-2 border-slate-200/50 dark:border-white/10"
               >
                 {/* AI Widget */}
-                <div className="flex justify-center mb-6">
-                  <AIAnalysisWidget size="md" showStatus={true} />
+                <div className="flex justify-center mb-4">
+                  <AIAnalysisWidget size="sm" showStatus={true} />
                 </div>
                 
-                <p className="text-sm text-slate-600 dark:text-gray-400 leading-relaxed mb-6">
-                  Our AI continuously analyzes local search trends, competition, and market data to find the best business opportunities for your specific location.
+                <p className="text-xs text-slate-500 dark:text-gray-500 leading-tight mb-4 text-center">
+                  Real-time market signal extraction and business opportunity synthesis.
                 </p>
                 
-                <div className="space-y-4">
-                  <div className="flex items-center gap-4 p-4 bg-slate-50 dark:bg-white/5 rounded-xl border border-slate-200 dark:border-white/10">
-                    <div className="w-10 h-10 rounded-xl bg-blue-500/20 flex items-center justify-center text-blue-500 flex-shrink-0">
-                      <Globe2 size={20} />
+                <div className="space-y-2">
+                  <div className="flex items-center gap-3 p-2.5 bg-slate-50 dark:bg-white/5 rounded-lg border border-slate-200 dark:border-white/10">
+                    <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center text-blue-500 flex-shrink-0">
+                      <Globe2 size={16} />
                     </div>
                     <div>
-                      <div className="text-sm font-bold text-slate-700 dark:text-gray-300">Live Market Data</div>
-                      <div className="text-xs text-slate-500 dark:text-gray-500">Real-time business intelligence</div>
+                      <div className="text-xs font-bold text-slate-700 dark:text-gray-300">Live Market Data</div>
                     </div>
                   </div>
-                  <div className="flex items-center gap-4 p-4 bg-slate-50 dark:bg-white/5 rounded-xl border border-slate-200 dark:border-white/10">
-                    <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center text-emerald-500 flex-shrink-0">
-                      <TrendingUp size={20} />
+                  <div className="flex items-center gap-3 p-2.5 bg-slate-50 dark:bg-white/5 rounded-lg border border-slate-200 dark:border-white/10">
+                    <div className="w-8 h-8 rounded-lg bg-emerald-500/20 flex items-center justify-center text-emerald-500 flex-shrink-0">
+                      <TrendingUp size={16} />
                     </div>
                     <div>
-                      <div className="text-sm font-bold text-slate-700 dark:text-gray-300">Profit Predictions</div>
-                      <div className="text-xs text-slate-500 dark:text-gray-500">AI-powered ROI calculations</div>
+                      <div className="text-xs font-bold text-slate-700 dark:text-gray-300">Profit Predictions</div>
                     </div>
                   </div>
                 </div>
               </UniformCard>
             </div>
             {/* Right Panel: ANALYSIS RESULTS */}
-            <div className="lg:col-span-8 space-y-10">
+            <div className="lg:col-span-8 space-y-6">
               <AnimatePresence mode="wait">
                 {loading ? (
                   <motion.div 
@@ -931,8 +944,8 @@ function DashboardContent() {
                   >
                     <UniformCard 
                       variant="glass" 
-                      size="lg"
-                      className="min-h-[500px] relative overflow-hidden shadow-2xl border-2 border-slate-200/50 dark:border-white/10"
+                      size="sm"
+                      className="min-h-[300px] sm:min-h-[380px] relative overflow-hidden shadow-xl border border-slate-200/50 dark:border-white/10"
                     >
                       {/* AI Animation Background */}
                       <AIAnalysisCanvas className="absolute inset-0 w-full h-full" />
@@ -987,7 +1000,7 @@ function DashboardContent() {
                   >
                     <UniformCard 
                       variant="glass" 
-                      size="lg"
+                      size="md"
                       className="min-h-[300px] flex flex-col items-center justify-center text-center p-8 sm:p-12 border-2 border-orange-500/20 shadow-[0_0_50px_rgba(249,115,22,0.05)]"
                     >
                       <div className="w-16 h-16 mb-6 bg-orange-500/10 rounded-full flex items-center justify-center">
@@ -1024,15 +1037,15 @@ function DashboardContent() {
                     {/* Results Header */}
                     <UniformCard 
                       variant="gradient" 
-                      size="lg"
+                      size="md"
                       className="flex flex-col lg:flex-row lg:items-center justify-between gap-8 shadow-2xl border-2 border-slate-200/50 dark:border-white/10"
                     >
                       <div className="space-y-4">
                         <div className="text-sm font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">{t('dash_results_header')}</div>
-                        <h2 className="text-4xl lg:text-6xl font-black text-slate-900 dark:text-white tracking-tight leading-none">
+                        <h2 className="text-2xl lg:text-4xl font-black text-slate-900 dark:text-white tracking-tight leading-none">
                           {area}
                         </h2>
-                        <p className="text-slate-600 dark:text-gray-400 text-lg font-medium flex items-center gap-2">
+                        <p className="text-slate-600 dark:text-gray-400 text-sm font-medium flex items-center gap-2">
                           Found {Array.isArray(result.recommendations) ? result.recommendations.length : 0} {t('dash_strategic_opps')}
                           {result.cached && (
                             <span className="px-3 py-1 bg-blue-500/10 text-blue-500 text-[10px] font-black uppercase tracking-tighter rounded-full border border-blue-500/20">
@@ -1052,7 +1065,7 @@ function DashboardContent() {
                             href={`/roadmap?area=${encodeURIComponent(area)}&title=${encodeURIComponent(result.recommendations?.[0]?.title || "New Business")}&desc=${encodeURIComponent(
                               (typeof result.analysis === 'object' ? result.analysis?.executive_summary : result.analysis) || "Market Opportunity"
                             )}&lang=${language}`} 
-                            className="flex items-center gap-3 px-8 py-4 bg-[#10b981] hover:bg-[#059669] text-white rounded-2xl font-black text-lg transition-all shadow-[0_8px_30px_rgb(16,185,129,0.3)] hover:shadow-[0_8px_30px_rgb(16,185,129,0.4)] hover:scale-[1.05] active:scale-95 group"
+                            className="flex items-center gap-2 px-4 py-2 bg-[#10b981] hover:bg-[#059669] text-white rounded-lg font-black text-sm transition-all shadow-[0_8px_30px_rgb(16,185,129,0.3)] hover:shadow-[0_8px_30px_rgb(16,185,129,0.4)] hover:scale-[1.05] active:scale-95 group"
                           >
                             <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center group-hover:bg-white/30 transition-colors">
                               <Play size={18} fill="currentColor" className="ml-0.5" />
@@ -1064,11 +1077,11 @@ function DashboardContent() {
                     </UniformCard>
 
                     {/* Analysis Summary */}
-                    <div className="grid lg:grid-cols-2 gap-8 items-stretch mb-12">
+                    <div className="grid lg:grid-cols-2 gap-4 items-stretch mb-8">
                       <UniformCard 
                         title="Live Market Intelligence"
                         variant="glass"
-                        size="lg"
+                        size="md"
                         className="shadow-lg border-2 border-slate-200/50 dark:border-white/10 h-full flex flex-col"
                       >
                         <div className="flex-grow flex flex-col min-h-0">
@@ -1079,7 +1092,7 @@ function DashboardContent() {
                               </span>
                             ))}
                           </div>
-                          <div className="prose prose-sm lg:prose-base prose-slate dark:prose-invert max-w-none overflow-y-auto max-h-[450px] pr-4 custom-scrollbar">
+                          <div className="prose prose-sm prose-slate dark:prose-invert max-w-none overflow-y-auto max-h-[250px] pr-2 custom-scrollbar">
                             {renderFormattedText(typeof result.analysis === 'object' 
                               ? (result.analysis?.executive_summary || result.analysis?.market_overview) 
                               : (result.analysis || "Market analysis in progress..."))}
@@ -1089,25 +1102,25 @@ function DashboardContent() {
                       <UniformCard 
                         title="Key Metrics"
                         variant="glass"
-                        size="lg"
+                        size="md"
                         className="shadow-lg border-2 border-slate-200/50 dark:border-white/10 h-full flex flex-col"
                       >
                         <div className="flex-grow flex flex-col justify-center">
                           <div className="grid grid-cols-2 gap-8">
-                            <div className="text-center p-6 rounded-2xl bg-emerald-500/5 border border-emerald-500/10 hover:border-emerald-500/30 transition-all group">
+                            <div className="text-center p-4 rounded-xl bg-emerald-500/5 border border-emerald-500/10 hover:border-emerald-500/30 transition-all group">
                               <div className="flex justify-center mb-4">
                                 <div className="p-3 rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform">
                                   <Target className="w-6 h-6" />
                                 </div>
                               </div>
                               <div className="text-xs font-bold text-slate-500 dark:text-gray-500 uppercase tracking-widest mb-1">Success Rate</div>
-                              <div className="text-4xl lg:text-5xl font-black text-emerald-500 tracking-tighter tabular-nums drop-shadow-sm">{
+                              <div className="text-3xl lg:text-4xl font-black text-emerald-500 tracking-tighter tabular-nums drop-shadow-sm">{
                                 (typeof result.analysis === 'object' ? result.analysis?.confidence_score : "85%")
                               }</div>
                               <div className="mt-2 text-[10px] font-bold text-emerald-600/60 dark:text-emerald-400/40 uppercase">High Potential</div>
                             </div>
                             
-                            <div className="text-center p-6 rounded-2xl bg-blue-500/5 border border-blue-500/10 hover:border-blue-500/30 transition-all group">
+                            <div className="text-center p-4 rounded-xl bg-blue-500/5 border border-blue-500/10 hover:border-blue-500/30 transition-all group">
                               <div className="flex justify-center mb-4">
                                 <div className="p-3 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform">
                                   <TrendingUp className="w-6 h-6" />
@@ -1128,12 +1141,12 @@ function DashboardContent() {
 
                     {/* Detailed Market Intelligence Sections */}
                     {result.analysis?.detailed_market_data && (
-                      <div className="grid lg:grid-cols-3 gap-8 mb-12">
+                      <div className="grid lg:grid-cols-3 gap-6 mb-8">
                         {/* Economic Indicators */}
                         <UniformCard 
                           title="Economic Indicators"
                           variant="glass"
-                          size="lg"
+                          size="md"
                           className="shadow-lg border-2 border-slate-200/50 dark:border-white/10"
                         >
                           <div className="space-y-4">
@@ -1172,7 +1185,7 @@ function DashboardContent() {
                         <UniformCard 
                           title="Market Trends"
                           variant="glass"
-                          size="lg"
+                          size="md"
                           className="shadow-lg border-2 border-slate-200/50 dark:border-white/10"
                         >
                           <div className="space-y-4">
@@ -1214,7 +1227,7 @@ function DashboardContent() {
                         <UniformCard 
                           title="Investment Climate"
                           variant="glass"
-                          size="lg"
+                          size="md"
                           className="shadow-lg border-2 border-slate-200/50 dark:border-white/10"
                         >
                           <div className="space-y-4">
@@ -1262,12 +1275,12 @@ function DashboardContent() {
 
                     {/* Competitive Landscape & Consumer Insights */}
                     {result.analysis?.competitive_landscape && (
-                      <div className="grid lg:grid-cols-2 gap-8 mb-12">
+                      <div className="grid lg:grid-cols-2 gap-4 mb-8">
                         {/* Competitive Landscape */}
                         <UniformCard 
                           title="Competitive Landscape"
                           variant="glass"
-                          size="lg"
+                          size="md"
                           className="shadow-lg border-2 border-slate-200/50 dark:border-white/10"
                         >
                           <div className="space-y-4">
@@ -1318,7 +1331,7 @@ function DashboardContent() {
                         <UniformCard 
                           title="Consumer Insights"
                           variant="glass"
-                          size="lg"
+                          size="md"
                           className="shadow-lg border-2 border-slate-200/50 dark:border-white/10"
                         >
                           <div className="space-y-4">
@@ -1376,7 +1389,7 @@ function DashboardContent() {
                     )}
 
                     {/* Business Opportunities */}
-                    <div className="space-y-8">
+                    <div className="space-y-4">
                       <div className="text-center">
                         <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-4">
                           Business Opportunities
@@ -1385,26 +1398,32 @@ function DashboardContent() {
                           {result.recommendations?.length || 0} premium opportunities found for {area}
                         </p>
                       </div>
-                      <div className="grid gap-8">
+                      <div className="grid gap-4">
                         {Array.isArray(result.recommendations) && result.recommendations.map((rec: any, idx: number) => (
                           <motion.div key={idx} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: idx * 0.1 }}>
                             <UniformCard 
+                              size="sm"
                               variant="glass"
                               hover={true}
                               delay={idx * 0.1}
-                              className="group relative overflow-hidden shadow-xl border-2 border-slate-200/50 dark:border-white/10"
+                              className="group relative overflow-hidden shadow-lg border border-slate-200/50 dark:border-white/10"
                             >
                               <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 via-transparent to-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
                               
                               <div className="relative z-10">
-                                <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-6 mb-6">
+                                <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4 mb-4">
                                   <div className="flex-1 space-y-4">
                                     <div className="flex items-center gap-4">
-                                      <div className="w-12 h-12 rounded-xl bg-emerald-500/20 flex items-center justify-center border border-emerald-500/30">
+                                      <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center border border-emerald-500/30">
                                         <span className="text-emerald-500 font-black text-lg">#{idx + 1}</span>
                                       </div>
                                       <div>
-                                        <h4 className="text-2xl lg:text-3xl font-black text-slate-900 dark:text-white tracking-tight group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+                                        <div className="flex items-center gap-2 mb-1">
+                                          <div className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-[8px] font-black uppercase tracking-widest text-slate-500 flex items-center gap-1">
+                                            <Cpu size={8} /> {result.ai_source || 'V6.1 Overlord Swarm'}
+                                          </div>
+                                        </div>
+                                        <h4 className="text-lg lg:text-xl font-black text-slate-900 dark:text-white tracking-tight group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
                                           {rec.title || rec.name || rec.business_title || rec.business_name || rec.idea || 'Strategic Market Opportunity'}
                                         </h4>
                                       </div>
@@ -1414,22 +1433,16 @@ function DashboardContent() {
                                     </p>
                                   </div>
                                   
-                                  <div className="flex flex-col items-center lg:items-end gap-2 min-w-[120px]">
-                                    <div className="text-xs font-bold text-slate-500 dark:text-gray-500 uppercase tracking-wider">Profit Score</div>
-                                    <div className="text-3xl font-black text-emerald-500 italic">
-                                      {rec.profitability_score || 85}/100
-                                    </div>
-                                    <div className="w-20 h-2 bg-slate-200 dark:bg-white/5 rounded-full overflow-hidden">
-                                      <div 
-                                        className="h-full bg-gradient-to-r from-emerald-500 to-blue-500 transition-all duration-1000"
-                                        style={{ width: `${rec.profitability_score || 85}%` }}
-                                      />
+                                  <div className="flex items-center lg:items-end gap-1.5 px-1.5 py-0.5 bg-emerald-500/5 rounded-md border border-emerald-500/10">
+                                    <div className="text-[9px] font-bold text-slate-500 dark:text-gray-500 uppercase tracking-wider">Score</div>
+                                    <div className="text-lg font-black text-emerald-500 italic">
+                                      {rec.profitability_score || 85}%
                                     </div>
                                   </div>
                                 </div>
 
                                 {/* Financial Grid */}
-                                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6 p-4 bg-slate-50 dark:bg-white/5 rounded-xl border border-slate-200 dark:border-white/10">
+                                <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 mb-3 p-2 bg-slate-50 dark:bg-white/5 rounded-xl border border-slate-200 dark:border-white/10">
                                   <div className="text-center">
                                     <div className="text-xs font-bold text-slate-500 dark:text-gray-500 uppercase tracking-wider mb-1">Investment</div>
                                     <div className="text-lg font-black text-blue-600 dark:text-blue-400">{rec.funding_required || '₹5L-₹15L'}</div>
@@ -1444,8 +1457,8 @@ function DashboardContent() {
 
                                   </div>
                                   <div className="text-center">
-                                    <div className="text-xs font-bold text-slate-500 dark:text-gray-500 uppercase tracking-wider mb-1">ROI</div>
-                                    <div className="text-lg font-black text-purple-600 dark:text-purple-400">{rec.roi_percentage || 120}%</div>
+                                    <div className="text-[10px] font-bold text-slate-500 dark:text-gray-500 uppercase tracking-wider mb-0.5">ROI</div>
+                                    <div className="text-sm font-black text-purple-600 dark:text-purple-400">{rec.roi_percentage || 120}%</div>
                                   </div>
                                 </div>
 
@@ -1509,7 +1522,7 @@ function DashboardContent() {
                                       }
                                     }}
                                     disabled={loadingPlan === rec.title}
-                                    className={`flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r ${theme?.gradient || 'from-gray-600 to-gray-500'} hover:opacity-90 text-white rounded-xl font-bold text-sm transition-all hover:scale-105 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none`}
+                                    className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r ${theme?.gradient || 'from-gray-600 to-gray-500'} hover:opacity-90 text-white rounded-lg font-bold text-xs transition-all hover:scale-105 shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none`}
                                   >
                                     {loadingPlan === rec.title ? (
                                       <>
@@ -1541,7 +1554,7 @@ function DashboardContent() {
                                       
                                       router.push('/business-details');
                                     }}
-                                    className="flex-1 flex items-center justify-center gap-2 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold text-sm transition-all hover:scale-105 shadow-lg"
+                                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-xs transition-all hover:scale-105 shadow-md"
                                   >
                                     <BarChart3 size={16} />
                                     View Details
@@ -1550,7 +1563,7 @@ function DashboardContent() {
                                   <button
                                     onClick={() => handleSaveBusiness(rec)}
                                     disabled={savingBusiness === rec.title}
-                                    className={`px-4 py-3 ${plan === 'free' ? 'bg-slate-200 text-slate-400 cursor-not-allowed' : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'} rounded-xl font-bold text-sm transition-all border border-slate-200 dark:border-white/10 hover:shadow-md flex items-center gap-2`}
+                                    className={`px-3 py-2 ${plan === 'free' ? 'bg-slate-200 text-slate-400 cursor-not-allowed' : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'} rounded-lg font-bold text-xs transition-all border border-slate-200 dark:border-white/10 hover:shadow-md flex items-center gap-2`}
                                     title={plan === 'free' ? "Vault access requires Professional plan" : "Save to Alpha Vault"}
                                   >
                                     {savingBusiness === rec.title ? (
@@ -1589,7 +1602,7 @@ function DashboardContent() {
                                         });
                                       }
                                     }}
-                                    className="px-4 py-3 bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/20 text-slate-700 dark:text-white rounded-xl font-bold text-sm transition-all border border-slate-200 dark:border-white/10 hover:shadow-md"
+                                    className="px-3 py-2 bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/20 text-slate-700 dark:text-white rounded-lg font-bold text-xs transition-all border border-slate-200 dark:border-white/10 hover:shadow-md"
                                     title="Copy business information"
                                   >
                                     <ArrowRight size={16} />
@@ -1613,8 +1626,8 @@ function DashboardContent() {
                     {/* AI Analysis Animation */}
                     <UniformCard 
                       variant="glass" 
-                      size="lg"
-                      className="min-h-[500px] relative overflow-hidden shadow-2xl border-2 border-slate-200/50 dark:border-white/10"
+                      size="sm"
+                      className="min-h-[300px] sm:min-h-[380px] relative overflow-hidden shadow-xl border border-slate-200/50 dark:border-white/10"
                     >
                       <AIAnalysisCanvas className="absolute inset-0 w-full h-full" />
                       
@@ -1626,27 +1639,27 @@ function DashboardContent() {
                           transition={{ delay: 0.5 }}
                           className="bg-white/90 dark:bg-[#0a0f25]/90 backdrop-blur-xl rounded-3xl p-8 border border-slate-200 dark:border-white/10 max-w-2xl shadow-2xl"
                         >
-                          <h2 className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 dark:text-white tracking-tight mb-4 drop-shadow-lg">
+                          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-black text-slate-900 dark:text-white tracking-tight mb-3 drop-shadow-lg">
                             AI Market Analysis
                           </h2>
                           
-                          <p className="text-slate-600 dark:text-gray-400 text-lg font-medium mb-8 leading-relaxed drop-shadow-sm">
+                          <p className="text-slate-600 dark:text-gray-400 text-sm sm:text-base font-medium mb-6 leading-relaxed drop-shadow-sm">
                             Enter a city or region to discover profitable business opportunities. 
                             Our AI analyzes market data, competition, and local trends in real-time.
                           </p>
                           
-                          <div className="flex flex-wrap justify-center gap-4 text-sm">
-                            <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 backdrop-blur-sm whitespace-nowrap shrink-0">
-                              <div className="w-2 h-2 shrink-0 bg-blue-500 rounded-full animate-pulse" />
-                              <span className="text-blue-700 dark:text-blue-400 font-bold uppercase tracking-widest text-[10px]">Live Market Data</span>
+                          <div className="flex flex-wrap justify-center gap-2 text-[9px] font-bold uppercase tracking-widest">
+                            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 backdrop-blur-sm">
+                              <div className="w-1.5 h-1.5 shrink-0 bg-blue-500 rounded-full animate-pulse" />
+                              <span>Live Market Data</span>
                             </div>
-                            <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 backdrop-blur-sm whitespace-nowrap shrink-0">
-                              <div className="w-2 h-2 shrink-0 bg-slate-500 rounded-full animate-pulse" style={{ animationDelay: '0.5s' }} />
-                              <span className="text-slate-700 dark:text-gray-400 font-bold uppercase tracking-widest text-[10px]">AI Predictions</span>
+                            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-gray-400 backdrop-blur-sm">
+                              <div className="w-1.5 h-1.5 shrink-0 bg-slate-500 rounded-full animate-pulse" style={{ animationDelay: '0.5s' }} />
+                              <span>AI Predictions</span>
                             </div>
-                            <div className="flex items-center gap-2 px-4 py-2 rounded-full bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 backdrop-blur-sm whitespace-nowrap shrink-0">
-                              <div className="w-2 h-2 shrink-0 bg-slate-400 rounded-full animate-pulse" style={{ animationDelay: '1s' }} />
-                              <span className="text-slate-600 dark:text-gray-500 font-bold uppercase tracking-widest text-[10px]">Smart Insights</span>
+                            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-gray-500 backdrop-blur-sm">
+                              <div className="w-1.5 h-1.5 shrink-0 bg-slate-400 rounded-full animate-pulse" style={{ animationDelay: '1s' }} />
+                              <span>Smart Insights</span>
                             </div>
                           </div>
                         </motion.div>
@@ -1654,38 +1667,41 @@ function DashboardContent() {
                     </UniformCard>
                     
                     {/* Feature Cards */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                       <UniformCard 
+                        size="sm"
                         variant="glass"
-                        className="text-center p-6 shadow-lg border-2 border-slate-200/50 dark:border-white/10"
+                        className="text-center p-3 shadow-lg border border-slate-200/50 dark:border-white/10"
                       >
-                        <div className="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center mb-4 mx-auto">
-                          <Globe2 className="text-blue-500" size={24} />
+                        <div className="w-9 h-9 rounded-lg bg-blue-500/20 flex items-center justify-center mb-2 mx-auto">
+                          <Globe2 className="text-blue-500" size={18} />
                         </div>
-                        <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">Market Analysis</h3>
-                        <p className="text-sm text-slate-600 dark:text-gray-400">Real-time market data and competition analysis</p>
+                        <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-1">Market Analysis</h3>
+                        <p className="text-[11px] text-slate-600 dark:text-gray-400">Real-time market analytics</p>
                       </UniformCard>
                       
                       <UniformCard 
+                        size="sm"
                         variant="glass"
-                        className="text-center p-6 shadow-lg border-2 border-slate-200/50 dark:border-white/10"
+                        className="text-center p-3 shadow-lg border border-slate-200/50 dark:border-white/10"
                       >
-                        <div className="w-12 h-12 rounded-xl bg-emerald-500/20 flex items-center justify-center mb-4 mx-auto">
-                          <TrendingUp className="text-emerald-500" size={24} />
+                        <div className="w-9 h-9 rounded-lg bg-emerald-500/20 flex items-center justify-center mb-2 mx-auto">
+                          <TrendingUp className="text-emerald-500" size={18} />
                         </div>
-                        <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">Profit Predictions</h3>
-                        <p className="text-sm text-slate-600 dark:text-gray-400">AI-powered ROI and revenue forecasting</p>
+                        <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-1">Profit Predictions</h3>
+                        <p className="text-[11px] text-slate-600 dark:text-gray-400">AI ROI forecasting</p>
                       </UniformCard>
                       
                       <UniformCard 
+                        size="sm"
                         variant="glass"
-                        className="text-center p-6 shadow-lg border-2 border-slate-200/50 dark:border-white/10 sm:col-span-2 lg:col-span-1"
+                        className="text-center p-3 shadow-lg border border-slate-200/50 dark:border-white/10 sm:col-span-2 lg:col-span-1"
                       >
-                        <div className="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center mb-4 mx-auto">
-                          <Lightbulb className="text-purple-500" size={24} />
+                        <div className="w-9 h-9 rounded-lg bg-purple-500/20 flex items-center justify-center mb-2 mx-auto">
+                          <Lightbulb className="text-purple-500" size={18} />
                         </div>
-                        <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-2">Smart Insights</h3>
-                        <p className="text-sm text-slate-600 dark:text-gray-400">Location-specific business recommendations</p>
+                        <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-1">Smart Insights</h3>
+                        <p className="text-[11px] text-slate-600 dark:text-gray-400">Business recommendations</p>
                       </UniformCard>
                     </div>
                   </motion.div>

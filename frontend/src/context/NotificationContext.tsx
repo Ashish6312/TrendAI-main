@@ -88,7 +88,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
       // 1. PRIORITY 1: User Profile Location (if authenticated)
       if (session?.user?.email) {
         try {
-          const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+          const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://trendai-api.onrender.com';
           const profileRes = await fetch(`${apiUrl}/api/users/${encodeURIComponent(session.user.email)}/location`);
           if (profileRes.ok) {
             const profileData = await profileRes.json();

@@ -43,9 +43,9 @@ export default function AuthPage() {
     
     // Check backend health
     const checkBackend = async () => {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://starterscope-api.onrender.com';
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://trendai-api.onrender.com';
       try {
-        const res = await fetch(`${apiUrl}/api/health`, { signal: AbortSignal.timeout(5000) });
+        const res = await fetch(`${apiUrl}/api/health`, { signal: AbortSignal.timeout(60000) });
         if (res.ok) {
           console.log('✅ Backend connectivity test: PASSED');
         } else {

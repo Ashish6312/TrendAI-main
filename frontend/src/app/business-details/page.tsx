@@ -487,33 +487,18 @@ export default function BusinessDetailsPage() {
               icon={<MapPin className="w-6 h-6" />}
               variant="gradient"
             >
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="bg-gradient-to-r from-blue-500/10 to-cyan-500/10 rounded-xl p-4 border border-blue-500/20">
                   <p className="text-blue-600 dark:text-blue-400 text-sm font-medium">Country</p>
                   <p className="text-slate-900 dark:text-white font-bold flex items-center mt-1">
-                    {locationData.country?.emoji && <span className="mr-2">{locationData.country.emoji}</span>}
-                    {locationData.country?.name || 'Unknown Country'}
-                  </p>
-                </div>
-                <div className="bg-gradient-to-r from-green-500/10 to-emerald-500/10 rounded-xl p-4 border border-green-500/20">
-                  <p className="text-green-600 dark:text-green-400 text-sm font-medium">State/Region</p>
-                  <p className="text-slate-900 dark:text-white font-bold mt-1">
-                    {locationData.state?.name || 'Unknown State'}
+                    <span className="mr-2">🇮🇳</span>
+                    India
                   </p>
                 </div>
                 <div className="bg-gradient-to-r from-purple-500/10 to-pink-500/10 rounded-xl p-4 border border-purple-500/20">
-                  <p className="text-purple-600 dark:text-purple-400 text-sm font-medium">City</p>
+                  <p className="text-purple-600 dark:text-purple-400 text-sm font-medium">Location Name</p>
                   <p className="text-slate-900 dark:text-white font-bold mt-1">
                     {locationData.city?.name || businessData.area.split(',')[0] || 'Unknown City'}
-                  </p>
-                </div>
-                <div className="bg-gradient-to-r from-orange-500/10 to-red-500/10 rounded-xl p-4 border border-orange-500/20">
-                  <p className="text-orange-600 dark:text-orange-400 text-sm font-medium">Coordinates</p>
-                  <p className="text-slate-900 dark:text-white font-bold text-xs mt-1">
-                    {locationData.coordinates ? 
-                      `${locationData.coordinates.lat.toFixed(4)}, ${locationData.coordinates.lng.toFixed(4)}` : 
-                      'Loading...'
-                    }
                   </p>
                 </div>
               </div>
@@ -530,25 +515,25 @@ export default function BusinessDetailsPage() {
                     <div className="bg-gradient-to-r from-green-500/10 to-emerald-500/10 rounded-2xl p-5 sm:p-6 border border-green-500/20 shadow-sm">
                       <p className="text-green-600 dark:text-green-400 text-[10px] sm:text-xs font-black uppercase tracking-widest mb-2">Investment Required</p>
                       <p className="text-xl sm:text-2xl lg:text-3xl font-black text-slate-900 dark:text-white leading-tight italic">
-                        {formatCurrency(businessData.business.funding_required || '₹5L-₹15L')}
+                        {formatCurrency(businessData.business.funding_required || 'Analysis pending...')}
                       </p>
                     </div>
                     <div className="bg-gradient-to-r from-blue-500/10 to-cyan-500/10 rounded-2xl p-5 sm:p-6 border border-blue-500/20 shadow-sm">
                       <p className="text-blue-600 dark:text-blue-400 text-[10px] sm:text-xs font-black uppercase tracking-widest mb-2">Expected Revenue</p>
                       <p className="text-xl sm:text-2xl lg:text-3xl font-black text-slate-900 dark:text-white leading-tight italic">
-                        {formatCurrency(businessData.business.estimated_revenue || '₹25L/year')}
+                        {formatCurrency(businessData.business.estimated_revenue || 'Analysis pending...')}
                       </p>
                     </div>
                     <div className="bg-gradient-to-r from-purple-500/10 to-pink-500/10 rounded-2xl p-5 sm:p-6 border border-purple-500/20 shadow-sm">
                       <p className="text-purple-600 dark:text-purple-400 text-[10px] sm:text-xs font-black uppercase tracking-widest mb-2">ROI Projection</p>
                       <p className="text-xl sm:text-2xl lg:text-3xl font-black text-slate-900 dark:text-white leading-tight italic">
-                        {businessData.business.roi_percentage || '120'}%
+                        {businessData.business.roi_percentage ? `${businessData.business.roi_percentage}%` : 'Analysis pending...'}
                       </p>
                     </div>
                     <div className="bg-gradient-to-r from-orange-500/10 to-red-500/10 rounded-2xl p-5 sm:p-6 border border-orange-500/20 shadow-sm">
                       <p className="text-orange-600 dark:text-orange-400 text-[10px] sm:text-xs font-black uppercase tracking-widest mb-2">Payback Period</p>
                       <p className="text-xl sm:text-2xl lg:text-3xl font-black text-slate-900 dark:text-white leading-tight italic">
-                        {businessData.business.payback_period || '12 months'}
+                        {businessData.business.payback_period || 'Analysis pending...'}
                       </p>
                     </div>
                   </div>
@@ -563,25 +548,25 @@ export default function BusinessDetailsPage() {
                   <div className="flex justify-between items-center">
                     <span className="text-slate-600 dark:text-gray-400">Market Size</span>
                     <span className="text-slate-900 dark:text-white font-bold">
-                      {businessData.business.market_size || 'Growing'}
+                      {businessData.business.market_size || 'N/A'}
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-slate-600 dark:text-gray-400">Competition</span>
                     <span className="text-slate-900 dark:text-white font-bold">
-                      {businessData.business.competition_level || 'Medium'}
+                      {businessData.business.competition_level || 'N/A'}
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-slate-600 dark:text-gray-400">Difficulty</span>
                     <span className="text-slate-900 dark:text-white font-bold">
-                      {businessData.business.startup_difficulty || 'Medium'}
+                      {businessData.business.startup_difficulty || 'N/A'}
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
                     <span className="text-slate-600 dark:text-gray-400">Team Size</span>
                     <span className="text-slate-900 dark:text-white font-bold">
-                      {businessData.business.initial_team_size || '3-5'} people
+                      {businessData.business.initial_team_size ? `${businessData.business.initial_team_size} people` : 'N/A'}
                     </span>
                   </div>
                 </div>
@@ -593,19 +578,19 @@ export default function BusinessDetailsPage() {
               icon={<Target className="w-6 h-6" />}
             >
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {(businessData.business.key_success_factors || [
-                  'Strong local market presence',
-                  'Quality service delivery',
-                  'Competitive pricing strategy',
-                  'Effective marketing campaigns',
-                  'Customer relationship management',
-                  'Operational efficiency'
-                ]).map((factor: string, index: number) => (
-                  <div key={index} className="flex items-center space-x-3 p-3 bg-slate-50 dark:bg-white/5 rounded-lg border border-slate-200 dark:border-white/10">
-                    <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
-                    <span className="text-slate-700 dark:text-gray-300 text-sm font-medium">{factor}</span>
-                  </div>
-                ))}
+                {(businessData.business.key_success_factors || []).length > 0 ? (
+                  businessData.business.key_success_factors.map((factor: string, index: number) => (
+                    <div key={index} className="flex items-center space-x-3 p-3 bg-slate-50 dark:bg-white/5 rounded-lg border border-slate-200 dark:border-white/10">
+                      <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
+                      <span className="text-slate-700 dark:text-gray-300 text-sm font-medium">{factor}</span>
+                    </div>
+                  ))
+                ) : (
+                  <p className="col-span-full text-center text-slate-500 dark:text-gray-500 py-4 italic text-sm">
+                    Detailed success factors are being synthetically generated for this specific niche. 
+                    Please return in a moment for complete results.
+                  </p>
+                )}
               </div>
             </UniformCard>
 

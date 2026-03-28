@@ -85,7 +85,7 @@ class RealBusinessAPI {
   async deepScrapeBusinesses(query: string, location: string, email?: string): Promise<RealBusiness[]> {
     console.log(`🚀 Deep scraping for '${query}' in ${location}...`);
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://trendai-api.onrender.com';
       const res = await fetch(`${apiUrl}/api/businesses/scrape`, {
         method: 'POST',
         headers: {
@@ -152,7 +152,7 @@ class RealBusinessAPI {
 
     try {
       // 🚀 Point to our secure backend proxy to bypass browser CORS & rate limits
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://trendai-api.onrender.com';
       const res = await fetch(
         `${apiUrl}/api/businesses/search?q=${query}`,
         { signal: controller.signal }
@@ -205,7 +205,7 @@ class RealBusinessAPI {
     const timeout = setTimeout(() => controller.abort(), 8000); // 8 s hard cap
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://trendai-api.onrender.com';
       const res = await fetch(`${apiUrl}/api/businesses/overpass`, {
         method: 'POST',
         headers: {

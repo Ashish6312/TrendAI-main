@@ -495,12 +495,23 @@ function ProfilePageContent() {
           setJoinDate(updatedJoinDate);
         }
 
-        let historyData = [];
+        let historyData: any[] = [];
         if (historyRes.ok) {
-          historyData = await historyRes.json();
-          setAnalysisHistory(historyData || []);
+          const resJson = await historyRes.json();
+          // Backend now returns {history: [...], purged_count: number}
+          historyData = resJson.history || (Array.isArray(resJson) ? resJson : []);
+          setAnalysisHistory(historyData);
           updatedAnalysisCount = historyData.length;
           setAnalysisCount(updatedAnalysisCount);
+
+          if (resJson.purged_count > 0) {
+            addNotification({
+              type: 'system',
+              title: 'History Maintained',
+              message: `Optimized storage by purging ${resJson.purged_count} records older than 7 days.`,
+              priority: 'low'
+            });
+          }
         }
 
         if (profileRes.ok) {

@@ -67,6 +67,7 @@ class ContactRequest(BaseModel):
     email: str
     subject: str
     message: str
+    profile_context: Optional[Dict[str, Any]] = None
 try:
     from standardwebhooks import Webhook
 except ImportError:
@@ -144,7 +145,7 @@ def system_health_check():
 # CONTACT & SUPPORT SYSTEM
 # ═══════════════════════════════════════════════════
 def send_support_email(host, port, user, password, recipient, subject, html_content, sender_name):
-    """Sends support email in background thread."""
+    """Sends support email in background thread with advanced resilience."""
     try:
         msg = MIMEMultipart()
         msg["From"] = str(user)
@@ -152,13 +153,30 @@ def send_support_email(host, port, user, password, recipient, subject, html_cont
         msg["Subject"] = f"StarterScope: {subject} (from {sender_name})"
         msg.attach(MIMEText(html_content, "html"))
 
-        with smtplib.SMTP(str(host), int(port)) as server:
-            server.starttls()
-            server.login(str(user), str(password))
-            server.send_message(msg)
+        # 💡 PRO TIP: For Gmail, port 465 with SSL is often more reliable than 587.
+        # Ensure you are using an 'APP PASSWORD' if 2FA is enabled.
+        if "gmail.com" in str(host).lower() and int(port) == 465:
+            with smtplib.SMTP_SSL(str(host), int(port)) as server:
+                server.login(str(user), str(password))
+                server.send_message(msg)
+        else:
+            with smtplib.SMTP(str(host), int(port)) as server:
+                try:
+                    server.starttls()
+                except: pass
+                server.login(str(user), str(password))
+                server.send_message(msg)
+        
         logging.info(f"✅ Neural transmission delivered to {recipient}")
+        print(f"✅ EMAIL SUCCESS: Sent '{subject}' to {recipient}")
     except Exception as e:
-        logging.error(f"❌ Neural transmission failed in background: {str(e)}")
+        error_msg = str(e)
+        logging.error(f"❌ Neural transmission failed in background: {error_msg}")
+        print(f"❌ EMAIL FAILURE: {error_msg}")
+        if "authentication" in error_msg.lower():
+            print("💡 REASON: Likely incorrect credentials. For Gmail, you MUST use an 'App Password', NOT your primary login password.")
+        elif "connection" in error_msg.lower():
+            print("💡 REASON: Could not connect to the SMTP server. Check your firewall or proxy settings.")
 
 @app.post("/api/contact")
 async def contact_form_submission(contact: ContactRequest, background_tasks: BackgroundTasks):
@@ -176,46 +194,101 @@ async def contact_form_submission(contact: ContactRequest, background_tasks: Bac
         # ═══════════════════════════════════════════════════
         # EMAIL TEMPLATE (Predefined & Professional)
         # ═══════════════════════════════════════════════════
+        request_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC')
         html_content = f"""
+        <!DOCTYPE html>
         <html>
-        <body style="font-family: 'Inter', sans-serif; background-color: #f8fafc; padding: 40px; color: #1e293b;">
-            <div style="max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 24px; overflow: hidden; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
-                <div style="background: #0f172a; padding: 40px; text-align: center;">
-                    <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.05em; font-style: italic;">
-                        STARTERSCOPE <span style="color: #10b981;">SUPPORT</span>
-                    </h1>
+        <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+            <style>
+                body {{ font-family: 'Inter', system-ui, -apple-system, sans-serif; background-color: #f1f5f9; margin: 0; padding: 0; -webkit-font-smoothing: antialiased; }}
+                .container {{ max-width: 600px; margin: 40px auto; background-color: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); border: 1px solid #e2e8f0; }}
+                .header {{ background-color: #0f172a; padding: 48px 40px; text-align: center; border-bottom: 4px solid #10b981; }}
+                .header h1 {{ color: #ffffff; margin: 0; font-size: 24px; font-weight: 900; letter-spacing: -0.05em; text-transform: uppercase; font-style: italic; }}
+                .sub {{ color: #10b981; }}
+                .content {{ padding: 40px; }}
+                .meta-label {{ text-transform: uppercase; font-size: 11px; font-weight: 900; letter-spacing: 0.15em; color: #64748b; margin-bottom: 8px; }}
+                .subject-box {{ margin-bottom: 32px; }}
+                .subject-text {{ font-size: 22px; font-weight: 800; color: #0f172a; margin: 0; line-height: 1.2; }}
+                .message-box {{ background-color: #f8fafc; padding: 32px; border-radius: 20px; border: 1px solid #f1f5f9; margin-bottom: 32px; }}
+                .message-text {{ font-size: 16px; line-height: 1.7; color: #334155; margin: 0; white-space: pre-wrap; }}
+                .sender-card {{ background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 20px; padding: 24px; }}
+                .sender-row {{ display: flex; justify-content: space-between; border-bottom: 1px solid #f1f5f9; padding: 8px 0; font-size: 14px; width: 100%; }}
+                .sender-row:last-child {{ border: none; }}
+                .label {{ color: #64748b; font-weight: 500; width: 120px; }}
+                .value {{ color: #0f172a; font-weight: 700; text-align: right; flex-grow: 1; }}
+                .footer {{ background-color: #fafafa; padding: 24px 40px; text-align: center; border-top: 1px solid #f1f5f9; }}
+                .footer p {{ font-size: 12px; color: #94a3b8; margin: 0; }}
+                .accent-bar {{ height: 8px; background: linear-gradient(90deg, #10b981, #3b82f6); }}
+            </style>
+        </head>
+        <body>
+            <div class="container">
+                <div class="header">
+                    <h1>StarterScope <span class="sub">Support</span></h1>
                 </div>
-                
-                <div style="padding: 40px;">
-                    <div style="margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid #f1f5f9;">
-                        <p style="text-transform: uppercase; font-size: 10px; font-weight: 900; letter-spacing: 0.1em; color: #64748b; margin-bottom: 8px;">Subject</p>
-                        <h2 style="font-size: 20px; font-weight: 800; color: #0f172a; margin: 0;">{contact.subject}</h2>
+                <div class="accent-bar"></div>
+                <div class="content">
+                    <div class="subject-box">
+                        <div class="meta-label">Priority Support Request</div>
+                        <h2 class="subject-text">{contact.subject}</h2>
                     </div>
 
-                    <div style="margin-bottom: 30px;">
-                        <p style="text-transform: uppercase; font-size: 10px; font-weight: 900; letter-spacing: 0.1em; color: #64748b; margin-bottom: 8px;">Incoming Message</p>
-                        <p style="font-size: 16px; line-height: 1.6; color: #334155; white-space: pre-wrap;">{contact.message}</p>
+                    <div class="meta-label">Communication content</div>
+                    <div class="message-box">
+                        <p class="message-text">{contact.message}</p>
                     </div>
 
-                    <div style="background: #f1f5f9; padding: 24px; border-radius: 16px;">
-                        <p style="text-transform: uppercase; font-size: 10px; font-weight: 900; letter-spacing: 0.1em; color: #64748b; margin-bottom: 12px;">Sender Details</p>
-                        <table style="width: 100%; font-size: 14px;">
-                            <tr>
-                                <td style="color: #64748b; padding: 4px 0;">Name:</td>
-                                <td style="font-weight: 700; color: #0f172a;">{contact.name}</td>
+                    <div class="meta-label">Origin details</div>
+                    <div class="sender-card">
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <tr style="border-bottom: 1px solid #f1f5f9;">
+                                <td style="padding: 12px 0; color: #64748b; font-size: 14px; font-weight: 500;">Name</td>
+                                <td style="padding: 12px 0; color: #0f172a; font-size: 14px; font-weight: 700; text-align: right;">{contact.name}</td>
                             </tr>
+                            <tr style="border-bottom: 1px solid #f1f5f9;">
+                                <td style="padding: 12px 0; color: #64748b; font-size: 14px; font-weight: 500;">Identity</td>
+                                <td style="padding: 12px 0; color: #10b981; font-size: 14px; font-weight: 700; text-align: right;">{contact.email}</td>
+                            </tr>
+                            {f'''
+                            <tr style="border-bottom: 1px solid #f1f5f9;">
+                                <td style="padding: 12px 0; color: #64748b; font-size: 14px; font-weight: 500;">Company</td>
+                                <td style="padding: 12px 0; color: #0f172a; font-size: 14px; font-weight: 700; text-align: right;">{contact.profile_context.get("company", "Not specified")}</td>
+                            </tr>
+                            <tr style="border-bottom: 1px solid #f1f5f9;">
+                                <td style="padding: 12px 0; color: #64748b; font-size: 14px; font-weight: 500;">Industry</td>
+                                <td style="padding: 12px 0; color: #0f172a; font-size: 14px; font-weight: 700; text-align: right;">{contact.profile_context.get("industry", "Not specified")}</td>
+                            </tr>
+                            <tr style="border-bottom: 1px solid #f1f5f9;">
+                                <td style="padding: 12px 0; color: #64748b; font-size: 14px; font-weight: 500;">Location</td>
+                                <td style="padding: 12px 0; color: #0f172a; font-size: 14px; font-weight: 700; text-align: right;">{contact.profile_context.get("location", "Not specified")}</td>
+                            </tr>
+                            <tr style="border-bottom: 1px solid #f1f5f9;">
+                                <td style="padding: 12px 0; color: #64748b; font-size: 14px; font-weight: 500;">Phone</td>
+                                <td style="padding: 12px 0; color: #0f172a; font-size: 14px; font-weight: 700; text-align: right;">{contact.profile_context.get("phone", "Not specified")}</td>
+                            </tr>
+                            ''' if contact.profile_context else ''}
                             <tr>
-                                <td style="color: #64748b; padding: 4px 0;">Email:</td>
-                                <td style="font-weight: 700; color: #10b981;">{contact.email}</td>
+                                <td style="padding: 12px 0; color: #64748b; font-size: 14px; font-weight: 500;">Intelligence Logged</td>
+                                <td style="padding: 12px 0; color: #0f172a; font-size: 14px; font-weight: 700; text-align: right;">{request_time}</td>
                             </tr>
                         </table>
                     </div>
+                    {f'''
+                    <div style="margin-top: 24px;">
+                        <div class="meta-label">Pro Profile Context</div>
+                        <div class="message-box" style="margin-bottom: 0;">
+                            <p class="message-text" style="font-style: italic; font-size: 14px;">"{contact.profile_context.get("bio", "No bio provided.")}"</p>
+                            {f'<p style="font-size: 12px; margin-top: 12px; color: #3b82f6;">Website: {contact.profile_context.get("website")}</p>' if contact.profile_context.get("website") else ''}
+                        </div>
+                    </div>
+                    ''' if contact.profile_context else ''}
                 </div>
-
-                <div style="background: #f8fafc; padding: 20px 40px; text-align: center; border-top: 1px solid #e2e8f0;">
-                    <p style="font-size: 12px; color: #94a3b8; margin: 0;">
-                        AI Core System Generated • {datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC')}
-                    </p>
+                <div class="footer">
+                    <p>Designed for Enterprise Strategic Insights • STARTERSCOPE V3.0</p>
+                    <p style="margin-top: 8px; font-size: 10px;">ID: UN-INITIATED-NEURAL-GATE-TX</p>
                 </div>
             </div>
         </body>
@@ -227,10 +300,12 @@ async def contact_form_submission(contact: ContactRequest, background_tasks: Bac
         # ═══════════════════════════════════════════════════
         # BACKGROUND TRANSMISSION
         # ═══════════════════════════════════════════════════
-        if not EMAIL_USER or not EMAIL_PASS:
+        if (not EMAIL_USER or not EMAIL_PASS):
             logging.warning("⚠️ SMTP Credentials missing! Logging message to terminal instead.")
             print(f"📬 FORM SUBMISSION: {contact.name} ({contact.email}) | Sub: {contact.subject}")
             print(f"💬 MESSAGE: {contact.message}")
+            if contact.profile_context:
+                print(f"👤 PRO PROFILE CONTEXT: {json.dumps(contact.profile_context, indent=2)}")
             return {"status": "success", "message": "Feedback logged locally", "id": request_id}
 
         # Queue the email send so we can respond to the user IMMEDIATELY
@@ -1158,10 +1233,29 @@ async def get_recommendations(request: RecommendationRequest, db: Session = Depe
 
         if existing_record:
             cached_recs = ensure_json_obj(existing_record.recommendations)
-            # 🎯 CACHE QUALITY GUARD: If cached data contains generic placeholders, force a high-fidelity refresh
+            # 🎯 CACHE QUALITY GUARD: FORCE REFRESH FOR ALL LEGACY RESULTS
             cache_str = str(cached_recs)
-            is_generic = "Strategic Market Opportunity" in cache_str or "₹5L-₹15L" in cache_str
-            is_valid_cache = isinstance(cached_recs, list) and len(cached_recs) >= 3 and not is_generic
+            # Detect old-style generic fallbacks or placeholder data
+            is_generic_placeholder = "Strategic Market Opportunity" in cache_str or "₹5L-₹15L" in cache_str
+            is_generic_template = any(t in cache_str for t in ["Local Digital Solutions", "Hyper-Local Logistics", "Eco-Smart Retail Hub"])
+            
+            # STRICT COUNT VALIDATION: The V4.2 Strategic Engine MUST return 8-10 items. 
+            # If the cache has fewer than 8, it's definitely legacy data and MUST be refreshed.
+            rec_count = len(cached_recs) if isinstance(cached_recs, list) else 0
+            is_legacy_count = rec_count < 8
+            
+            # ADDRESS IN TITLE DETECTION: If any recommendation title is low-fidelity
+            is_bad_naming = False
+            if isinstance(cached_recs, list):
+                for rec in cached_recs:
+                    if isinstance(rec, dict):
+                        title = str(rec.get("title", rec.get("name", "")))
+                        if title.count(",") >= 2 or "India" in title or "zip" in title.lower():
+                            is_bad_naming = True
+                            print(f"⚠️  Detected low-fidelity naming in cached title: '{title}'. Forcing refresh...")
+                            break
+            
+            is_valid_cache = isinstance(cached_recs, list) and rec_count >= 8 and not is_generic_placeholder and not is_generic_template and not is_bad_naming and not is_legacy_count
             
             if is_valid_cache:
                 # Deep validation: ensuring the structure has actual business titles, not empty shells
@@ -1339,9 +1433,39 @@ async def get_recommendations(request: RecommendationRequest, db: Session = Depe
 
 @app.get("/api/history/{email}")
 def get_user_history(email: str, db: Session = Depends(get_db)):
-    """Fetch search history with explicit serialization and error avoidance"""
+    """Fetch search history with automatic 7-day cleanup and serialization"""
     try:
         user_email = email.lower().strip()
+        
+        # 🧹 AUTOMATIC CLEANUP: Purge history older than 7 days OR legacy low-fidelity results (<8 items)
+        # This forces the dashboard to only show high-fidelity V4.2 Strategic RAG-Chain results
+        seven_days_ago = datetime.now() - timedelta(days=7)
+        
+        # 1. Delete by age
+        db.query(models.SearchHistory).filter(
+            models.SearchHistory.user_email == user_email,
+            models.SearchHistory.created_at < seven_days_ago
+        ).delete(synchronize_session=False)
+        
+        # 2. Delete by fidelity (Count < 8 is legacy V2/V3 data)
+        # We fetch all and check JSON length because SQLite/Postgres JSON length functions vary
+        all_recs = db.query(models.SearchHistory).filter(models.SearchHistory.user_email == user_email).all()
+        ids_to_purge = []
+        for r in all_recs:
+            try:
+                # Handle potential string-encoded JSON
+                recs = r.recommendations
+                if isinstance(recs, str): recs = json.loads(recs)
+                if not isinstance(recs, list) or len(recs) < 8:
+                    ids_to_purge.append(r.id)
+            except: ids_to_purge.append(r.id)
+            
+        if ids_to_purge:
+            db.query(models.SearchHistory).filter(models.SearchHistory.id.in_(ids_to_purge)).delete(synchronize_session=False)
+        
+        db.commit()
+            
+        # Fetch remaining high-fidelity history
         history = db.query(models.SearchHistory).filter(
             models.SearchHistory.user_email == user_email
         ).order_by(models.SearchHistory.created_at.desc()).all()
@@ -1355,10 +1479,14 @@ def get_user_history(email: str, db: Session = Depends(get_db)):
                 "created_at": str(getattr(h, "created_at", datetime.now())),
                 "user_email": getattr(h, "user_email", user_email)
             })
-        return serialized_history
+            
+        return {
+            "history": serialized_history,
+            "purged_count": deleted_count
+        }
     except Exception as e:
         logger.error(f"Error fetching history for {email}: {e}")
-        return []
+        return {"history": [], "purged_count": 0}
 
 # NEW: Saved Businesses Endpoints
 @app.post("/api/saved-businesses")
@@ -2852,6 +2980,6 @@ if __name__ == "__main__":
         sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
         sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
         
-    print("--- [STARTUP] Engine V3 Standardized on UTF-8 (All Interfaces) ---")
-    # Disable reload for production-like stability during final testing
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=False)
+    print("--- [STARTUP] Engine V4.2 Standardized on UTF-8 (RAG Cluster) ---")
+    # Hot-reload enabled for strategic session updates
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

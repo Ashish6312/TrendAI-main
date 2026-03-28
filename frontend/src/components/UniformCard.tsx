@@ -27,9 +27,9 @@ export default function UniformCard({
   delay = 0
 }: UniformCardProps) {
   const sizeClasses = {
-    sm: 'p-4 sm:p-5',
-    md: 'p-5 sm:p-6 lg:p-8',
-    lg: 'p-6 sm:p-8 lg:p-10'
+    sm: 'p-2 sm:p-2.5',
+    md: 'p-3 sm:p-4',
+    lg: 'p-4 sm:p-6'
   };
 
   const variantClasses = {
@@ -58,7 +58,7 @@ export default function UniformCard({
         <div className="flex items-start justify-between mb-4 sm:mb-6">
           <div className="flex items-center space-x-3">
             {icon && (
-              <div className="flex-shrink-0 w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-emerald-500/10 dark:bg-emerald-500/20 flex items-center justify-center border border-emerald-500/20 dark:border-emerald-500/30">
+              <div className="flex-shrink-0 w-8 h-8 sm:w-9 sm:h-9 rounded-lg bg-emerald-500/10 dark:bg-emerald-500/20 flex items-center justify-center border border-emerald-500/20 dark:border-emerald-500/30">
                 <span className="text-emerald-600 dark:text-emerald-400">
                   {icon}
                 </span>

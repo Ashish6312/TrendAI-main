@@ -26,7 +26,7 @@ const handler = NextAuth({
           throw new Error("Email and password are required");
         }
 
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://starterscope-api.onrender.com';
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://trendai-api.onrender.com';
         
         try {
           if (credentials.isSignUp === "true") {
@@ -46,7 +46,7 @@ const handler = NextAuth({
                 name: credentials.name
               }),
               // Add timeout to prevent hanging
-              signal: AbortSignal.timeout(10000) // 10 second timeout
+              signal: AbortSignal.timeout(60000) // 60 second timeout for cold starts
             });
             
             if (!signUpResponse.ok) {
@@ -81,7 +81,7 @@ const handler = NextAuth({
                 password: credentials.password
               }),
               // Add timeout to prevent hanging
-              signal: AbortSignal.timeout(10000) // 10 second timeout
+              signal: AbortSignal.timeout(60000) // 60 second timeout for cold starts
             });
 
             if (!signInResponse.ok) {
@@ -126,7 +126,7 @@ const handler = NextAuth({
       // Simplified sign-in callback - remove heavy operations
       if (user.email) {
         // Only do basic user sync, don't wait for it to complete
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://starterscope-api.onrender.com';
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://trendai-api.onrender.com';
         
         // Fire and forget - don't await this to speed up login
         fetch(`${apiUrl}/api/users/sync`, {
@@ -137,7 +137,7 @@ const handler = NextAuth({
             name: user.name || 'User',
             image_url: user.image 
           }),
-          signal: AbortSignal.timeout(5000) // 5 second timeout
+          signal: AbortSignal.timeout(30000) // Increased to 30s
         }).catch(error => {
           console.error('Failed to sync user (non-blocking):', error);
         });

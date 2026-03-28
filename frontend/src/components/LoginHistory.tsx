@@ -44,7 +44,7 @@ export default function LoginHistory({ userEmail }: LoginHistoryProps) {
       if (!userEmail) return;
       
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://trendai-api.onrender.com';
         const response = await fetch(`${apiUrl}/api/users/${userEmail}/sessions?limit=10`);
         
         if (response.ok) {

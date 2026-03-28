@@ -123,7 +123,7 @@ async function getLocationInfo(): Promise<any> {
   }
 
   // Fallback to IP-based location
-  const apiUrl = 'https://starterscope-api.onrender.com';
+  const apiUrl = 'https://trendai-api.onrender.com';
   const services = [
     `${apiUrl}/api/utils/location`,
     'https://ipapi.co/json/',
@@ -134,7 +134,7 @@ async function getLocationInfo(): Promise<any> {
   for (const service of services) {
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000);
+      const timeoutId = setTimeout(() => controller.abort(), 30000);
 
       const response = await fetch(service, {
         signal: controller.signal,

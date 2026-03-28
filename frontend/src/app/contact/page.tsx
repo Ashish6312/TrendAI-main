@@ -3,14 +3,42 @@
 import { ArrowLeft, Mail, MessageSquare, MapPin, Send, Headset } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLanguage } from "@/context/LanguageContext";
+import { useSession } from "next-auth/react";
 
 export default function ContactPage() {
   const router = useRouter();
   const { t } = useLanguage();
+  const { data: session } = useSession();
   const [formData, setFormData] = useState({ name: "", email: "", subject: "", message: "" });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [profileData, setProfileData] = useState<any>(null);
+
+  useEffect(() => {
+    if (session?.user?.email) {
+      setFormData(prev => ({
+        ...prev,
+        name: session.user?.name || "",
+        email: session.user?.email || ""
+      }));
+
+      // Fetch full profile for context
+      const fetchProfile = async () => {
+        try {
+          const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://trendai-api.onrender.com';
+          const res = await fetch(`${apiUrl}/api/users/${session.user?.email}/profile`);
+          if (res.ok) {
+            const data = await res.json();
+            setProfileData(data);
+          }
+        } catch (e) {
+          console.error("Context fetch failed:", e);
+        }
+      };
+      fetchProfile();
+    }
+  }, [session]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,18 +51,18 @@ export default function ContactPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          ...formData,
+          profile_context: profileData?.user || profileData // Send refined user data if available
+        }),
       });
 
       if (!response.ok) {
         throw new Error('Failed to transmit message');
       }
 
-      const result = await response.json();
-      console.log("Transmission Result:", result);
-
       alert(t('contact_success'));
-      setFormData({ name: "", email: "", subject: "", message: "" });
+      setFormData(prev => ({ ...prev, subject: "", message: "" }));
     } catch (error) {
       console.error("Transmission Error:", error);
       alert("Neural transmission failed. Please try again or email StarterScope7@gmail.com directly.");
@@ -114,22 +142,24 @@ export default function ContactPage() {
                   <label className="text-[10px] font-black text-slate-500 dark:text-gray-500 uppercase tracking-widest pl-1">{t('contact_form_name')}</label>
                   <input
                     required
+                    readOnly
                     type="text"
                     value={formData.name}
                     onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                     placeholder={t('contact_id_self')}
-                    className="w-full px-5 py-4 bg-white dark:bg-black/20 border-2 border-slate-200 dark:border-white/5 rounded-2xl focus:border-emerald-500 dark:focus:border-emerald-500 transition-all outline-none text-sm font-bold"
+                    className="w-full px-5 py-4 bg-slate-100/50 dark:bg-black/40 border-2 border-slate-200 dark:border-white/5 rounded-2xl focus:border-emerald-500 dark:focus:border-emerald-500 transition-all outline-none text-sm font-bold opacity-70 cursor-not-allowed"
                   />
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-500 dark:text-gray-500 uppercase tracking-widest pl-1">{t('contact_form_email')}</label>
                   <input
                     required
+                    readOnly
                     type="email"
                     value={formData.email}
                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     placeholder="name@email.com"
-                    className="w-full px-5 py-4 bg-white dark:bg-black/20 border-2 border-slate-200 dark:border-white/5 rounded-2xl focus:border-emerald-500 dark:focus:border-emerald-500 transition-all outline-none text-sm font-bold"
+                    className="w-full px-5 py-4 bg-slate-100/50 dark:bg-black/40 border-2 border-slate-200 dark:border-white/5 rounded-2xl focus:border-emerald-500 dark:focus:border-emerald-500 transition-all outline-none text-sm font-bold opacity-70 cursor-not-allowed"
                   />
                 </div>
               </div>
