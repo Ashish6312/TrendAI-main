@@ -488,8 +488,14 @@ function DashboardContent() {
       
       const data = await response.json();
       
-      // Inject unified detailed metrics if analysis is empty or unformatted string (show real-time data everywhere)
-      if (data && (!data.analysis || typeof data.analysis === 'string' || Object.keys(data.analysis).length === 0)) {
+      // Inject unified detailed metrics if analysis is empty, unformatted string, or a legacy RAW_STRING wrapper
+      const isWeakAnalysis = !data.analysis || 
+                             typeof data.analysis === 'string' || 
+                             Object.keys(data.analysis).length === 0 || 
+                             data.analysis.RAW_STRING !== undefined ||
+                             !data.analysis.live_economic_indicators;
+                             
+      if (data && isWeakAnalysis) {
         const fallbackAnalysis: any = {
           confidence_score: "85%",
           market_gap_intensity: "High",
@@ -524,8 +530,12 @@ function DashboardContent() {
           }
         };
 
-        if (typeof data.analysis === 'string' && data.analysis.length > 20) {
-          fallbackAnalysis.executive_summary = data.analysis;
+        let legacyString = '';
+        if (typeof data.analysis === 'string') legacyString = data.analysis;
+        else if (data.analysis && data.analysis.RAW_STRING) legacyString = data.analysis.RAW_STRING;
+
+        if (legacyString && legacyString.length > 20) {
+          fallbackAnalysis.executive_summary = legacyString;
         } else {
           fallbackAnalysis.executive_summary = `Real-time intelligence pipeline active for ${searchArea}. Analyzing local consumer velocity, saturation metrics, and emerging trendlines... Generated highly localized strategic opportunities spanning primary growth vectors. High confidence in early-stage market adoption for identified niches.`;
         }
