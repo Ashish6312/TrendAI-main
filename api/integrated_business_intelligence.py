@@ -341,44 +341,197 @@ class IntegratedBusinessIntelligence:
         """
 
     async def _scout_google(self, area: str) -> str:
-        """Performs Super-RAG parallel search across elite providers (Tavily/Exa/Serper/SerpApi)"""
+        """Enhanced Super-RAG search using ALL working APIs for maximum intelligence"""
         res = []
+        
+        print(f"🔍 [SCOUTING] Deploying all available APIs for {area}...")
         
         # 1. TAVILY (Primary AI Search)
         if self.tavily_key:
             try:
                 async with httpx.AsyncClient(timeout=10.0) as client:
                     resp = await client.post("https://api.tavily.com/search", json={
-                        "api_key": self.tavily_key, "query": f"business gaps and high-growth opportunities in {area} 2026",
-                        "search_depth": "advanced", "max_results": 5
+                        "api_key": self.tavily_key, 
+                        "query": f"business gaps and high-growth opportunities in {area} 2026",
+                        "search_depth": "advanced", 
+                        "max_results": 5
                     })
                     if resp.status_code == 200:
-                        res.append("\n".join([f"TAVILY: {r.get('title')}: {r.get('content')}" for r in resp.json().get('results', [])]))
-            except: pass
+                        tavily_data = resp.json().get('results', [])
+                        if tavily_data:
+                            res.append("\n".join([f"TAVILY: {r.get('title', '')}: {r.get('content', '')}" for r in tavily_data]))
+                            print(f"✅ TAVILY: {len(tavily_data)} results")
+                        else:
+                            print(f"⚠️ TAVILY: No results")
+                    else:
+                        print(f"⚠️ TAVILY: {resp.status_code}")
+            except Exception as e:
+                print(f"❌ TAVILY: {str(e)}")
 
         # 2. EXA (Neural Search)
         if self.exa_key:
             try:
                 async with httpx.AsyncClient(timeout=10.0) as client:
-                    resp = await client.post("https://api.exa.ai/search", headers={"x-api-key": self.exa_key}, json={
-                        "query": f"best untapped unique business niches in {area} 2026", "use_autoprompt": True, "num_results": 5
-                    })
+                    resp = await client.post("https://api.exa.ai/search", 
+                        headers={"x-api-key": self.exa_key}, 
+                        json={
+                            "query": f"best untapped unique business niches in {area} 2026", 
+                            "use_autoprompt": True, 
+                            "num_results": 5
+                        })
                     if resp.status_code == 200:
-                        res.append("\n".join([f"EXA: {r.get('title')}: {r.get('url')}" for r in resp.json().get('results', [])]))
-            except: pass
+                        exa_data = resp.json().get('results', [])
+                        if exa_data:
+                            res.append("\n".join([f"EXA: {r.get('title', '')}: {r.get('url', '')}" for r in exa_data]))
+                            print(f"✅ EXA: {len(exa_data)} results")
+                        else:
+                            print(f"⚠️ EXA: No results")
+                    else:
+                        print(f"⚠️ EXA: {resp.status_code}")
+            except Exception as e:
+                print(f"❌ EXA: {str(e)}")
 
-        # 3. SERPER/SERPAPI (Legacy Google Backup)
+        # 3. SERPER (Google Search API)
         if self.serper_key:
             try:
                 async with httpx.AsyncClient(timeout=8.0) as client:
-                    resp = await client.post("https://google.serper.dev/search", headers={"X-API-KEY": self.serper_key}, json={
-                        "q": f"local market trends {area} startups 2026"
+                    resp = await client.post("https://google.serper.dev/search", 
+                        headers={"X-API-KEY": self.serper_key}, 
+                        json={"q": f"local market trends {area} startups 2026"})
+                    if resp.status_code == 200:
+                        serper_data = resp.json().get('organic', [])[:5]
+                        if serper_data:
+                            res.append("\n".join([f"SERPER: {r.get('title', '')}: {r.get('snippet', '')}" for r in serper_data]))
+                            print(f"✅ SERPER: {len(serper_data)} results")
+                        else:
+                            print(f"⚠️ SERPER: No results")
+                    else:
+                        print(f"⚠️ SERPER: {resp.status_code}")
+            except Exception as e:
+                print(f"❌ SERPER: {str(e)}")
+
+        # 4. SERPAPI (Alternative Google Search)
+        if self.serpapi_key:
+            try:
+                async with httpx.AsyncClient(timeout=8.0) as client:
+                    resp = await client.get("https://serpapi.com/search", params={
+                        "engine": "google",
+                        "q": f"business opportunities {area} 2026",
+                        "api_key": self.serpapi_key,
+                        "num": 5
                     })
                     if resp.status_code == 200:
-                        res.append("\n".join([f"SERPER: {r.get('title')}: {r.get('snippet')}" for r in resp.json().get('organic', [])[:5]]))
-            except: pass
+                        serpapi_data = resp.json().get('organic_results', [])[:5]
+                        if serpapi_data:
+                            res.append("\n".join([f"SERPAPI: {r.get('title', '')}: {r.get('snippet', '')}" for r in serpapi_data]))
+                            print(f"✅ SERPAPI: {len(serpapi_data)} results")
+                        else:
+                            print(f"⚠️ SERPAPI: No results")
+                    else:
+                        print(f"⚠️ SERPAPI: {resp.status_code}")
+            except Exception as e:
+                print(f"❌ SERPAPI: {str(e)}")
+
+        # 5. SEARCHAPI (Additional Search Provider)
+        if self.searchapi_key:
+            try:
+                async with httpx.AsyncClient(timeout=8.0) as client:
+                    resp = await client.get("https://www.searchapi.io/api/v1/search", params={
+                        "engine": "google",
+                        "q": f"emerging business trends {area}",
+                        "api_key": self.searchapi_key
+                    })
+                    if resp.status_code == 200:
+                        searchapi_data = resp.json().get('organic_results', [])[:5]
+                        if searchapi_data:
+                            res.append("\n".join([f"SEARCHAPI: {r.get('title', '')}: {r.get('snippet', '')}" for r in searchapi_data]))
+                            print(f"✅ SEARCHAPI: {len(searchapi_data)} results")
+                        else:
+                            print(f"⚠️ SEARCHAPI: No results")
+                    else:
+                        print(f"⚠️ SEARCHAPI: {resp.status_code}")
+            except Exception as e:
+                print(f"❌ SEARCHAPI: {str(e)}")
+
+        # 6. FIRECRAWL (Web Scraping)
+        if self.firecrawl_key:
+            try:
+                async with httpx.AsyncClient(timeout=15.0) as client:
+                    # Search for relevant business websites to scrape
+                    resp = await client.post("https://api.firecrawl.dev/v0/search", 
+                        headers={"Authorization": f"Bearer {self.firecrawl_key}"},
+                        json={
+                            "query": f"business opportunities {area} market analysis",
+                            "limit": 3
+                        })
+                    if resp.status_code == 200:
+                        firecrawl_data = resp.json().get('data', [])
+                        if firecrawl_data:
+                            res.append("\n".join([f"FIRECRAWL: {r.get('title', '')}: {r.get('description', '')}" for r in firecrawl_data]))
+                            print(f"✅ FIRECRAWL: {len(firecrawl_data)} results")
+                        else:
+                            print(f"⚠️ FIRECRAWL: No results")
+                    else:
+                        print(f"⚠️ FIRECRAWL: {resp.status_code}")
+            except Exception as e:
+                print(f"❌ FIRECRAWL: {str(e)}")
+
+        # 7. APIFY (Business Intelligence Scraping)
+        if self.apify_key:
+            try:
+                # Use APIFY for local business intelligence
+                apify_data = await self._scout_apify_businesses(area)
+                if apify_data:
+                    res.append(f"APIFY: {apify_data}")
+                    print(f"✅ APIFY: Business intelligence gathered")
+                else:
+                    print(f"⚠️ APIFY: No business data")
+            except Exception as e:
+                print(f"❌ APIFY: {str(e)}")
             
+        total_sources = len([r for r in res if r.strip()])
+        print(f"📊 [SCOUTING COMPLETE] Gathered data from {total_sources} sources")
+        
         return "\n\n".join(res)
+    
+    async def _scout_apify_businesses(self, area: str) -> str:
+        """Use APIFY to gather local business intelligence - Optimized for speed"""
+        try:
+            # Import APIFY functions
+            from apify_scraper import scrape_google_maps_contacts, format_apify_to_internal
+            
+            # Search for key business categories to understand market saturation
+            search_queries = ["restaurants", "tech companies"]  # Reduced for speed
+            
+            # Scrape business data (optimized for speed)
+            businesses = scrape_google_maps_contacts(
+                search_queries=search_queries,
+                location=area,
+                max_results=5,  # Reduced for speed
+                scrape_reviews=False,  # Skip for speed
+                scrape_contacts=False  # Skip for speed
+            )
+            
+            if businesses:
+                # Analyze business landscape
+                categories = {}
+                total_businesses = len(businesses)
+                
+                for business in businesses:
+                    formatted = format_apify_to_internal(business)
+                    category = formatted.get('category', 'Unknown')
+                    categories[category] = categories.get(category, 0) + 1
+                
+                # Create market intelligence summary
+                market_summary = f"Market Analysis for {area}: {total_businesses} businesses analyzed. "
+                market_summary += f"Top categories: {', '.join([f'{cat}({count})' for cat, count in list(categories.items())[:3]])}"
+                
+                return market_summary
+            
+        except Exception as e:
+            print(f"APIFY scouting error: {str(e)}")
+        
+        return ""
 
     async def _scout_reddit(self, area: str) -> str:
         """Neural scraping of community sentiment for gaps"""
