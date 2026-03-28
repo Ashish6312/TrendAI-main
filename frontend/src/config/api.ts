@@ -12,9 +12,9 @@ export const getApiUrl = () => {
     const hostname = window.location.hostname;
     const searchParams = new URLSearchParams(window.location.search);
     
-    // Use localhost for local development
+    // Use consistent protocol/hostname for local development
     if (hostname === 'localhost' || hostname === '127.0.0.1') {
-      return 'http://127.0.0.1:8000';
+      return `http://${hostname}:8000`;
     }
     
     // Check for explicit local API override (e.g., ?api=local)

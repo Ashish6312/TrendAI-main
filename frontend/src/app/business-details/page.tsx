@@ -8,7 +8,7 @@ import {
   Eye, Maximize2, RefreshCw, X, Building, Store, Factory, 
   Globe2, DollarSign, BarChart3, Target, Building2, Globe, Search, Plus, 
   Trash2, ShieldCheck, Calendar, Clock, Award, Info, Sparkles, TrendingUp,
-  Cpu, Archive, ChevronRight, Bookmark, Instagram, Facebook, Twitter
+  Cpu, Archive, ChevronRight, Bookmark, Instagram, Facebook, Twitter, Rocket
 } from 'lucide-react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -60,7 +60,7 @@ export default function BusinessDetailsPage() {
   const [locationData, setLocationData] = useState<LocationData>({});
   const [realLocationData, setRealLocationData] = useState<any>(null);
   const [fetchingRealData, setFetchingRealData] = useState(false);
-  const [activeView, setActiveView] = useState<'overview' | 'map' | 'businesses' | 'neural'>('overview');
+  const [activeView, setActiveView] = useState<'overview' | 'map' | 'businesses' | 'neural' | 'roadmap'>('overview');
   const [mapFullscreen, setMapFullscreen] = useState(false);
   const [contactInfo, setContactInfo] = useState<any>(null);
   const [savingToVault, setSavingToVault] = useState(false);
@@ -68,12 +68,16 @@ export default function BusinessDetailsPage() {
   const { plan } = useSubscription();
   const { addNotification } = useNotifications();
   const [scraping, setScraping] = useState(false);
+  const [landscapeSummary, setLandscapeSummary] = useState<string | null>(null);
 
   useEffect(() => {
     const storedBusiness = sessionStorage.getItem('selected_business');
     if (storedBusiness) {
       const data = JSON.parse(storedBusiness);
       setBusinessData(data);
+      
+      // Force sync to roadmap storage for immediate availability
+      localStorage.setItem('currentBusinessAnalysis', JSON.stringify(data));
       
       // If it's a frozen snapshot, load that instead of refetching
       if (data.is_snapshot && data.snapshot) {
@@ -114,14 +118,126 @@ export default function BusinessDetailsPage() {
       // Fetch businesses and contact info
       await Promise.all([
         fetchRealExistingBusinesses(data.business.title, data.area, parsedLocation),
-        fetchContactInformation(data.business.title, data.area, locationBasedData)
+        fetchContactInformation(data.business.title, data.area, locationBasedData),
+        enrichFinancialAnalysis(data.business.title, data.area, data.business)
       ]);
+
+      // Professional Autopilot: Auto-trigger deep extraction if on Pro tier
+      if (typeof plan === 'string' && (plan.toLowerCase().includes('professional') || plan.toLowerCase().includes('enterprise') || plan.toLowerCase().includes('dominance'))) {
+         console.log("🚀 Professional Autopilot: Triggering deep market extraction...");
+         handleDeepScrape();
+      }
       
     } catch (error) {
       console.error('❌ Error loading location data:', error);
     } finally {
       setLoadingMap(false);
       setFetchingRealData(false);
+    }
+  };
+
+  const enrichFinancialAnalysis = async (title: string, area: string, business: any) => {
+    // Only enrich if values are missing or placeholders
+    const needsEnrichment = !business.funding_required || 
+                           business.funding_required === "Analysis pending..." ||
+                           !business.estimated_revenue ||
+                           business.estimated_revenue === "Analysis pending...";
+    
+    if (!needsEnrichment) return;
+
+    try {
+      console.log(`🤖 Enriching financial intelligence for ${title} in ${area}...`);
+      
+      const prompt = `Act as a Technical Market Analysis Engine (TMAE-1). Perform a simulated strategic reconnaissance for the following venture:
+Venture Title: ${title}
+Market Sector: ${business?.category || "Industrial/Commercial"}
+Operational Cluster: ${area} (India-specific context)
+
+Synthesize a Technical Simulation Report in PURE JSON format. Ensure all currency valuations are in INR (₹) and calibrated for the ${area} economic landscape.
+
+{
+  "funding_required": "estimated cap-ex simulation (e.g. ₹5L - 12L)",
+  "estimated_revenue": "projected yield per cluster (e.g. ₹3L - 6L)",
+  "roi_percentage": "numerical simulation only (e.g. 145)",
+  "payback_period": "simulated period (e.g. 10-14 Months)",
+  "market_size": "technical sector briefing (4-7 words)",
+  "startup_difficulty": "Easy/Moderate/Hard",
+  "initial_team_size": "numerical simulation (e.g. 3)",
+  "key_success_factors": ["Technical Parameter 1", "Technical Parameter 2", "Technical Parameter 3"],
+  "six_month_plan": ["Phase 1 simulation", "Phase 2 simulation", "Phase 3 simulation", "Phase 4 simulation", "Phase 5 simulation", "Phase 6 simulation"],
+  "profit_niches": [
+    {"niche": "Technical Niche 1", "yield": 20},
+    {"niche": "Technical Niche 2", "yield": 15},
+    {"niche": "Technical Niche 3", "yield": 10}
+  ],
+  "demand_index": 92.4,
+  "strategic_recommendations": [
+    {"title": "Strategic Placement", "description": "Technical strategy for the sector."},
+    {"title": "Market Disruptor", "description": "Tactical disruption vector."},
+    {"title": "Scaling Vector", "description": "Growth acceleration strategy."}
+  ]
+}
+STRICT RULE: RESPOND ONLY WITH PURE JSON. DO NOT EXPLAIN. NO WARNINGS.`;
+
+      const response = await fetch(`https://text.pollinations.ai/${encodeURIComponent(prompt)}`);
+      const text = await response.text();
+      
+      // Hyper-Robust Neural Data Extraction
+      let jsonStr = "";
+      const firstCurly = text.indexOf('{');
+      const lastCurly = text.lastIndexOf('}');
+      if (firstCurly !== -1 && lastCurly !== -1) {
+        jsonStr = text.substring(firstCurly, lastCurly + 1);
+      } else if (text.includes('```json')) {
+        jsonStr = text.split('```json')[1].split('```')[0].trim();
+      } else if (text.includes('```')) {
+        jsonStr = text.split('```')[1].split('```')[0].trim();
+      }
+      
+      if (!jsonStr || (!jsonStr.startsWith('{') && !jsonStr.startsWith('['))) {
+         const match = text.match(/\{[\s\S]*\}/);
+         jsonStr = match ? match[0] : "";
+      }
+
+      let result;
+      if (!jsonStr) {
+        console.warn("⚠️ Intelligence gap detected. Synthesizing heuristic fallback...");
+        // Heuristic Intelligence Fallback
+        result = {
+          funding_required: "₹5L - 15L (Heuristic)",
+          estimated_revenue: "₹2.5L - 5L (Heuristic)",
+          roi_percentage: 120,
+          payback_period: "8-18 Months",
+          market_size: "High Demand Sector (India)",
+          competition_level: "Medium",
+          startup_difficulty: "Moderate",
+          initial_team_size: 4,
+          key_success_factors: ["Local Market Dominance", "Cost Effective Operations", "Local SEO Reach"],
+          six_month_plan: ["Month 1: Foundation", "Month 2: Soft Launch", "Month 3: Scaling", "Month 4: Marketing", "Month 5: Growth", "Month 6: Dominance"]
+        };
+      } else {
+        result = JSON.parse(jsonStr);
+      }
+      
+      if (result) {
+        // Update the business data in our state
+        setBusinessData((prev: any) => {
+          if (!prev) return prev;
+          const updated = {
+            ...prev,
+            business: {
+              ...prev.business,
+              ...result
+            }
+          };
+          sessionStorage.setItem('selected_business', JSON.stringify(updated));
+          localStorage.setItem('currentBusinessAnalysis', JSON.stringify(updated));
+          return updated;
+        });
+        console.log("✅ Strategic intelligence successfully enriched.");
+      }
+    } catch (err) {
+      console.error("❌ Enrichment failed:", err);
     }
   };
 
@@ -142,6 +258,9 @@ export default function BusinessDetailsPage() {
     // Check if definitely Indian (has L or Cr, or in an Indian area)
     const isIndian = str.includes('L') || str.includes('Cr') || indianKeywords.some(k => areaLower.includes(k));
     
+    // Don't prepend currency symbols to placeholders
+    if (str.includes('Analysis pending') || str.includes('Synthesizing')) return str;
+
     if (isIndian) {
       if (str.includes('$')) return str.replace(/\$/g, '₹');
       if (!str.includes('₹')) return `₹${str}`;
@@ -152,13 +271,21 @@ export default function BusinessDetailsPage() {
 
   const fetchRealExistingBusinesses = async (businessType: string, area: string, locationData: LocationData) => {
     try {
-      console.log('🏢 Fetching real business data for:', businessType, 'in', area);
+      // Dynamic Operational Radius Logic
+      const areaKeywords = area.toLowerCase();
+      // Broad City Scans (New Delhi, Mumbai, etc.) use wider radius
+      const needsLargeRadius = (areaKeywords.includes('delhi') || areaKeywords.includes('mumbai') || areaKeywords.includes('bangalore')) && !areaKeywords.includes(',');
+      // Hyper-local Neighborhoods (Rohini, Saket, etc.) use dense 5km scan
+      const isNeighborhoodSearch = areaKeywords.includes('rohini') || areaKeywords.includes('saket') || areaKeywords.includes('pitampura') || areaKeywords.includes('sector');
       
+      const dynamicRadius = isNeighborhoodSearch ? 5 : needsLargeRadius ? 20 : 15;
+      console.log(`📡 Area Scope: ${dynamicRadius}km (${isNeighborhoodSearch ? 'Hyper-Local' : needsLargeRadius ? 'Broad City' : 'Standard'})`);
+
       const realBusinesses = await realBusinessAPI.searchBusinesses({
         businessType,
         location: area,
         coordinates: locationData.coordinates,
-        radius: 15
+        radius: dynamicRadius
       });
 
       const convertedBusinesses: ExistingBusiness[] = realBusinesses.map(business => ({
@@ -180,17 +307,22 @@ export default function BusinessDetailsPage() {
       
     } catch (error) {
       console.error('❌ Error fetching businesses:', error);
-      setExistingBusinesses(generateFallbackBusinesses(businessType, area, locationData));
+      // Zero Fallback: No fake data allowed
+      setExistingBusinesses([]);
     }
   };
   const generateFallbackBusinesses = (businessType: string, area: string, locationData: LocationData): ExistingBusiness[] => {
+    const safeType = (businessType || businessData?.business?.title || 'Business').toString();
+    const safeArea = (area || 'India').toString();
+    const city = safeArea.split(',')[0] || 'Local';
+    
     const businessNames = [
-      `${area.split(',')[0]} ${businessType} Solutions`,
-      `Elite ${businessType} ${area.split(',')[0]}`,
-      `Professional ${businessType} Center`,
-      `${businessType} Hub ${area.split(',')[0]}`,
-      `Advanced ${businessType} Services`,
-      `Local ${businessType} Network`
+      `${city} ${safeType} Solutions`,
+      `Elite ${safeType} ${city}`,
+      `Professional ${safeType} Center`,
+      `${safeType} Hub ${city}`,
+      `Advanced ${safeType} Services`,
+      `Local ${safeType} Network`
     ];
 
     return businessNames.map((name, index) => ({
@@ -213,45 +345,8 @@ export default function BusinessDetailsPage() {
   };
 
   const fetchContactInformation = async (businessType: string, area: string, locationBasedData?: any) => {
-    const locationName = locationBasedData?.locationName || area.split(',')[0];
-    const countryName = locationBasedData?.countryName || 'Unknown';
-    const phoneFormat = locationBasedData?.phoneFormat || '+1 (555) XXX-XXXX';
-    
-    const mockContactInfo = {
-      businessAssociations: [
-        {
-          name: `${locationName} Chamber of Commerce`,
-          phone: phoneFormat.replace(/X/g, () => Math.floor(Math.random() * 10).toString()),
-          email: `info@${locationName.toLowerCase().replace(/\s+/g, '')}chamber.com`,
-          website: `www.${locationName.toLowerCase().replace(/\s+/g, '')}chamber.com`
-        },
-        {
-          name: `${businessType} Business Association`,
-          phone: phoneFormat.replace(/X/g, () => Math.floor(Math.random() * 10).toString()),
-          email: `contact@${businessType.toLowerCase().replace(/\s+/g, '')}assoc.org`,
-          website: `www.${businessType.toLowerCase().replace(/\s+/g, '')}association.org`
-        }
-      ],
-      localSupport: [
-        {
-          name: `${locationName} Business Development Center`,
-          phone: phoneFormat.replace(/X/g, () => Math.floor(Math.random() * 10).toString()),
-          email: `help@${locationName.toLowerCase().replace(/\s+/g, '')}bdc.org`,
-          website: `www.${locationName.toLowerCase().replace(/\s+/g, '')}business.org`,
-          services: ['Business Planning', 'Funding Assistance', 'Mentoring', 'Market Research']
-        }
-      ],
-      suppliers: [
-        {
-          name: `${locationName} Supply Network`,
-          phone: phoneFormat.replace(/X/g, () => Math.floor(Math.random() * 10).toString()),
-          email: `sales@${locationName.toLowerCase().replace(/\s+/g, '')}supply.com`,
-          category: 'Equipment & Supplies'
-        }
-      ]
-    };
-
-    setContactInfo(mockContactInfo);
+    // Zero Fallback: We exclusively use deep extraction (Apify) for authentic contacts.
+    setContactInfo(null);
   };
 
   const handleDeepScrape = async () => {
@@ -266,6 +361,11 @@ export default function BusinessDetailsPage() {
     }
 
     setScraping(true);
+    if (!businessData?.business) {
+      setScraping(false);
+      return;
+    }
+
     addNotification({
       type: 'analysis',
       title: 'Deep Extraction Started',
@@ -274,18 +374,21 @@ export default function BusinessDetailsPage() {
     });
 
     try {
-      const enriched = await realBusinessAPI.deepScrapeBusinesses(
+      const response = await realBusinessAPI.deepScrapeBusinesses(
         businessData.business.title,
         businessData.area,
         session?.user?.email || undefined
       );
 
-      if (enriched.length > 0) {
-        setExistingBusinesses(enriched as any);
+      if (response.data.length > 0) {
+        setExistingBusinesses(response.data as any);
+        if (response.summary) {
+          setLandscapeSummary(response.summary);
+        }
         addNotification({
           type: 'profile',
           title: 'Extraction Complete',
-          message: `Found ${enriched.length} businesses with enriched contact details.`,
+          message: `Found ${response.data.length} businesses with enriched contact details.`,
           priority: 'medium'
         });
       } else {
@@ -439,6 +542,13 @@ export default function BusinessDetailsPage() {
       icon: <Cpu className="w-5 h-5" />, 
       active: activeView === 'neural',
       onClick: () => setActiveView('neural')
+    },
+    { 
+      id: 'roadmap', 
+      label: 'Strategy Roadmap', 
+      icon: <Rocket className="w-5 h-5" />, 
+      active: activeView === 'roadmap',
+      onClick: () => setActiveView('roadmap')
     }
   ];
 
@@ -456,10 +566,10 @@ export default function BusinessDetailsPage() {
           <button
             onClick={handleSaveToVault}
             disabled={savingToVault}
-            className={`px-4 lg:px-6 py-2.5 rounded-2xl flex items-center gap-2 lg:gap-3 transition-all font-black text-[10px] lg:text-xs uppercase tracking-[0.2em] shadow-lg hover:scale-105 active:scale-95 ${
+            className={`px-4 lg:px-6 py-2.5 rounded-2xl flex items-center gap-2 lg:gap-3 transition-all font-black text-[10px] lg:text-xs uppercase tracking-[0.2em] shadow-xl hover:scale-105 active:scale-95 ${
               plan === 'free' 
                 ? 'bg-slate-200 text-slate-400 cursor-not-allowed grayscale' 
-                : 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 border-2 border-slate-900/10 dark:border-white/10'
+                : 'bg-black dark:bg-slate-950 text-white border border-white/10 hover:shadow-[0_0_20px_rgba(34,197,94,0.15)]'
             }`}
           >
             {savingToVault ? (
@@ -513,7 +623,10 @@ export default function BusinessDetailsPage() {
                 >
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                     <div className="bg-gradient-to-r from-green-500/10 to-emerald-500/10 rounded-2xl p-5 sm:p-6 border border-green-500/20 shadow-sm">
-                      <p className="text-green-600 dark:text-green-400 text-[10px] sm:text-xs font-black uppercase tracking-widest mb-2">Investment Required</p>
+                      <p className="text-green-600 dark:text-green-400 text-[10px] sm:text-xs font-black uppercase tracking-widest mb-2 flex items-center gap-2">
+                        Investment Required
+                        {businessData.business.funding_required === "Analysis pending..." && <Loader2 size={10} className="animate-spin opacity-50" />}
+                      </p>
                       <p className="text-xl sm:text-2xl lg:text-3xl font-black text-slate-900 dark:text-white leading-tight italic">
                         {formatCurrency(businessData.business.funding_required || 'Analysis pending...')}
                       </p>
@@ -545,28 +658,36 @@ export default function BusinessDetailsPage() {
                 icon={<BarChart3 className="w-6 h-6" />}
               >
                 <div className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <span className="text-slate-600 dark:text-gray-400">Market Size</span>
-                    <span className="text-slate-900 dark:text-white font-bold">
-                      {businessData.business.market_size || 'N/A'}
+                  <div className="flex justify-between items-center group/stat">
+                    <span className="text-slate-600 dark:text-gray-400 text-xs font-bold flex items-center gap-2">
+                       <Map size={14} className="text-blue-500" /> Market Context
+                    </span>
+                    <span className="text-slate-900 dark:text-white font-black italic">
+                      {businessData.business.market_size || (fetchingRealData ? 'Scouting...' : 'N/A')}
                     </span>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-slate-600 dark:text-gray-400">Competition</span>
-                    <span className="text-slate-900 dark:text-white font-bold">
-                      {businessData.business.competition_level || 'N/A'}
+                  <div className="flex justify-between items-center group/stat">
+                    <span className="text-slate-600 dark:text-gray-400 text-xs font-bold flex items-center gap-2">
+                       <Target size={14} className="text-red-500" /> Competition
+                    </span>
+                    <span className="text-slate-900 dark:text-white font-black italic">
+                      {businessData.business.competition_level || (fetchingRealData ? 'Analyzing...' : 'N/A')}
                     </span>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-slate-600 dark:text-gray-400">Difficulty</span>
-                    <span className="text-slate-900 dark:text-white font-bold">
-                      {businessData.business.startup_difficulty || 'N/A'}
+                  <div className="flex justify-between items-center group/stat">
+                    <span className="text-slate-600 dark:text-gray-400 text-xs font-bold flex items-center gap-2">
+                       <ShieldCheck size={14} className="text-emerald-500" /> Difficulty
+                    </span>
+                    <span className={`text-slate-900 dark:text-white font-black italic ${businessData.business.startup_difficulty === 'Hard' ? 'text-red-500' : ''}`}>
+                      {businessData.business.startup_difficulty || (fetchingRealData ? 'Evaluating...' : 'N/A')}
                     </span>
                   </div>
-                  <div className="flex justify-between items-center">
-                    <span className="text-slate-600 dark:text-gray-400">Team Size</span>
-                    <span className="text-slate-900 dark:text-white font-bold">
-                      {businessData.business.initial_team_size ? `${businessData.business.initial_team_size} people` : 'N/A'}
+                  <div className="flex justify-between items-center group/stat">
+                    <span className="text-slate-600 dark:text-gray-400 text-xs font-bold flex items-center gap-2">
+                       <Building size={14} className="text-purple-500" /> Ops Scale
+                    </span>
+                    <span className="text-slate-900 dark:text-white font-black italic">
+                      {businessData.business.initial_team_size ? `${businessData.business.initial_team_size} Nodes` : 'N/A'}
                     </span>
                   </div>
                 </div>
@@ -578,18 +699,28 @@ export default function BusinessDetailsPage() {
               icon={<Target className="w-6 h-6" />}
             >
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {(businessData.business.key_success_factors || []).length > 0 ? (
+                {Array.isArray(businessData.business.key_success_factors) && businessData.business.key_success_factors.length > 0 ? (
                   businessData.business.key_success_factors.map((factor: string, index: number) => (
-                    <div key={index} className="flex items-center space-x-3 p-3 bg-slate-50 dark:bg-white/5 rounded-lg border border-slate-200 dark:border-white/10">
-                      <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
-                      <span className="text-slate-700 dark:text-gray-300 text-sm font-medium">{factor}</span>
-                    </div>
+                    <motion.div 
+                        key={index} 
+                        initial={{ opacity: 0, scale: 0.9 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: index * 0.1 }}
+                        className="flex items-center space-x-3 p-4 bg-slate-50 dark:bg-white/5 rounded-2xl border border-slate-200 dark:border-white/10 hover:border-emerald-500/30 transition-all group"
+                    >
+                      <div className="w-8 h-8 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-500 shrink-0 group-hover:bg-emerald-500 group-hover:text-white transition-all">
+                        <CheckCircle className="w-5 h-5 flex-shrink-0" />
+                      </div>
+                      <span className="text-slate-700 dark:text-gray-300 text-sm font-bold italic">{factor}</span>
+                    </motion.div>
                   ))
                 ) : (
-                  <p className="col-span-full text-center text-slate-500 dark:text-gray-500 py-4 italic text-sm">
-                    Detailed success factors are being synthetically generated for this specific niche. 
-                    Please return in a moment for complete results.
-                  </p>
+                  <div className="col-span-full text-center py-8 space-y-4">
+                     <Loader2 className="w-8 h-8 animate-spin text-emerald-500 mx-auto" />
+                     <p className="text-slate-500 dark:text-gray-500 italic text-sm font-black uppercase tracking-widest">
+                       Synthesizing market success metrics...
+                     </p>
+                  </div>
                 )}
               </div>
             </UniformCard>
@@ -786,51 +917,69 @@ export default function BusinessDetailsPage() {
                 animate={{ opacity: 1, y: 0 }}
                 className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8"
               >
-                <div className="p-6 rounded-3xl bg-slate-900/5 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 group hover:border-blue-500/30 transition-all">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-8 h-8 rounded-xl bg-blue-500/20 flex items-center justify-center">
-                      <TrendingUp size={16} className="text-blue-500" />
-                    </div>
-                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Market Saturation</span>
-                  </div>
-                  <div className="text-2xl font-black text-slate-900 dark:text-white italic tracking-tighter mb-1">
-                    {existingBusinesses.length < 5 ? 'LOW' : existingBusinesses.length < 15 ? 'MEDIUM' : 'HIGH'}
-                  </div>
-                  <p className="text-[10px] font-medium text-slate-500 italic opacity-80">
-                    {existingBusinesses.length < 5 
-                      ? "High entrance potential. Minimal direct interference detected in the broad search zone." 
-                      : "Balanced competitive state. Niche positioning is recommended to optimize ROI."}
-                  </p>
-                </div>
-
-                <div className="p-6 rounded-3xl bg-slate-900/5 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 group hover:border-emerald-500/30 transition-all">
-                  <div className="flex items-center gap-3 mb-4">
-                    <div className="w-8 h-8 rounded-xl bg-emerald-500/20 flex items-center justify-center">
-                      <Target size={16} className="text-emerald-500" />
-                    </div>
-                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">Search Radius</span>
-                  </div>
-                  <div className="text-2xl font-black text-slate-900 dark:text-white italic tracking-tighter mb-1">
-                    15.0 KM
-                  </div>
-                  <p className="text-[10px] font-medium text-slate-500 italic opacity-80">
-                    Broad city-wide analysis coverage. Capturing industrial zones and central business districts.
-                  </p>
-                </div>
-
-                <div className="p-6 rounded-3xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 border border-slate-200 dark:border-white/10 shadow-2xl relative overflow-hidden group">
-                  <div className="absolute inset-0 bg-blue-500/20 opacity-0 group-hover:opacity-100 transition-opacity" />
-                  <div className="relative z-10">
-                    <div className="flex items-center gap-3 mb-4">
-                      <div className="w-8 h-8 rounded-xl bg-white/20 dark:bg-slate-900/20 flex items-center justify-center">
-                        <Sparkles size={16} className="text-blue-400" />
+                {/* Saturation */}
+                <div className="p-6 rounded-[2rem] bg-slate-900/5 dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 group hover:bg-blue-500/5 hover:border-blue-500/20 transition-all duration-500">
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-2xl bg-blue-500/10 flex items-center justify-center border border-blue-500/10 group-hover:scale-110 transition-transform">
+                        <TrendingUp size={16} className="text-blue-500" />
                       </div>
-                      <span className="text-[10px] font-black uppercase tracking-widest opacity-60">Neural Pulse Index</span>
+                      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">Market Saturation</span>
                     </div>
-                    <div className="text-2xl font-black italic tracking-tighter mb-1">
-                      78.2 / 100
+                  </div>
+                  <div className="text-3xl font-black text-slate-900 dark:text-white italic tracking-tighter mb-2 flex items-baseline gap-2">
+                    {existingBusinesses.length < 5 ? 'LOW' : existingBusinesses.length < 15 ? 'MEDIUM' : 'HIGH'}
+                    <span className="text-[10px] font-black uppercase tracking-widest text-emerald-500 opacity-60">
+                      {existingBusinesses.length} Units
+                    </span>
+                  </div>
+                  <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 leading-relaxed italic opacity-70 border-t border-slate-100 dark:border-white/5 pt-3">
+                    {existingBusinesses.length < 5 
+                      ? "Neural nodes detect high entrance potential. Low interference cluster identified." 
+                      : existingBusinesses.length < 15
+                      ? "Optimum competitive density. Niche tactical positioning is required to maximize ROI."
+                      : "Saturated landscape. Lateral expansion or disruptive displacement strategy advised."}
+                  </p>
+                </div>
+
+                {/* Radius */}
+                <div className="p-6 rounded-[2rem] bg-slate-900/5 dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 group hover:bg-emerald-500/5 hover:border-emerald-500/20 transition-all duration-500">
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-3">
+                      <div className="w-9 h-9 rounded-2xl bg-emerald-500/10 flex items-center justify-center border border-emerald-500/10 group-hover:scale-110 transition-transform">
+                        <Target size={16} className="text-emerald-500" />
+                      </div>
+                      <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">Analysis Radius</span>
                     </div>
-                    <p className="text-[10px] font-black uppercase tracking-widest opacity-40">Entry Strategy Optimized</p>
+                  </div>
+                  <div className="text-3xl font-black text-slate-900 dark:text-white italic tracking-tighter mb-2">
+                    15.0 <span className="text-sm opacity-40 not-italic">KM</span>
+                  </div>
+                  <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 leading-relaxed italic opacity-70 border-t border-slate-100 dark:border-white/5 pt-3">
+                    Broad-spectrum metro scan. Capturing industrial hubs and strategic commerce nodes.
+                  </p>
+                </div>
+
+                {/* Pulse Index */}
+                <div className="p-6 rounded-[2rem] bg-slate-900/5 dark:bg-white/[0.02] border border-slate-200 dark:border-white/10 group hover:bg-purple-500/5 hover:border-purple-500/20 transition-all duration-500 relative overflow-hidden">
+                  <div className="absolute -right-4 -bottom-4 opacity-[0.03] group-hover:opacity-[0.08] transition-opacity">
+                    <Sparkles size={120} className="text-slate-900 dark:text-white" />
+                  </div>
+                  <div className="relative z-10">
+                    <div className="flex items-center justify-between mb-6">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-2xl bg-purple-500/10 flex items-center justify-center border border-purple-500/10 group-hover:scale-110 transition-transform">
+                          <Zap size={16} className="text-purple-500" />
+                        </div>
+                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-slate-400">Success Index</span>
+                      </div>
+                    </div>
+                    <div className="text-3xl font-black text-slate-900 dark:text-white italic tracking-tighter mb-2">
+                       {Math.max(60, 100 - (existingBusinesses.length * 2)).toFixed(1)} <span className="text-sm opacity-40 not-italic">/ 100</span>
+                    </div>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-purple-600 dark:text-purple-400 border-t border-slate-100 dark:border-white/5 pt-3">
+                      Dynamic Entrance Optimized
+                    </p>
                   </div>
                 </div>
               </motion.div>
@@ -871,6 +1020,30 @@ export default function BusinessDetailsPage() {
               </div>
             )}
 
+            {landscapeSummary && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                key="landscape-summary"
+                className="mb-8 p-6 bg-blue-600/5 border border-blue-500/20 rounded-3xl relative overflow-hidden group"
+              >
+                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+                  <Cpu size={80} className="text-blue-500" />
+                </div>
+                <div className="relative z-10 flex items-start gap-4">
+                  <div className="w-12 h-12 rounded-2xl bg-blue-500 flex items-center justify-center shadow-lg shadow-blue-500/20 shrink-0">
+                    <Sparkles className="text-white w-6 h-6 animate-pulse" />
+                  </div>
+                  <div className="space-y-1 text-left">
+                    <h3 className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-[0.2em] italic mb-1">Neural Landscape Insight</h3>
+                    <p className="text-slate-700 dark:text-slate-300 font-bold italic text-lg leading-snug">
+                       {landscapeSummary}
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
             {existingBusinesses.length > 0 && (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {existingBusinesses.map((biz, i) => (
@@ -890,7 +1063,15 @@ export default function BusinessDetailsPage() {
                       <div className="flex-1 min-w-0">
                         {/* Name + status */}
                         <div className="flex items-start justify-between gap-2 mb-1">
-                          <h3 className="font-black text-slate-900 dark:text-white text-sm leading-tight truncate">{biz.name}</h3>
+                          <a 
+                            href={biz.coordinates ? `https://www.google.com/maps/search/?api=1&query=${biz.coordinates.lat},${biz.coordinates.lng}` : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(biz.name + ' ' + (biz.address || ''))}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="hover:text-blue-500 transition-colors group/title flex-1 min-w-0"
+                            title="Verify on Google Maps"
+                          >
+                            <h3 className="font-black text-slate-900 dark:text-white text-sm leading-tight truncate group-hover/title:underline decoration-blue-500/30">{biz.name}</h3>
+                          </a>
                           <div className="flex gap-2 items-center flex-shrink-0">
                             {biz.price_level && (
                               <span className="text-[10px] font-black text-amber-500/80 tracking-tighter">
@@ -936,6 +1117,29 @@ export default function BusinessDetailsPage() {
                           </div>
                         )}
 
+                        {/* Website */}
+                        {biz.website && (
+                          <div className="flex items-center gap-1.5 mb-1.5">
+                            <Globe className="w-3 h-3 text-blue-400 flex-shrink-0" />
+                            <a 
+                              href={biz.website.startsWith('http') ? biz.website : `https://${biz.website}`} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="text-xs text-blue-500 hover:underline truncate"
+                            >
+                              {biz.website.replace(/^https?:\/\//, '').replace(/^www\./, '')}
+                            </a>
+                          </div>
+                        )}
+
+                        {/* Email */}
+                        {biz.email && (
+                          <div className="flex items-center gap-1.5 mb-1.5">
+                            <Mail className="w-3.5 h-3.5 text-purple-400 flex-shrink-0" />
+                            <span className="text-xs text-slate-500 dark:text-gray-400 truncate">{biz.email}</span>
+                          </div>
+                        )}
+
                         {/* Social Media Links */}
                         {biz.social_media && (biz.social_media.instagram || biz.social_media.facebook || biz.social_media.twitter) && (
                           <div className="flex items-center gap-4 mb-2 mt-2">
@@ -968,29 +1172,52 @@ export default function BusinessDetailsPage() {
                         )}
 
                         {/* Footer row */}
-                        <div className="flex items-center justify-between mt-2 pt-2 border-t border-slate-100 dark:border-white/5">
-                          <div className="flex items-center gap-3">
+                        <div className="flex flex-col sm:flex-row items-center justify-between mt-3 pt-3 border-t border-slate-100 dark:border-white/5 gap-3">
+                          <div className="flex items-center gap-3 w-full sm:w-auto">
                             {biz.distance && (
-                              <span className="text-xs font-bold text-slate-400 dark:text-gray-500 flex items-center gap-1">
+                              <span className="text-[10px] font-black text-slate-400 dark:text-gray-500 flex items-center gap-1 uppercase tracking-widest">
                                 <Navigation className="w-3 h-3" />{biz.distance}
                               </span>
                             )}
-                            {biz.established && (
-                              <span className="text-xs text-slate-400 dark:text-gray-500 flex items-center gap-1">
-                                <Clock className="w-3 h-3" />Est. {biz.established}
-                              </span>
-                            )}
+                            <button
+                              onClick={() => {
+                                // Store the specific competitor as the "target" for the roadmap
+                                const targetAnalysis = {
+                                  business: {
+                                    title: biz.name,
+                                    description: biz.category || `Premium ${businessData.business.title} Service`,
+                                    six_month_plan: [] // Trigger auto-gen
+                                  },
+                                  area: biz.address || businessData.area
+                                };
+                                localStorage.setItem('currentBusinessAnalysis', JSON.stringify(targetAnalysis));
+                                router.push('/roadmap');
+                              }}
+                              className="px-3 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-[9px] font-black uppercase tracking-widest transition-all flex items-center gap-1.5 border border-emerald-500/10"
+                            >
+                              <Rocket size={10} /> Roadmap
+                            </button>
                           </div>
-                          {biz.website && (
+                          <div className="flex items-center gap-4 w-full sm:w-auto justify-end">
                             <a
-                              href={biz.website.startsWith('http') ? biz.website : `https://${biz.website}`}
+                              href={biz.coordinates ? `https://www.google.com/maps/search/?api=1&query=${biz.coordinates.lat},${biz.coordinates.lng}` : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(biz.name + ' ' + (biz.address || ''))}`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-xs text-blue-500 hover:text-blue-400 flex items-center gap-1 font-bold transition-colors"
+                              className="text-xs text-blue-500 hover:text-blue-400 flex items-center gap-1 font-black transition-colors group/map italic"
                             >
-                              Visit <ExternalLink className="w-3 h-3" />
+                              Maps <Navigation className="w-3 h-3 group-hover/map:translate-y-[-2px] transition-transform" />
                             </a>
-                          )}
+                            {biz.website && (
+                              <a
+                                href={biz.website.startsWith('http') ? biz.website : `https://${biz.website}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs text-slate-500 dark:text-slate-400 hover:text-blue-500 flex items-center gap-1 font-black transition-colors italic"
+                              >
+                                {biz.website.replace('https://', '').replace('http://', '').split('/')[0].slice(0, 15)}... <ExternalLink className="w-3 h-3" />
+                              </a>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -1075,15 +1302,18 @@ export default function BusinessDetailsPage() {
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                       {/* Placeholder for real neural data */}
                        <div className="space-y-6">
                           <div>
                              <h4 className="text-xs font-black uppercase tracking-widest text-slate-400 dark:text-gray-500 mb-4 italic">High-Profit Micro-Niches</h4>
                              <div className="space-y-3">
-                                {['B2B Corporate Supply', 'Sustainable Sourcing', 'AI-Driven Customization'].map((n, i) => (
+                                {(businessData.business.profit_niches || [
+                                  {niche: 'B2B Corporate Supply', yield: 20}, 
+                                  {niche: 'Sustainable Sourcing', yield: 15}, 
+                                  {niche: 'AI-Driven Customization', yield: 10}
+                                ]).map((n: any, i: number) => (
                                   <div key={i} className="flex items-center justify-between p-4 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl">
-                                     <span className="text-sm font-bold text-slate-800 dark:text-white italic">{n}</span>
-                                     <div className="text-emerald-500 font-black text-xs">+{(20 - i*5)}% yield</div>
+                                     <span className="text-sm font-bold text-slate-800 dark:text-white italic">{n.niche}</span>
+                                     <div className="text-emerald-500 font-black text-xs">+{n.yield}% yield</div>
                                   </div>
                                 ))}
                              </div>
@@ -1094,7 +1324,9 @@ export default function BusinessDetailsPage() {
                              <h4 className="text-xs font-black uppercase tracking-widest text-slate-400 dark:text-gray-500 mb-4 italic">Demand Pulse Index</h4>
                              <div className="p-6 bg-slate-900 dark:bg-white/5 rounded-3xl border border-slate-800 dark:border-white/10 relative overflow-hidden">
                                 <div className="relative z-10">
-                                   <div className="text-4xl font-black text-white italic tracking-tighter mb-2">92.4</div>
+                                   <div className="text-4xl font-black text-white italic tracking-tighter mb-2">
+                                     {businessData.business.demand_index || '91.4'}
+                                   </div>
                                    <div className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Optimized Entrance Vector</div>
                                 </div>
                                 <div className="absolute -right-4 -bottom-4 opacity-10">
@@ -1187,13 +1419,14 @@ export default function BusinessDetailsPage() {
                 <div className="lg:col-span-4 space-y-8">
                   <UniformCard title="Strategic Recommendations" icon={<Lightbulb className="w-6 h-6" />}>
                      <div className="space-y-6">
-                        {[
-                          { t: 'Market Dominance', d: 'Focus on under-served micro-zones within 2km of the central hub.' },
-                          { t: 'Operational Optimization', d: 'Automate logistics using AI-powered routing to reduce OH by 15%.' }
-                        ].map((r, i) => (
-                          <div key={i} className="space-y-2">
-                             <div className="text-xs font-black text-purple-500 uppercase tracking-widest">{r.t}</div>
-                             <p className="text-sm text-slate-600 dark:text-gray-400 leading-relaxed font-medium">{r.d}</p>
+                        {(businessData.business.strategic_recommendations || [
+                          { title: 'Strategic Placement', description: `Establish the central node in ${businessData.area.split(',')[0]} to capture maximum transit volume.` },
+                          { title: 'Market Disruptor', description: `Undercut existing competitors in the ${businessData.area.split(',')[0]} sector by optimizing neural supply chains.` },
+                          { title: 'Scaling Vector', description: 'Transition to a decentralized model once the first cluster achieves 20% local dominance.' }
+                        ]).map((r: any, i: number) => (
+                          <div key={i} className="p-4 rounded-2xl bg-slate-900/5 dark:bg-white/[0.03] border border-slate-100 dark:border-white/5 group hover:border-purple-500/20 transition-all duration-300">
+                             <div className="text-[10px] font-black text-purple-600 dark:text-purple-400 uppercase tracking-[0.2em] mb-2">{r.title}</div>
+                             <p className="text-xs text-slate-600 dark:text-gray-400 leading-relaxed font-bold italic">{r.description}</p>
                           </div>
                         ))}
                      </div>
@@ -1203,7 +1436,90 @@ export default function BusinessDetailsPage() {
             )}
           </motion.div>
         )}
+
+        {activeView === 'roadmap' && (
+          <motion.div
+            key="roadmap"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="space-y-8"
+          >
+            {/* Standalone Link Callout */}
+            <UniformCard variant="gradient">
+               <div className="flex flex-col md:flex-row items-center justify-between gap-6 p-4">
+                  <div className="flex items-center gap-5">
+                     <div className="w-16 h-16 rounded-2xl bg-white/20 flex items-center justify-center shadow-xl">
+                        <Rocket size={32} className="text-white animate-pulse" />
+                     </div>
+                     <div className="text-white">
+                        <h3 className="text-xl font-black italic uppercase tracking-tighter">Launch Standalone Explorer</h3>
+                        <p className="text-xs font-medium opacity-80 max-w-md">Open the full-screen dynamic roadmap for professional export, KPI tracking, and phase-by-phase scaling.</p>
+                     </div>
+                  </div>
+                  <button 
+                    onClick={() => {
+                        localStorage.setItem('currentBusinessAnalysis', JSON.stringify(businessData));
+                        router.push('/roadmap');
+                    }}
+                    className="px-8 py-4 bg-white text-slate-900 rounded-2xl font-black text-xs uppercase tracking-widest shadow-2xl hover:scale-105 active:scale-95 transition-all"
+                  >
+                    Open Full Roadmap
+                  </button>
+               </div>
+            </UniformCard>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
+              <UniformCard title="Implementation Readiness" icon={<Target className="w-6 h-6" />}>
+                 <div className="space-y-6">
+                    <div className="space-y-2">
+                       <div className="text-xs font-black text-emerald-500 uppercase tracking-widest">Complexity Level</div>
+                       <div className="h-2 w-full bg-slate-100 dark:bg-white/5 rounded-full overflow-hidden">
+                          <div 
+                            className="h-full bg-emerald-500" 
+                            style={{ width: businessData?.business?.competition_level === 'High' ? '90%' : businessData?.business?.competition_level === 'Medium' ? '60%' : '30%' }} 
+                          />
+                       </div>
+                    </div>
+                    
+                    <div className="pt-4 space-y-4">
+                      <div className="flex items-start gap-3">
+                        <CheckCircle size={18} className="text-emerald-500 mt-0.5" />
+                        <div>
+                          <p className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">Resource Check</p>
+                          <p className="text-xs text-slate-500 font-medium">Core team and foundational tech ready.</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-3">
+                        <CheckCircle size={18} className="text-emerald-500 mt-0.5" />
+                        <div>
+                          <p className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-tight">Capital Allocation</p>
+                          <p className="text-xs text-slate-500 font-medium">{businessData?.business?.funding_required} budget approved.</p>
+                        </div>
+                      </div>
+                    </div>
+                 </div>
+              </UniformCard>
+
+              <UniformCard title="Strategic KPIs" icon={<BarChart3 className="w-6 h-6" />}>
+                <div className="grid grid-cols-2 gap-4">
+                  {[
+                    { l: 'Target ROI', v: `${businessData?.business?.roi_percentage || '150'}%` },
+                    { l: 'BEP Period', v: '8-12 Months' },
+                    { l: 'M1 Traffic', v: '~2.5K' },
+                    { l: 'Retention', v: '45%' }
+                  ].map((kpi, i) => (
+                    <div key={i} className="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10">
+                      <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{kpi.l}</div>
+                      <div className="text-lg font-black text-slate-900 dark:text-white">{kpi.v}</div>
+                    </div>
+                  ))}
+                </div>
+              </UniformCard>
+            </div>
+          </motion.div>
+        )}
       </AnimatePresence>
     </UniformLayout>
   );
-}
+}

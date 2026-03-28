@@ -22,6 +22,8 @@ import PaymentSuccessModal from "../../components/PaymentSuccessModal";
 import UniformCard from "@/components/UniformCard";
 import AIAnalysisCanvas from "@/components/AIAnalysisCanvas";
 import AIAnalysisWidget from "@/components/AIAnalysisWidget";
+import EnhancedRecommendationCard from "@/components/EnhancedRecommendationCard";
+import AISourceIndicator from "@/components/AISourceIndicator";
 import { useTheme } from "next-themes";
 import { getApiUrl } from "@/config/api";
 
@@ -128,7 +130,7 @@ function DashboardContent() {
     }
   }, [status, session?.user?.email]);
 
-  const handleSaveBusiness = async (rec: any) => {
+  const handleSaveBusiness = async (businessData: any) => {
     if (!session?.user?.email) {
       addNotification({
         type: 'alert',
@@ -164,17 +166,11 @@ function DashboardContent() {
     }
 
     try {
-      setSavingBusiness(rec.title);
+      setSavingBusiness(businessData.business_name);
       const response = await fetch(`${apiUrl}/api/saved-businesses`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          user_email: session.user.email,
-          business_name: rec.title,
-          category: rec.category || 'General',
-          location: area,
-          details: rec
-        })
+        body: JSON.stringify(businessData)
       });
 
       if (response.ok) {
@@ -182,19 +178,36 @@ function DashboardContent() {
         addNotification({
           type: 'profile',
           title: 'Stored in Vault',
-          message: `${rec.title} has been safely archived in your Alpha Vault.`,
+          message: `${businessData.business_name} has been safely archived in your Alpha Vault.`,
           priority: 'medium'
         });
       } else {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Failed to archive business');
+        let errorMessage = 'Failed to archive business';
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.detail || errorData.message || `HTTP ${response.status}: ${response.statusText}`;
+        } catch (parseError) {
+          errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+        }
+        throw new Error(errorMessage);
       }
     } catch (error: any) {
-      console.error('Archive failed:', error);
+      let displayMessage = 'Could not store business in vault.';
+      
+      // Better error handling
+      if (error?.message && typeof error.message === 'string' && error.message !== '[object Object]') {
+        displayMessage = error.message;
+      } else if (error?.toString && typeof error.toString === 'function') {
+        const errorStr = error.toString();
+        if (errorStr !== '[object Object]') {
+          displayMessage = errorStr;
+        }
+      }
+      
       addNotification({
         type: 'alert',
         title: 'Encryption Failed',
-        message: error.message || 'Could not store business in vault.',
+        message: displayMessage,
         priority: 'high'
       });
     } finally {
@@ -269,7 +282,6 @@ function DashboardContent() {
             if (data.location) {
               setProfileLocation(data.location);
               // Automatic pre-fill of search area removed to maintain a clean default state
-              console.log('Profile location available:', data.location);
             }
           }
         } catch (error) {
@@ -401,7 +413,6 @@ function DashboardContent() {
       socket = new WebSocket(`${wsUrl}/ws/analysis`);
       
       socket.onopen = () => {
-        console.log("📡 Analysis WebSocket Connected");
         socket?.send("ping"); // Keep-alive
       };
       
@@ -412,11 +423,11 @@ function DashboardContent() {
             setLoadingMessage(data.message);
             // V6.1 Elite Swarm progress mapping
             setLoadingProgress(prev => {
-              if (data.message.includes('Scouting')) return Math.max(prev, 15);
-              if (data.message.includes('Swarm Active')) return Math.max(prev, 35);
-              if (data.message.includes('SearchGPT')) return Math.max(prev, 55);
-              if (data.message.includes('Claude')) return Math.max(prev, 75);
-              if (data.message.includes('DeepSeek')) return Math.max(prev, 90);
+              if (data.message.includes('Gathering') || data.message.includes('Initializing')) return Math.max(prev, 15);
+              if (data.message.includes('Analyzing')) return Math.max(prev, 35);
+              if (data.message.includes('Generating')) return Math.max(prev, 55);
+              if (data.message.includes('AI Analysis')) return Math.max(prev, 75);
+              if (data.message.includes('Finalizing')) return Math.max(prev, 90);
               return prev;
             });
           }
@@ -849,7 +860,7 @@ function DashboardContent() {
                     <div className="space-y-4">
                       {history.length > 0 ? (
                         <>
-                          {(showAllHistory ? history : history.slice(0, 3)).map((item, i: number) => (
+                          {(showAllHistory ? history : history.slice(0, 15)).map((item, i: number) => (
                             <button 
                               key={i}
                               type="button"
@@ -877,7 +888,7 @@ function DashboardContent() {
                         </div>
                       )}
                       
-                      {history.length > 3 && (
+                      {history.length > 15 && (
                         <div className="pt-2 text-center border-t border-slate-100 dark:border-white/5">
                           <button
                             onClick={() => setShowAllHistory(!showAllHistory)}
@@ -886,7 +897,7 @@ function DashboardContent() {
                             {showAllHistory ? (
                               <>Show Fewer History <ChevronRight size={12} className="rotate-[-90deg]" /></>
                             ) : (
-                              <>+ {history.length - 3} More Items Hidden <ChevronRight size={12} className="rotate-[90deg]" /></>
+                              <>+ {history.length - 15} More Items Hidden <ChevronRight size={12} className="rotate-[90deg]" /></>
                             )}
                           </button>
                         </div>
@@ -970,11 +981,11 @@ function DashboardContent() {
                           </h2>
                           
                           <p className="text-slate-600 dark:text-gray-400 text-base font-medium uppercase tracking-wider mb-8 max-w-md drop-shadow-sm min-h-[1.5em] transition-all duration-700">
-                            {loadingProgress < 20 ? `Initializing neural probe for ${area.split(',')[0]}...` :
-                             loadingProgress < 50 ? `Extracting deep-web market signals...` :
-                             loadingProgress < 75 ? `Applying RAG (Retrieval-Augmented) synthesis...` :
-                             loadingProgress < 90 ? `Auditing local competitive entities...` :
-                             `Assembling strategic venture roadmap...`}
+                            {loadingProgress < 20 ? `Analyzing market opportunities in ${area.split(',')[0]}...` :
+                             loadingProgress < 50 ? `Gathering business intelligence data...` :
+                             loadingProgress < 75 ? `Processing market trends and gaps...` :
+                             loadingProgress < 90 ? `Generating strategic recommendations...` :
+                             `Finalizing business opportunities...`}
                           </p>
                           
                           <div className="w-full max-w-lg h-3 bg-slate-200 rounded-full overflow-hidden backdrop-blur-sm border border-slate-300">
@@ -1389,8 +1400,17 @@ function DashboardContent() {
                     )}
 
                     {/* Business Opportunities */}
-                    <div className="space-y-4">
-                      <div className="text-center">
+                    <div className="space-y-6">
+                      {/* AI Source Attribution */}
+                      <AISourceIndicator 
+                        aiSource={result.ai_source}
+                        dataSources={result.analysis?.data_sources}
+                        analysisTime={new Date().toLocaleTimeString()}
+                        area={area}
+                        className="mb-6"
+                      />
+
+                      <div className="text-center mb-6">
                         <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-4">
                           Business Opportunities
                         </h3>
@@ -1398,220 +1418,74 @@ function DashboardContent() {
                           {result.recommendations?.length || 0} premium opportunities found for {area}
                         </p>
                       </div>
-                      <div className="grid gap-4">
-                        {Array.isArray(result.recommendations) && result.recommendations.map((rec: any, idx: number) => (
-                          <motion.div key={idx} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: idx * 0.1 }}>
-                            <UniformCard 
-                              size="sm"
-                              variant="glass"
-                              hover={true}
-                              delay={idx * 0.1}
-                              className="group relative overflow-hidden shadow-lg border border-slate-200/50 dark:border-white/10"
-                            >
-                              <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 via-transparent to-blue-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-                              
-                              <div className="relative z-10">
-                                <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4 mb-4">
-                                  <div className="flex-1 space-y-4">
-                                    <div className="flex items-center gap-4">
-                                      <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center border border-emerald-500/30">
-                                        <span className="text-emerald-500 font-black text-lg">#{idx + 1}</span>
-                                      </div>
-                                      <div>
-                                        <div className="flex items-center gap-2 mb-1">
-                                          <div className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-[8px] font-black uppercase tracking-widest text-slate-500 flex items-center gap-1">
-                                            <Cpu size={8} /> {result.ai_source || 'V6.1 Overlord Swarm'}
-                                          </div>
-                                        </div>
-                                        <h4 className="text-lg lg:text-xl font-black text-slate-900 dark:text-white tracking-tight group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
-                                          {rec.title || rec.name || rec.business_title || rec.business_name || rec.idea || 'Strategic Market Opportunity'}
-                                        </h4>
-                                      </div>
-                                    </div>
-                                    <p className="text-sm font-medium text-slate-600 dark:text-gray-300 leading-relaxed max-w-3xl">
-                                      {rec.description || rec.thesis || rec.summary || rec.explanation || 'Detailed tactical breakdown of this localized market gap based on real-time 2026 economic indicators.'}
-                                    </p>
-                                  </div>
-                                  
-                                  <div className="flex items-center lg:items-end gap-1.5 px-1.5 py-0.5 bg-emerald-500/5 rounded-md border border-emerald-500/10">
-                                    <div className="text-[9px] font-bold text-slate-500 dark:text-gray-500 uppercase tracking-wider">Score</div>
-                                    <div className="text-lg font-black text-emerald-500 italic">
-                                      {rec.profitability_score || 85}%
-                                    </div>
-                                  </div>
-                                </div>
 
-                                {/* Financial Grid */}
-                                <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 mb-3 p-2 bg-slate-50 dark:bg-white/5 rounded-xl border border-slate-200 dark:border-white/10">
-                                  <div className="text-center">
-                                    <div className="text-xs font-bold text-slate-500 dark:text-gray-500 uppercase tracking-wider mb-1">Investment</div>
-                                    <div className="text-lg font-black text-blue-600 dark:text-blue-400">{rec.funding_required || '₹5L-₹15L'}</div>
-                                  </div>
-                                  <div className="text-center">
-                                    <div className="text-xs font-bold text-slate-500 dark:text-gray-500 uppercase tracking-wider mb-1">Revenue</div>
-                                    <div className="text-lg font-black text-emerald-600 dark:text-emerald-400">{rec.estimated_revenue || '₹25L/year'}</div>
-                                  </div>
-                                  <div className="text-center">
-                                    <div className="text-xs font-bold text-slate-500 dark:text-gray-500 uppercase tracking-wider mb-1">Profit</div>
-                                    <div className="text-lg font-black text-emerald-600 dark:text-emerald-400">{rec.estimated_profit || '₹15L/year'}</div>
-
-                                  </div>
-                                  <div className="text-center">
-                                    <div className="text-[10px] font-bold text-slate-500 dark:text-gray-500 uppercase tracking-wider mb-0.5">ROI</div>
-                                    <div className="text-sm font-black text-purple-600 dark:text-purple-400">{rec.roi_percentage || 120}%</div>
-                                  </div>
-                                </div>
-
-                                {/* Action Buttons */}
-                                <div className="flex flex-col sm:flex-row gap-3">
-                                  <button
-                                    onClick={async () => {
-                                      if (plan !== 'professional') {
-                                        addNotification({
-                                          type: 'alert',
-                                          title: 'Premium Roadmap Feature',
-                                          message: '6-Month Strategic Roadmaps are exclusive to Professional subscribers.',
-                                          priority: 'high'
-                                        });
-                                        router.push('/acquisition-tiers');
-                                        return;
-                                      }
-                                      try {
-                                        setLoadingPlan(rec.title);
-                                        
-                                        const response = await fetch(`${apiUrl}/api/business-plan`, {
-                                          method: 'POST',
-                                          headers: { 'Content-Type': 'application/json' },
-                                          body: JSON.stringify({
-                                            business_title: rec.title || 'Unknown Business',
-                                            area: area || 'Unknown Area',
-                                            user_email: session?.user?.email || 'anonymous',
-                                            language: language || 'English'
-                                          })
-                                        });
-                                        
-                                        if (response.ok) {
-                                          const planData = await response.json();
-                                          sessionStorage.setItem('business_plan', JSON.stringify({
-                                            business: rec,
-                                            plan: planData,
-                                            area: area
-                                          }));
-                                          
-                                          addNotification({
-                                            type: 'analysis',
-                                            title: 'Business Plan Generated',
-                                            message: `6-month plan for ${rec.title} is ready!`,
-                                            priority: 'high'
-                                          });
-                                          
-                                          router.push('/business-plan');
-                                        } else {
-                                          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                                        }
-                                      } catch (error) {
-                                        console.error('Failed to generate business plan:', error);
-                                        addNotification({
-                                          type: 'alert',
-                                          title: 'Generation Failed',
-                                          message: 'Failed to generate business plan. Please try again.',
-                                          priority: 'high'
-                                        });
-                                      } finally {
-                                        setLoadingPlan(null);
-                                      }
-                                    }}
-                                    disabled={loadingPlan === rec.title}
-                                    className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r ${theme?.gradient || 'from-gray-600 to-gray-500'} hover:opacity-90 text-white rounded-lg font-bold text-xs transition-all hover:scale-105 shadow-md disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none`}
-                                  >
-                                    {loadingPlan === rec.title ? (
-                                      <>
-                                        <Loader2 className="animate-spin" size={16} />
-                                        Generating...
-                                      </>
-                                    ) : (
-                                      <>
-                                        <FileText size={16} />
-                                        Get 6-Month Plan
-                                      </>
-                                    )}
-                                  </button>
-                                  
-                                  <button
-                                    onClick={() => {
-                                      sessionStorage.setItem('selected_business', JSON.stringify({
-                                        business: rec,
-                                        area: area,
-                                        coordinates: result?.location_data?.coordinates
-                                      }));
-                                      
-                                      addNotification({
-                                        type: 'profile',
-                                        title: 'Loading Details',
-                                        message: `Opening detailed analysis for ${rec.title}`,
-                                        priority: 'low'
-                                      });
-                                      
-                                      router.push('/business-details');
-                                    }}
-                                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-xs transition-all hover:scale-105 shadow-md"
-                                  >
-                                    <BarChart3 size={16} />
-                                    View Details
-                                  </button>
-                                  
-                                  <button
-                                    onClick={() => handleSaveBusiness(rec)}
-                                    disabled={savingBusiness === rec.title}
-                                    className={`px-3 py-2 ${plan === 'free' ? 'bg-slate-200 text-slate-400 cursor-not-allowed' : 'bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400'} rounded-lg font-bold text-xs transition-all border border-slate-200 dark:border-white/10 hover:shadow-md flex items-center gap-2`}
-                                    title={plan === 'free' ? "Vault access requires Professional plan" : "Save to Alpha Vault"}
-                                  >
-                                    {savingBusiness === rec.title ? (
-                                      <Loader2 className="animate-spin" size={16} />
-                                    ) : (
-                                      <Bookmark size={16} fill={plan === 'free' ? "none" : "currentColor"} />
-                                    )}
-                                    <span className="hidden sm:inline">Save to Vault</span>
-                                  </button>
-
-                                  <button
-                                    onClick={async () => {
-                                      const businessInfo = `Business: ${rec.title}\nLocation: ${area}\nInvestment: ${rec.funding_required}\nRevenue: ${rec.estimated_revenue}\nProfit: ${rec.estimated_profit}\nROI: ${rec.roi_percentage}%`;
-                                      
-                                      try {
-                                        await navigator.clipboard.writeText(businessInfo);
-                                        addNotification({
-                                          type: 'system',
-                                          title: 'Copied to Clipboard',
-                                          message: 'Business information copied successfully',
-                                          priority: 'low'
-                                        });
-                                      } catch (error) {
-                                        const textArea = document.createElement('textarea');
-                                        textArea.value = businessInfo;
-                                        document.body.appendChild(textArea);
-                                        textArea.select();
-                                        document.execCommand('copy');
-                                        document.body.removeChild(textArea);
-                                        
-                                        addNotification({
-                                          type: 'system',
-                                          title: 'Copied to Clipboard',
-                                          message: 'Business information copied successfully',
-                                          priority: 'low'
-                                        });
-                                      }
-                                    }}
-                                    className="px-3 py-2 bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/20 text-slate-700 dark:text-white rounded-lg font-bold text-xs transition-all border border-slate-200 dark:border-white/10 hover:shadow-md"
-                                    title="Copy business information"
-                                  >
-                                    <ArrowRight size={16} />
-                                  </button>
-                                </div>
-                              </div>
-                            </UniformCard>
-                          </motion.div>
-                        ))}
+                      <div className="space-y-6">
+                        {Array.isArray(result.recommendations) && result.recommendations.length > 0 ? (
+                          result.recommendations.map((rec: any, idx: number) => (
+                              <EnhancedRecommendationCard
+                                key={idx}
+                                recommendation={{
+                                  business_name: rec.title || rec.name || rec.business_title || rec.business_name || rec.idea || 'Strategic Market Opportunity',
+                                  description: rec.description || rec.thesis || rec.summary || rec.explanation || 'Detailed tactical breakdown of this localized market gap based on real-time 2026 economic indicators.',
+                                  market_gap: rec.market_gap || rec.gap || 'Identified market opportunity',
+                                  target_audience: rec.target_audience || rec.audience || 'Local market segment',
+                                  investment_range: rec.funding_required || rec.investment || '₹5L-₹15L',
+                                  roi_potential: `${rec.roi_percentage || 120}% annual returns`,
+                                  implementation_difficulty: rec.difficulty || rec.complexity || 'Medium',
+                                  market_size: rec.market_size || 'Regional market',
+                                  competitive_advantage: rec.competitive_advantage || rec.advantage || 'First-mover advantage in local market',
+                                  revenue_model: rec.revenue_model || rec.business_model || 'Multiple revenue streams',
+                                  key_success_factors: Array.isArray(rec.key_success_factors) ? rec.key_success_factors.join(", ") : (rec.success_factors || rec.critical_factors || 'Strong local partnerships'),
+                                  category: rec.category || 'Business Opportunity',
+                                  ai_source: result.ai_source || 'Multi-AI Analysis System',
+                                  six_month_plan: rec.six_month_plan || []
+                                }}
+                                index={idx}
+                                onSave={(recommendation) => {
+                                  // Create the correct data structure for the API
+                                  const businessData = {
+                                    user_email: session?.user?.email,
+                                    business_name: recommendation.business_name,
+                                    category: recommendation.category || 'Business Opportunity',
+                                    location: area,
+                                    details: recommendation
+                                  };
+                                  handleSaveBusiness(businessData);
+                                }}
+                                onViewDetails={(recommendation) => {
+                                  const target = (recommendation as any)._target || '/business-details';
+                                  const bizObj = {
+                                     business: {
+                                       title: recommendation.business_name,
+                                       description: recommendation.description,
+                                       category: recommendation.category,
+                                       funding_required: recommendation.investment_range,
+                                       estimated_revenue: recommendation.revenue_model,
+                                       roi_percentage: recommendation.roi_potential.replace(/\D/g, ''),
+                                       market_size: recommendation.market_size,
+                                       competition_level: recommendation.implementation_difficulty,
+                                       key_success_factors: (recommendation.key_success_factors || '').split(",").map(s => s.trim()),
+                                       six_month_plan: recommendation.six_month_plan || []
+                                     },
+                                     area: area,
+                                     analysis: result.analysis
+                                   };
+                                   sessionStorage.setItem('selected_business', JSON.stringify(bizObj));
+                                   if (target === '/roadmap') {
+                                       localStorage.setItem('currentBusinessAnalysis', JSON.stringify(bizObj));
+                                   }
+                                   router.push(target);
+                                }}
+                                saving={savingBusiness === (rec.title || rec.name || rec.business_title || rec.business_name)}
+                              />
+                            ))
+                        ) : (
+                          <div className="text-center py-12">
+                            <div className="text-slate-500 dark:text-gray-400 mb-4">
+                              No recommendations available
+                            </div>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </motion.div>

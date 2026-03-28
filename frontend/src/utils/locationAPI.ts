@@ -191,7 +191,9 @@ class LocationAPI {
       
       return await response.json();
     } catch (error) {
-      console.error('Error fetching cities:', error);
+      if (!(error instanceof Error && error.message.includes('403'))) {
+        console.error('Error fetching cities:', error);
+      }
       return [];
     }
   }
@@ -207,6 +209,12 @@ class LocationAPI {
     coordinates?: { lat: number; lng: number };
   }> {
     try {
+      // Validate input
+      if (!locationString || typeof locationString !== 'string') {
+        console.warn('⚠️ Invalid location string provided:', locationString);
+        return {};
+      }
+      
       console.log('🔍 Parsing location string:', locationString);
       
       // 1. TRY BACKEND AI RESOLVER FIRST (Source Research + Gemini)
@@ -220,7 +228,6 @@ class LocationAPI {
             console.log('✅ Resolved via Backend AI:', res.data);
             const data = res.data;
             
-            // Map the flat backend structure to the expected frontend structure
             return {
               country: { name: data.country, iso2: data.country_code, emoji: data.country_code === 'IN' ? '🇮🇳' : '' } as any,
               state: { name: data.state } as any,
@@ -230,7 +237,29 @@ class LocationAPI {
           }
         }
       } catch (backendError) {
-        console.warn('⚠️ Backend location resolution failed, trying local logic...', backendError);
+        console.warn('⚠️ Backend location resolution failed, trying geocoding resolver...', backendError);
+      }
+
+      // 1.5. HIGH-FIDELITY GEOCORING RESOLVER (Dynamic & Live)
+      try {
+        const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(locationString)}&format=json&addressdetails=1&limit=1`, {
+          headers: { 'User-Agent': 'TrendAI/2.0' }
+        });
+        if (geoRes.ok) {
+           const geoData = await geoRes.json();
+           if (geoData && geoData[0]) {
+              console.log('✅ Resolved via Live Geocoding:', geoData[0].display_name);
+              const addr = geoData[0].address;
+              return {
+                coordinates: { lat: parseFloat(geoData[0].lat), lng: parseFloat(geoData[0].lon) },
+                city: { name: addr.city || addr.town || addr.village || addr.suburb } as any,
+                state: { name: addr.state } as any,
+                country: { name: addr.country, iso2: addr.country_code?.toUpperCase() } as any
+              };
+           }
+        }
+      } catch (geoError) {
+        console.warn('⚠️ Live geocoding failed, falling back to local heuristic...', geoError);
       }
 
       // 2. DEFAULT LOCAL LOGIC
@@ -271,7 +300,7 @@ class LocationAPI {
         
         // Check for common patterns
         const patterns = [
-          { iso: 'IN', cities: ['bhopal', 'mumbai', 'delhi', 'bangalore'], states: ['madhya pradesh', 'maharashtra'] },
+          { iso: 'IN', cities: ['bhopal', 'berasia', 'mumbai', 'delhi', 'bangalore'], states: ['madhya pradesh', 'maharashtra'] },
           { iso: 'US', cities: ['new york', 'los angeles', 'chicago'], states: ['california', 'texas'] },
           { iso: 'KR', cities: ['seoul', 'jongno', 'busan', 'incheon'], states: ['gyeonggi'] },
           { iso: 'GB', cities: ['london', 'manchester'], states: ['england'] }
@@ -308,8 +337,9 @@ class LocationAPI {
         const states = await this.getStatesByCountry(matchedCountry.iso2);
         console.log('📍 Found states:', states.length);
         
-        // Look for state match with prioritization (Exact > Substring > Fuzzy)
+        // Look for state match with prioritization (Exact > Code > Substring > Fuzzy)
         matchedState = states.find(s => parts.some(p => s.name.toLowerCase() === p)) || 
+                       states.find(s => parts.some(p => s.state_code.toLowerCase() === p)) ||
                        states.find(s => parts.some(p => s.name.toLowerCase().includes(p) || p.includes(s.name.toLowerCase()))) ||
                        states.find(s => parts.some(p => this.fuzzyMatch(p, s.name.toLowerCase(), 0.85)));
         
@@ -457,6 +487,7 @@ class LocationAPI {
     const CITIES: OfflineCity[] = [
       // ── Madhya Pradesh, India ──
       { name: 'Bhopal',       state_code: 'MP', country_code: 'IN', lat: '23.2599', lng: '77.4126' },
+      { name: 'Berasia',      state_code: 'MP', country_code: 'IN', lat: '23.6345', lng: '77.4365' },
       { name: 'Indore',       state_code: 'MP', country_code: 'IN', lat: '22.7196', lng: '75.8577' },
       { name: 'Gwalior',      state_code: 'MP', country_code: 'IN', lat: '26.2183', lng: '78.1828' },
       { name: 'Jabalpur',     state_code: 'MP', country_code: 'IN', lat: '23.1815', lng: '79.9864' },
@@ -526,6 +557,11 @@ class LocationAPI {
 
   // Known location coordinates for manual lookup
   private getKnownLocationCoordinates(locationString: string): { lat: number; lng: number } | undefined {
+    // Validate input
+    if (!locationString || typeof locationString !== 'string') {
+      return undefined;
+    }
+    
     const knownLocations: Record<string, { lat: number; lng: number }> = {
       'berasia': { lat: 23.6345, lng: 77.4365 },
       'berasia, india': { lat: 23.6345, lng: 77.4365 },
@@ -539,16 +575,19 @@ class LocationAPI {
       'sydney': { lat: -33.8688, lng: 151.2093 },
       'mumbai': { lat: 19.0760, lng: 72.8777 },
       'delhi': { lat: 28.7041, lng: 77.1025 },
+      'new delhi': { lat: 28.6139, lng: 77.2090 },
       'bangalore': { lat: 12.9716, lng: 77.5946 },
       'bhopal': { lat: 23.2599, lng: 77.4126 }
     };
 
     const key = locationString.toLowerCase().trim();
+    const keyFirstPart = key.split(',')[0]?.trim() || '';
+    
     return knownLocations[key] || 
-           knownLocations[key.split(',')[0].trim()] ||
+           knownLocations[keyFirstPart] ||
            Object.entries(knownLocations).find(([k]) => 
-             k.includes(key.split(',')[0].trim()) || 
-             key.includes(k)
+             k.includes(keyFirstPart) || 
+             keyFirstPart.includes(k)
            )?.[1];
   }
 
@@ -563,16 +602,20 @@ class LocationAPI {
     const locationName = city?.name || state?.name || country?.name || 'Unknown Location';
     const countryName = country?.name || 'Unknown Country';
     
+    // Validate businessType
+    const safeBusinessType = businessType && typeof businessType === 'string' ? businessType : 'Business';
+    const businessTypeFirstWord = safeBusinessType.split(' ')[0] || 'Business';
+    
     // Generate realistic business names based on location and type
     const businessNames = [
-      `${locationName} ${businessType.split(' ')[0]} Solutions`,
-      `${businessType.split(' ')[0]} Hub ${locationName}`,
-      `Elite ${businessType.split(' ')[0]} ${locationName}`,
-      `${locationName} Premium ${businessType.split(' ')[0]}`,
-      `Local ${businessType.split(' ')[0]} Network`,
-      `${businessType.split(' ')[0]} Express ${locationName}`,
-      `${locationName} Professional ${businessType.split(' ')[0]}`,
-      `Quality ${businessType.split(' ')[0]} ${locationName}`
+      `${locationName} ${businessTypeFirstWord} Solutions`,
+      `${businessTypeFirstWord} Hub ${locationName}`,
+      `Elite ${businessTypeFirstWord} ${locationName}`,
+      `${locationName} Premium ${businessTypeFirstWord}`,
+      `Local ${businessTypeFirstWord} Network`,
+      `${businessTypeFirstWord} Express ${locationName}`,
+      `${locationName} Professional ${businessTypeFirstWord}`,
+      `Quality ${businessTypeFirstWord} ${locationName}`
     ];
     
     // Generate contact information based on country

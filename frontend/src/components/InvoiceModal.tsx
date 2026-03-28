@@ -49,40 +49,74 @@ export default function InvoiceModal({ isOpen, onClose, payment, userData }: Inv
         backgroundColor: "#020617",
         onclone: (clonedDoc) => {
           // EXHAUSTIVE SANITIZATION: html2canvas recursively parses the DOM
-          // Even hidden elements can crash it if they have modern colors (oklab/oklch)
+          // Tailwind v4 uses modern colors (oklab/oklch) which crash jspdf/html2canvas
           const allElements = clonedDoc.querySelectorAll('*');
           
+          // 1. STRIP ALL STYLE TAGS (Prevents global oklch/oklab definitions)
+          const styleBlocks = clonedDoc.querySelectorAll('style');
+          styleBlocks.forEach(style => {
+            let css = style.innerHTML;
+            if (css.includes('oklch') || css.includes('oklab') || css.includes('lab(') || css.includes('hwb(')) {
+              // Cleanse all modern colors to safe hex fallbacks
+              css = css.replace(/oklch\([^)]+\)/g, '#3b82f6');
+              css = css.replace(/oklab\([^)]+\)/g, '#3b82f6');
+              css = css.replace(/lab\([^)]+\)/g, '#3b82f6');
+              css = css.replace(/hwb\([^)]+\)/g, '#3b82f6');
+              style.innerHTML = css;
+            }
+          });
+
+          // 2. SANITIZE ALL COMPUTED AND INLINE STYLES
           allElements.forEach(el => {
             const htmlEl = el as HTMLElement;
+            if (!htmlEl.style) return;
+
+            // Aggressive cssText cleanup for any remaining modern color leaks
+            const cssText = htmlEl.style.cssText;
+            if (cssText && (cssText.includes('oklch') || cssText.includes('oklab') || cssText.includes('var(--'))) {
+              htmlEl.style.cssText = cssText
+                .replace(/oklch\([^)]+\)/g, '#3b82f6')
+                .replace(/oklab\([^)]+\)/g, '#3b82f6')
+                .replace(/var\(--[^)]+\)/g, '#3b82f6');
+            }
+
             const style = window.getComputedStyle(htmlEl);
-            
-            const sanitize = (val: string) => {
-              if (!val || val === 'none') return val;
+            const sanitizeValue = (val: string) => {
+              if (!val || val === 'none' || val === 'transparent') return val;
               if (
-                val.includes('oklch(') || 
-                val.includes('oklab(') || 
+                val.includes('oklch') || 
+                val.includes('oklab') || 
                 val.includes('lab(') || 
-                val.includes('hwb(')
+                val.includes('hwb(') ||
+                val.includes('var(--')
               ) {
-                // If it looks like a blue primary accent, return standard blue
-                if (val.includes('0.5') || val.includes('50%')) return 'rgba(37, 99, 235, 0.5)';
-                if (val.includes('0.1') || val.includes('10%')) return 'rgba(255, 255, 255, 0.05)';
-                return '#020617';
+                // Heuristic conversion: Emerald/Greenish? -> Green hex
+                if (val.includes('150') || val.includes('emerald') || val.includes('160')) return '#10b981';
+                // Purple? -> Purple hex
+                if (val.includes('270') || val.includes('purple')) return '#8b5cf6';
+                return '#3b82f6'; // Standard blue fallback
               }
               return val;
             };
 
-            // HTML Styles
-            htmlEl.style.color = sanitize(style.color);
-            htmlEl.style.backgroundColor = sanitize(style.backgroundColor);
-            htmlEl.style.borderColor = sanitize(style.borderColor);
-            htmlEl.style.boxShadow = sanitize(style.boxShadow);
-            htmlEl.style.textShadow = sanitize(style.textShadow);
+            // Force apply sanitized styles as inline overrides
+            htmlEl.style.color = sanitizeValue(style.color);
+            htmlEl.style.backgroundColor = sanitizeValue(style.backgroundColor);
+            htmlEl.style.borderColor = sanitizeValue(style.borderColor);
+            
+            // Critical for gradients
+            if (style.backgroundImage && (style.backgroundImage.includes('oklch') || style.backgroundImage.includes('oklab'))) {
+               htmlEl.style.backgroundImage = 'none';
+               htmlEl.style.backgroundColor = '#020617';
+            }
 
-            // SVG Styles (Critical for Lucide icons and charts)
+            htmlEl.style.boxShadow = 'none'; 
+            htmlEl.style.textShadow = 'none';
+
+            // SVG specific styles (Lucide icons)
             if (el.tagName.toLowerCase() === 'svg' || el.parentElement?.tagName.toLowerCase() === 'svg') {
-              htmlEl.style.fill = sanitize(style.fill);
-              htmlEl.style.stroke = sanitize(style.stroke);
+              htmlEl.style.fill = sanitizeValue(style.fill);
+              htmlEl.style.stroke = sanitizeValue(style.stroke);
             }
           });
 

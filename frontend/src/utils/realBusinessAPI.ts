@@ -49,7 +49,8 @@ class RealBusinessAPI {
     console.log(`🌐 Searching broad area (${radius}km) for '${params.businessType}' in ${location}...`);
     
     // Extract city name for Nominatim
-    const cityName = location.split(',')[0].trim();
+    const safeLocation = (location || 'India').toString();
+    const cityName = safeLocation.split(',')[0].trim();
 
     try {
       // Race Overpass (map data) vs Nominatim (search API)
@@ -77,12 +78,12 @@ class RealBusinessAPI {
       // Both sources failed — fall through to AI
     }
 
-    console.log(`🤖 Live sources unavailable, generating AI businesses for ${location}...`);
-    return await this.searchAlternativeSources(params);
+    console.log(`📡 Live sources exhausted for ${location}. Zero Fallback Policy enforced: No synthetic data.`);
+    return [];
   }
 
   /** 🔥 NEW: Deep extract contacts, social profiles and reviews via Apify (PRO feature) */
-  async deepScrapeBusinesses(query: string, location: string, email?: string): Promise<RealBusiness[]> {
+  async deepScrapeBusinesses(query: string, location: string, email?: string): Promise<{ data: RealBusiness[], summary?: string }> {
     console.log(`🚀 Deep scraping for '${query}' in ${location}...`);
     try {
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://trendai-api.onrender.com';
@@ -107,15 +108,28 @@ class RealBusinessAPI {
       const responseData = await res.json();
       if (responseData.success) {
         console.log(`✅ Deep scrape successful! Got ${responseData.data.length} enriched results.`);
-        return responseData.data.map((b: any) => ({
-          ...b,
-          // Add distance calculation if we have center coordinates later, or just return as is
-        }));
+        return {
+          data: responseData.data.map((b: any) => {
+            const sm: any = {};
+            if (Array.isArray(b.social_media)) {
+               b.social_media.forEach((item: any) => {
+                 if (item.url && item.url.includes('instagram.com')) sm.instagram = item.url;
+                 if (item.url && item.url.includes('facebook.com')) sm.facebook = item.url;
+                 if (item.url && item.url.includes('twitter.com') || item.url && item.url.includes('x.com')) sm.twitter = item.url;
+               });
+            }
+            return {
+              ...b,
+              social_media: sm
+            };
+          }),
+          summary: responseData.summary
+        };
       }
-      return [];
+      return { data: [] };
     } catch (error) {
       console.error('Deep scrape failed:', error);
-      return [];
+      return { data: [] };
     }
   }
 
@@ -242,7 +256,9 @@ class RealBusinessAPI {
       .map(tag => `node["${tag.replace('=', '"="')}"](around:${radiusMeters},${lat},${lng});`)
       .join('\n  ');
 
-    return `[out:json][timeout:15];(\n  ${tagQueries}\n);out 25;`;
+    // Neural Discovery Limit (150) for broad city scans, 60 for local dense scans
+    const limit = radius >= 15 ? 150 : 60;
+    return `[out:json][timeout:25];(\n  ${tagQueries}\n);out ${limit};`;
   }
 
 
@@ -262,7 +278,13 @@ class RealBusinessAPI {
       'retail': ['shop=*', 'amenity=marketplace'],
       'service': ['office=*', 'craft=*'],
       'healthcare': ['amenity=hospital', 'amenity=clinic', 'amenity=pharmacy'],
-      'education': ['amenity=school', 'amenity=university', 'amenity=college'],
+      'education': ['amenity=school', 'amenity=university', 'amenity=college', 'amenity=library'],
+      'edtech': ['office=it', 'office=software', 'amenity=school', 'amenity=university'],
+      'software': ['office=it', 'office=software', 'office=telecommunication'],
+      'tech': ['office=it', 'shop=computer', 'shop=electronics', 'office=software'],
+      'contractor': ['office=contractor', 'craft=builder', 'craft=carpenter', 'office=estate_agent'],
+      'construction': ['office=construction', 'craft=builder', 'industrial=warehouse'],
+      'logistics': ['office=logistics', 'industrial=warehouse', 'amenity=transportation'],
       'fitness': ['leisure=fitness_centre', 'leisure=sports_centre'],
       'beauty': ['shop=beauty', 'shop=hairdresser', 'amenity=spa'],
       'automotive': ['shop=car', 'shop=car_repair', 'amenity=fuel'],
@@ -291,7 +313,7 @@ class RealBusinessAPI {
 
     return data.elements
       .filter((element: any) => element.tags && element.tags.name)
-      .slice(0, 10) // Limit to 10 results
+      .slice(0, 80) // High-density reconnaissance depth (increased from 10)
       .map((element: any) => {
         const tags = element.tags;
         const coords = { lat: element.lat, lng: element.lon };
@@ -398,183 +420,8 @@ class RealBusinessAPI {
     locationDetails: any,
     coordinates?: { lat: number; lng: number }
   ): Promise<RealBusiness[]> {
-    const city = locationDetails?.address?.city || 
-                 locationDetails?.address?.town || 
-                 locationDetails?.address?.village || 
-                 location.split(',')[0];
-    
-    const country = locationDetails?.address?.country || 'Unknown';
-    const state = locationDetails?.address?.state || locationDetails?.address?.region || '';
-
-    // Clean the business type string - strip any embedded "for X in Y" location suffix
-    const cleanedBusinessType = businessType
-      .replace(/\s+for\s+\S+(\s+in\s+\S+)*/gi, '') // remove "for Bhopal in Bhopal" etc.
-      .replace(/\s+in\s+\S+/gi, '')                  // remove remaining "in City" parts
-      .trim() || businessType;
-
-    // 🔥 NEW: Use AI to generate hyper-realistic mock data if API fails
-    try {
-      console.log(`🤖 Generating AI-powered realistic businesses for ${city}, ${country}...`);
-      const prompt = `Generate 8 realistic, distinct business listings for '${cleanedBusinessType}' in '${city}, ${state}, ${country}'. 
-      Return as a JSON array of objects: 
-      [{"name": "...", "address": "...", "phone": "...", "rating": 4.5, "reviews": 120, "established": "2018", "status": "active"}]. 
-      Ensure addresses follow ${country} standards. Phone numbers must use ${country} international code.`;
-      
-      const response = await fetch(`https://text.pollinations.ai/${encodeURIComponent(prompt)}?json=true`);
-      
-      const content = await response.text();
-      let businessesJson = [];
-      try {
-        // Try to find JSON in the plain text response using compatible regex
-        const jsonMatch = content.match(/\[[\s\S]*\]/);
-        if (jsonMatch) {
-          businessesJson = JSON.parse(jsonMatch[0]);
-        }
-      } catch (e) {
-        console.warn("JSON parse error for AI businesses:", e);
-      }
-
-      if (businessesJson.length > 0) {
-        return businessesJson.map((b: any, index: number) => {
-          // Add coordinates and distance calculation
-          const offsetLat = (Math.random() - 0.5) * 0.01;
-          const offsetLng = (Math.random() - 0.5) * 0.01;
-          const bCoords = coordinates ? { lat: coordinates.lat + offsetLat, lng: coordinates.lng + offsetLng } : undefined;
-          
-          return {
-            name: b.name,
-            address: b.address,
-            phone: b.phone,
-            rating: b.rating || 4.0,
-            reviews: b.reviews || 50,
-            status: b.status || 'active',
-            established: b.established || '2019',
-            category: this.getBusinessCategory(businessType),
-            distance: coordinates && bCoords ? this.calculateDistance(coordinates, bCoords) : '0.5 km',
-            coordinates: bCoords
-          } as RealBusiness;
-        });
-      }
-    } catch (e) {
-      console.warn("AI business generation failed, using legacy fallback", e);
-    }
-
-    // LEGACY FALLBACK (Improved)
-    const businessNames = this.generateBusinessNames(businessType, city, country);
-    
-    return businessNames.map((name, index) => {
-      const isActive = Math.random() > 0.15; // 85% active
-      const hasDetails = Math.random() > 0.3; // 70% have contact details
-      
-      // Generate coordinates near the main location
-      const offsetLat = (Math.random() - 0.5) * 0.02;
-      const offsetLng = (Math.random() - 0.5) * 0.02;
-      const businessCoords = coordinates ? {
-        lat: coordinates.lat + offsetLat,
-        lng: coordinates.lng + offsetLng
-      } : undefined;
-
-      const business: RealBusiness = {
-        name,
-        address: this.generateRealisticAddress(city, state, country, index),
-        status: isActive ? 'active' : (Math.random() > 0.5 ? 'closed' : 'unknown'),
-        distance: coordinates ? this.calculateDistance(coordinates, businessCoords!) : undefined,
-        established: `${2015 + Math.floor(Math.random() * 9)}`,
-        category: this.getBusinessCategory(businessType),
-        coordinates: businessCoords
-      };
-
-      if (hasDetails && isActive) {
-        business.phone = this.generateRealisticPhone(country);
-        business.email = this.generateBusinessEmail(name);
-        business.website = this.generateBusinessWebsite(name);
-        business.rating = Math.round((Math.random() * 2 + 3) * 10) / 10;
-        business.reviews = Math.floor(Math.random() * 300 + 5);
-      }
-
-      return business;
-    });
-  }
-
-  private generateBusinessNames(businessType: string, city: string, country: string): string[] {
-    const typeKeywords = businessType.toLowerCase().split(' ').filter(w => w !== city.toLowerCase());
-    const mainKeyword = typeKeywords.length > 0 ? typeKeywords[0].charAt(0).toUpperCase() + typeKeywords[0].slice(1) : 'Business';
-    
-    const templates = [
-      `${city} ${mainKeyword} Professionals`,
-      `${mainKeyword} Masters of ${city}`,
-      `Elite ${mainKeyword} Services`,
-      `${city} Premier ${mainKeyword}`,
-      `The ${mainKeyword} Collective`,
-      `${mainKeyword} Experts - ${city}`,
-      `${city} ${mainKeyword} Center`,
-      `Advanced ${mainKeyword} Industry`,
-      `${city} ${mainKeyword} Partners`,
-      `Prime ${mainKeyword} Hub`
-    ];
-
-    return templates.slice(0, 8);
-  }
-
-  private generateRealisticAddress(city: string, state: string, country: string, index: number): string {
-    const streetNumbers = [100, 250, 350, 450, 550, 650, 750, 850];
-    const streetNames = [
-      'Main Street', 'Business Avenue', 'Commerce Boulevard', 'Enterprise Way',
-      'Market Street', 'Industry Road', 'Professional Drive', 'Corporate Plaza'
-    ];
-
-    const parts = [
-      streetNumbers[index % streetNumbers.length],
-      streetNames[index % streetNames.length],
-      city,
-      state,
-      country
-    ].filter(Boolean);
-
-    return parts.join(', ');
-  }
-
-  private generateRealisticPhone(country: string): string {
-    const formats: Record<string, string> = {
-      'United States': '+1 (555) XXX-XXXX',
-      'India': '+91 XXXXX XXXXX',
-      'United Kingdom': '+44 XXXX XXXXXX',
-      'Canada': '+1 (XXX) XXX-XXXX',
-      'Australia': '+61 X XXXX XXXX',
-      'Germany': '+49 XXX XXXXXXX',
-      'France': '+33 X XX XX XX XX'
-    };
-
-    const format = formats[country] || '+XX XXX XXX XXXX';
-    return format.replace(/X/g, () => Math.floor(Math.random() * 10).toString());
-  }
-
-  private generateBusinessEmail(businessName: string): string {
-    const domain = businessName
-      .toLowerCase()
-      .replace(/\s+/g, '')
-      .replace(/[^a-z0-9]/g, '')
-      .substring(0, 15);
-    return `contact@${domain}.com`;
-  }
-
-  private generateBusinessWebsite(businessName: string): string {
-    const domain = businessName
-      .toLowerCase()
-      .replace(/\s+/g, '')
-      .replace(/[^a-z0-9]/g, '')
-      .substring(0, 15);
-    return `www.${domain}.com`;
-  }
-
-  private getBusinessCategory(businessType: string): string {
-    const type = businessType.toLowerCase();
-    if (type.includes('digital') || type.includes('marketing')) return 'Digital Services';
-    if (type.includes('restaurant') || type.includes('food')) return 'Food & Beverage';
-    if (type.includes('retail') || type.includes('shop')) return 'Retail';
-    if (type.includes('service')) return 'Professional Services';
-    if (type.includes('tech')) return 'Technology';
-    return 'Business Services';
+    console.log(`📡 Zero Fallback Policy: Skipping synthetic generation for ${location}.`);
+    return [];
   }
 }
 

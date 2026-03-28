@@ -81,12 +81,12 @@ class IntegratedBusinessIntelligence:
                 print(f"♻️ [CACHE] Tiered Hit for {area}.")
                 return data
 
-        print(f"🚀 [WORKFLOW] Executing Sequential 4-Layer RAG Pipeline for {area}...")
-        await push_ws_status(f"Phase 1: Multi-Source Scouting (Google/Reddit/Web) in {area}...")
+        await push_ws_status("Initializing AI Analysis Engine...")
         
         try:
             # --- STAGE 1: MULTI-SOURCE RAG SCOUTING ---
             # Parallel gathering for speed
+            await push_ws_status("Gathering market intelligence...")
             scouting = await asyncio.gather(
                 self._scout_google(area),
                 self._scout_reddit(area),
@@ -99,18 +99,18 @@ class IntegratedBusinessIntelligence:
             w_data = scouting[2] if not isinstance(scouting[2], Exception) else ""
             
             # --- STAGE 2: RAG CONTEXT COMPILATION ---
-            await push_ws_status("Phase 2: Compiling unified RAG context block...")
+            await push_ws_status("Analyzing market data...")
             rag_context = self._compile_rag_block(g_data, r_data, w_data)
             
             # --- STAGE 3: SEQUENTIAL 4-LAYER ANALYSIS CLUSTER ---
-            await push_ws_status("Phase 3: Deploying Sequential Analysis Cluster (Gemini -> Pollinations -> Claude -> Fred)...")
+            await push_ws_status("Generating business recommendations...")
             final_insights = await self._run_analysis_cluster(area, rag_context, language)
             
             if not final_insights or not final_insights.get("success"):
-                 return {"success": False, "message": "Critical Analysis Failover: Multi-layer AI cluster exhausted."}
+                 return {"success": False, "message": "Analysis system temporarily unavailable."}
 
             # --- STAGE 4: NEURAL REFINEMENT ---
-            await push_ws_status("Phase 4: Refining strategic identifiers and stripping location leaks...")
+            await push_ws_status("Finalizing recommendations...")
             polished_recs = self._polish_identities(final_insights.get("recommendations", []), area)
             
             final_result = {
@@ -139,7 +139,7 @@ class IntegratedBusinessIntelligence:
         """Fast Pollinations-only analysis with location intelligence"""
         
         print(f"🚀 [POLLINATIONS ONLY] Starting analysis for: {area}...")
-        await push_ws_status("Pollinations AI Active: Generating recommendations...")
+        await push_ws_status("AI Analysis in progress...")
         
         # Use only Pollinations API since it's the only working one
         result = await self._call_search_gpt(area, rag_context, language)
@@ -148,9 +148,10 @@ class IntegratedBusinessIntelligence:
             print(f"✅ [POLLINATIONS SUCCESS] Analysis completed successfully!")
             return result
         
-        # If Pollinations fails, use smart fallback based on location
-        print("🚨 [SMART FALLBACK] Pollinations failed, using location-aware recommendations...")
-        return self._generate_smart_fallback(area, language)
+        # 🚨 ZERO FALLBACK POLICY: No hardcoded predictions as requested. 
+        # If the AI engine fails, we return a failure and let main.py handle the self-healing.
+        print(f"🚨 [ENGINE FAILURE] Pollinations failed for {area}. No fallbacks used.")
+        return {"success": False, "error": "AI engine unavailable", "recommendations": []}
 
     
 
@@ -161,9 +162,7 @@ class IntegratedBusinessIntelligence:
             # Create a comprehensive, real-time focused prompt
             current_year = "2026"
             enhanced_prompt = f"""
-            REAL-TIME BUSINESS INTELLIGENCE ANALYSIS FOR {area} ({current_year})
-            
-            Analyze current market conditions and generate 6-8 specific, actionable business opportunities for {area}.
+            Analyze current market conditions and generate 12-15 specific, actionable business opportunities for {area}.
             
             Consider these real-time factors:
             - Current economic trends in {area}
@@ -177,41 +176,48 @@ class IntegratedBusinessIntelligence:
             
             Market Context: {context[:800] if context else f"Analyze {area} for emerging business opportunities based on current market dynamics, local needs, and economic indicators."}
             
-            Generate practical, implementable business ideas that:
-            1. Address real current market gaps in {area}
+            Generate EXACTLY 15 high-quality, diverse, and practical business ideas that:
+            1. Address real current market gaps in {area} (Metropolitan tech workforce hub context)
             2. Are feasible with realistic investment amounts
             3. Have clear revenue models
             4. Consider local competition and market saturation
             5. Align with current consumer preferences and behaviors
             
-            Return ONLY valid JSON with this exact structure (use Indian Rupees ₹):
+            Generate EXACTLY 15 high-fidelity, diverse business ideas. Each idea MUST include a practical implementation roadmap.
+            
+            Return ONLY valid JSON with this EXACT structure (use Indian Rupees ₹ for India locations):
             {{
                 "recommendations": [
                     {{
-                        "business_name": "Unique, brandable business name (no location reference)",
-                        "description": "Clear 2-sentence description of the business model and value proposition",
-                        "market_gap": "Specific current problem or unmet need this addresses in {area}",
-                        "target_audience": "Detailed customer segments with demographics",
+                        "title": "Unique brand name",
+                        "business_name": "Entity Name",
+                        "description": "2-sentence high-impact value proposition",
+                        "market_gap": "Specific unmet need in {area}",
+                        "target_audience": "Demographics and behavior",
                         "investment_range": "₹X,XX,000 - ₹Y,XX,000",
-                        "roi_potential": "Realistic ROI with percentage and timeframe",
-                        "implementation_difficulty": "Low/Medium/High with brief reasoning",
-                        "market_size": "Estimated market size and growth potential",
-                        "competitive_advantage": "What makes this business unique and defensible",
-                        "revenue_model": "How the business will generate income",
-                        "key_success_factors": "Critical elements for success"
+                        "roi_potential": "ROI % and payback in months",
+                        "implementation_difficulty": "Difficulty level + reasoning",
+                        "market_size": "Addressable local market size",
+                        "competitive_advantage": "Defensible USP",
+                        "key_success_factors": "Critical execution elements",
+                        "six_month_plan": ["Month 1: ...", "Month 2: ...", "Month 3: ...", "Month 4: ...", "Month 5: ...", "Month 6: ..."],
+                        "risk_analysis": "Top 2 local risks and mitigation",
+                        "revenue_model": "Monetization strategy"
                     }}
                 ]
             }}
+            *MUST RETURN EXACTLY 15 HIGH-FIDELITY ITEMS IN THE 'recommendations' ARRAY.*
             """
             
-            async with httpx.AsyncClient(timeout=30.0, follow_redirects=True) as client:
+            # Neural Timeout: Increased to 60s for high-bandwidth Karnataka nodes
+            async with httpx.AsyncClient(timeout=60.0, follow_redirects=True) as client:
                 resp = await client.post("https://text.pollinations.ai/", json={
                     "messages": [
-                        {"role": "system", "content": f"You are an expert business intelligence analyst specializing in real-time market analysis for {area}. Generate current, actionable business recommendations based on 2026 market conditions. Return only valid JSON with no explanations."}, 
+                        {"role": "system", "content": f"You are an expert business intelligence analyst specializing in real-time market analysis for {area}. Generate current, actionable business recommendations based on 2026 market conditions. Return only valid JSON with no explanations. Format: {{'recommendations': [...]}}"}, 
                         {"role": "user", "content": enhanced_prompt}
                     ],
                     "model": "openai",
-                    "temperature": 0.7  # Add some creativity while maintaining accuracy
+                    "temperature": 0.5  # More deterministic for mission-critical nodes
                 })
                 
                 if resp.status_code == 200:
@@ -241,7 +247,11 @@ class IntegratedBusinessIntelligence:
                             # Validate and enhance recommendations
                             valid_recs = []
                             for rec in data["recommendations"]:
-                                if isinstance(rec, dict) and rec.get("business_name") and rec.get("description"):
+                                if isinstance(rec, dict) and (rec.get("title") or rec.get("business_name")) and rec.get("description"):
+                                    # Ensure 'title' exists for the dashboard
+                                    if "business_name" in rec and "title" not in rec:
+                                        rec["title"] = rec["business_name"]
+                                    
                                     # Ensure Indian currency format
                                     if "investment_range" in rec and "₹" not in rec["investment_range"]:
                                         # Convert any dollar amounts to rupees (approximate)
@@ -262,7 +272,7 @@ class IntegratedBusinessIntelligence:
                                 print(f"✅ Pollinations success: {len(valid_recs)} recommendations")
                                 return {
                                     "success": True,
-                                    "recommendations": valid_recs[:8],  # Limit to 8 recommendations
+                                    "recommendations": valid_recs[:15],  # Limit to 15 recommendations
                                     "ai_source": "Pollinations AI (Real-Time Analysis)"
                                 }
                     except json.JSONDecodeError as e:
@@ -279,7 +289,7 @@ class IntegratedBusinessIntelligence:
                                     print(f"✅ Extracted JSON successfully")
                                     return {
                                         "success": True,
-                                        "recommendations": data["recommendations"][:8],
+                                        "recommendations": data["recommendations"][:15],
                                         "ai_source": "Pollinations AI (Extracted)"
                                     }
                             except Exception as extract_error:
@@ -302,14 +312,14 @@ class IntegratedBusinessIntelligence:
 
     def _build_prompt(self, area: str, context: str, lang: str) -> str:
         return f"""
-        CORE MISSION: IDENTIFY EXACTLY 10 UNYIELDING VENTURE OPPORTUNITIES FOR {area} (2026).
+        CORE MISSION: IDENTIFY EXACTLY 15 UNYIELDING VENTURE OPPORTUNITIES FOR {area} (2026).
         
         RAG CONTEXT (GROUND TRUTH):
         {context if context else "Scouting swarm busy. Rely on deep economic reasoning for " + area}
 
         STRICT IDENTITY PROTOCOL (UNBREAKABLE):
         1. DATA EXTRACTION: Extract local gaps from RAG signals.
-        2. VENTURE MAPPING: Map gaps to exactly 10 professional business roadmaps.
+        2. VENTURE MAPPING: Map gaps to exactly 15 professional business roadmaps.
         3. BRANDING DESIGN (RULE OF ZERO):
            - RULE 1 [CRITICAL]: ABSOLUTELY NO mention of '{area}', city, ZIP, state, or 'India' in any business title.
            - RULE 2: FORBID generic 'Local Digital Solutions' or 'Kolkata Logistics' templates.
@@ -560,177 +570,22 @@ class IntegratedBusinessIntelligence:
         a_low = area.lower()
         for r in recs:
             if not isinstance(r, dict): continue
-            t = r.get("title", "Strategic Opportunity")
+            
+            # Robust title extraction
+            t = r.get("title") or r.get("name") or r.get("business_name") or r.get("idea") or "Strategic Opportunity"
+            
+            # Clean up the title (remove location artifacts)
             t = re.sub(rf"(?i)\s+(for|in|at|near|of|area)\s+{re.escape(a_low)}.*", "", t)
             t = re.sub(r"\d{5,6}", "", t)
             t = re.sub(r"(?i)\bIndia\b", "", t)
+            
             r["title"] = t.strip().title()
             p.append(r)
         return p
 
-    def _generate_smart_fallback(self, area: str, language: str) -> Dict:
-        """Dynamic fallback using location analysis and market research"""
-        
-        # Analyze location to determine market characteristics
-        area_lower = area.lower()
-        
-        # Detect economic indicators based on location
-        major_cities = ["mumbai", "delhi", "bangalore", "chennai", "hyderabad", "pune", "kolkata"]
-        tier2_cities = ["ahmedabad", "surat", "jaipur", "lucknow", "kanpur", "nagpur", "indore", "bhopal", "visakhapatnam", "vadodara"]
-        
-        is_major_city = any(city in area_lower for city in major_cities)
-        is_tier2_city = any(city in area_lower for city in tier2_cities)
-        
-        # Generate dynamic recommendations based on current market trends
-        recommendations = []
-        
-        if is_major_city:
-            # Metro cities - focus on tech, services, and innovation
-            base_investment = 300000
-            recommendations = self._generate_metro_opportunities(area, base_investment)
-        elif is_tier2_city:
-            # Tier 2 cities - focus on emerging markets and local needs
-            base_investment = 200000
-            recommendations = self._generate_tier2_opportunities(area, base_investment)
-        else:
-            # Smaller cities/towns - focus on local services and agriculture
-            base_investment = 150000
-            recommendations = self._generate_local_opportunities(area, base_investment)
-        
-        return {
-            "success": True,
-            "recommendations": recommendations,
-            "ai_source": "Dynamic Market Analysis Fallback",
-            "analysis_quality": "market_trend_based",
-            "message": f"Generated market-trend based recommendations for {area}"
-        }
-    
-    def _generate_metro_opportunities(self, area: str, base_investment: int) -> List[Dict]:
-        """Generate opportunities for metro cities based on current trends"""
-        currency = "₹"
-        
-        # Current 2026 market trends for metro cities
-        opportunities = [
-            {
-                "business_name": "AI-Powered EdTech Solutions",
-                "description": "Personalized learning platform using AI for skill development in emerging technologies. Offers courses in AI, blockchain, and digital marketing with job placement assistance.",
-                "market_gap": "Skill gap in AI and emerging technologies",
-                "target_audience": "Working professionals, college students, career switchers",
-                "investment_range": f"{currency}{base_investment:,} - {currency}{base_investment*2:,}",
-                "roi_potential": "High - 45-65% annual returns",
-                "implementation_difficulty": "Medium",
-                "market_size": "Metropolitan tech workforce",
-                "competitive_advantage": "AI-driven personalization and industry partnerships"
-            },
-            {
-                "business_name": "Sustainable Urban Logistics",
-                "description": "Electric vehicle-based last-mile delivery service focusing on eco-friendly packaging and carbon-neutral operations. Serves e-commerce and local businesses.",
-                "market_gap": "Sustainable delivery solutions for urban areas",
-                "target_audience": "E-commerce businesses, environmentally conscious consumers",
-                "investment_range": f"{currency}{base_investment*2:,} - {currency}{base_investment*4:,}",
-                "roi_potential": "High - 40-55% annual returns",
-                "implementation_difficulty": "Medium-High",
-                "market_size": "Urban delivery market",
-                "competitive_advantage": "Sustainability focus with government incentives"
-            },
-            {
-                "business_name": "HealthTech Diagnostics Hub",
-                "description": "AI-powered health screening and telemedicine platform offering home-based diagnostic services and remote consultations with specialists.",
-                "market_gap": "Accessible healthcare diagnostics and remote consultation",
-                "target_audience": "Urban families, elderly population, busy professionals",
-                "investment_range": f"{currency}{base_investment*3:,} - {currency}{base_investment*6:,}",
-                "roi_potential": "Very High - 50-70% annual returns",
-                "implementation_difficulty": "High",
-                "market_size": "Urban healthcare market",
-                "competitive_advantage": "AI diagnostics with home service convenience"
-            }
-        ]
-        
-        return opportunities
-    
-    def _generate_tier2_opportunities(self, area: str, base_investment: int) -> List[Dict]:
-        """Generate opportunities for tier 2 cities"""
-        currency = "₹"
-        
-        opportunities = [
-            {
-                "business_name": "Digital Commerce Enabler",
-                "description": "Platform helping traditional retailers transition to online sales with inventory management, digital payments, and customer engagement tools.",
-                "market_gap": "Digital transformation for traditional retail businesses",
-                "target_audience": "Local retailers, small business owners, traditional merchants",
-                "investment_range": f"{currency}{base_investment:,} - {currency}{base_investment*2:,}",
-                "roi_potential": "High - 35-50% annual returns",
-                "implementation_difficulty": "Medium",
-                "market_size": "Local retail ecosystem",
-                "competitive_advantage": "Local market understanding with digital expertise"
-            },
-            {
-                "business_name": "Smart Manufacturing Solutions",
-                "description": "IoT and automation solutions for small and medium manufacturing units to improve efficiency, reduce waste, and enhance quality control.",
-                "market_gap": "Technology adoption in traditional manufacturing",
-                "target_audience": "SME manufacturers, industrial units, production facilities",
-                "investment_range": f"{currency}{base_investment*2:,} - {currency}{base_investment*4:,}",
-                "roi_potential": "High - 40-60% annual returns",
-                "implementation_difficulty": "Medium-High",
-                "market_size": "Regional manufacturing sector",
-                "competitive_advantage": "Industry 4.0 solutions for SMEs"
-            },
-            {
-                "business_name": "Regional Talent Development",
-                "description": "Skill development center focusing on local industry needs including manufacturing, services, and digital skills with placement partnerships.",
-                "market_gap": "Industry-specific skill development for local workforce",
-                "target_audience": "Local youth, job seekers, career changers",
-                "investment_range": f"{currency}{base_investment:,} - {currency}{base_investment*3:,}",
-                "roi_potential": "Medium-High - 30-45% annual returns",
-                "implementation_difficulty": "Medium",
-                "market_size": "Regional workforce development",
-                "competitive_advantage": "Local industry partnerships and placement guarantee"
-            }
-        ]
-        
-        return opportunities
-    
-    def _generate_local_opportunities(self, area: str, base_investment: int) -> List[Dict]:
-        """Generate opportunities for smaller cities and towns"""
-        currency = "₹"
-        
-        opportunities = [
-            {
-                "business_name": "AgriTech Innovation Hub",
-                "description": "Technology solutions for farmers including drone-based crop monitoring, soil analysis, weather prediction, and direct market access platform.",
-                "market_gap": "Modern technology adoption in agriculture",
-                "target_audience": "Local farmers, agricultural cooperatives, rural entrepreneurs",
-                "investment_range": f"{currency}{base_investment:,} - {currency}{base_investment*3:,}",
-                "roi_potential": "Medium-High - 30-45% annual returns",
-                "implementation_difficulty": "Medium",
-                "market_size": "Regional agricultural community",
-                "competitive_advantage": "Government support and farmer-centric approach"
-            },
-            {
-                "business_name": "Community Services Network",
-                "description": "Digital platform connecting local service providers with residents for home services, healthcare, education, and emergency services.",
-                "market_gap": "Organized access to reliable local services",
-                "target_audience": "Local residents, service providers, small business owners",
-                "investment_range": f"{currency}{base_investment//2:,} - {currency}{base_investment*2:,}",
-                "roi_potential": "Medium - 25-40% annual returns",
-                "implementation_difficulty": "Low-Medium",
-                "market_size": "Local community network",
-                "competitive_advantage": "First-mover advantage and community trust"
-            },
-            {
-                "business_name": "Renewable Energy Solutions",
-                "description": "Solar panel installation and maintenance services for homes and small businesses with financing options and energy efficiency consulting.",
-                "market_gap": "Affordable renewable energy adoption",
-                "target_audience": "Homeowners, small businesses, rural communities",
-                "investment_range": f"{currency}{base_investment*2:,} - {currency}{base_investment*5:,}",
-                "roi_potential": "High - 35-55% annual returns",
-                "implementation_difficulty": "Medium",
-                "market_size": "Regional energy market",
-                "competitive_advantage": "Government incentives and environmental benefits"
-            }
-        ]
-        
-        return opportunities
+
+    # ─── HELPER METHODS ──────────────────────────────────────────────────────────
+
 
     def _clean_json(self, text: str) -> Optional[Dict]:
         try:

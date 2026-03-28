@@ -221,7 +221,12 @@ function ProfilePageContent() {
     
     try {
       const apiUrl = getApiUrl();
-      const response = await fetch(`${apiUrl}/api/saved-businesses?email=${encodeURIComponent(session.user.email)}`);
+      const response = await fetch(`${apiUrl}/api/saved-businesses?email=${encodeURIComponent(session.user.email)}`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
       
       if (response.ok) {
         const data = await response.json();
@@ -232,10 +237,15 @@ function ProfilePageContent() {
           localStorage.setItem(`vault_cache_${session.user.email}`, JSON.stringify(data));
         }
       } else {
+        console.warn(`Vault fetch failed: ${response.status} ${response.statusText}`);
         setSavedBusinesses([]);
       }
     } catch (error) {
-      console.error('Failed to fetch vault:', error);
+      // Silently handle network errors to avoid console spam
+      if (!silent) {
+        console.warn('Vault temporarily unavailable:', error instanceof Error ? error.message : 'Network error');
+      }
+      setSavedBusinesses([]);
     } finally {
       setLoadingVault(false);
     }
@@ -864,60 +874,48 @@ function ProfilePageContent() {
           <motion.div 
             initial={{ opacity: 0, x: -30 }}
             animate={{ opacity: 1, x: 0 }}
-            className="lg:col-span-1 order-1 lg:order-1"
-          >
-            <div 
-              className="glass-card p-6 lg:p-8 text-center relative overflow-hidden bg-white/80 dark:bg-slate-900/50 border-slate-300 dark:border-white/10 shadow-xl"
+            className="lg:col-span-1 order-1 lg:order-1 space-y-6">
+          
+          <div 
+              className="glass-card p-10 lg:p-12 text-center relative overflow-hidden bg-white/80 dark:bg-[#020617] border-slate-300 dark:border-white/10 shadow-2xl rounded-[3rem]"
               style={{ 
                 borderColor: `${theme.primary}20`,
-                background: `linear-gradient(135deg, ${theme.primary}08, transparent)`
+                background: `linear-gradient(135deg, ${theme.primary}05, transparent)`
               }}
             >
+              <div className="absolute inset-0 noise-bg opacity-[0.03] pointer-events-none" />
+              
               {/* Profile Image with Plan-based Animation */}
-              <div className="relative mb-4 lg:mb-6">
-                {/* Elegant pulsing ring instead of spinning gradient */}
+              <div className="relative mb-10">
                 <motion.div 
-                  className="absolute -inset-3 lg:-inset-4 rounded-full"
+                  className="absolute -inset-6 rounded-full"
                   style={{ 
-                    background: `linear-gradient(135deg, ${theme.primary}40, ${theme.secondary}40, ${theme.primary}40)`,
-                    filter: 'blur(8px)'
+                    background: `radial-gradient(circle, ${theme.primary}30, transparent 70%)`,
+                    filter: 'blur(15px)'
                   }}
                   animate={{
-                    scale: [1, 1.1, 1],
-                    opacity: [0.4, 0.8, 0.4],
+                    scale: [1, 1.15, 1],
+                    opacity: [0.3, 0.6, 0.3],
                   }}
-                  transition={{
-                    duration: 3,
-                    repeat: Infinity,
-                    ease: "easeInOut"
-                  }}
+                  transition={{ duration: 4, repeat: Infinity }}
                 />
-                {/* Secondary ring for depth */}
-                <motion.div 
-                  className="absolute -inset-2 lg:-inset-3 rounded-full border-2 opacity-30"
-                  style={{ borderColor: theme.primary }}
-                  animate={{
-                    scale: [1.05, 0.95, 1.05],
-                    opacity: [0.2, 0.6, 0.2],
-                  }}
-                  transition={{
-                    duration: 4,
-                    repeat: Infinity,
-                    ease: "easeInOut",
-                    delay: 0.5
-                  }}
-                />
+                
                 <div 
-                  className="relative group cursor-pointer"
+                  className="relative group cursor-pointer inline-block"
                   onClick={() => fileInputRef.current?.click()}
                 >
-                  <img 
-                    src={formData.image_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(formData.name || session?.user?.name || 'User')}&background=${theme.primary.slice(1)}&color=ffffff&size=200&bold=true`} 
-                    className="w-24 h-24 lg:w-32 lg:h-32 rounded-full border-4 border-white/20 shadow-2xl object-cover mx-auto relative z-10 group-hover:opacity-60 transition-all duration-500"
-                    alt="Profile"
-                  />
+                   <div className="absolute inset-0 rounded-full border-2 border-dashed border-white/20 animate-spin-slow group-hover:opacity-100 opacity-30 transition-opacity" />
+                   <div className="relative p-2">
+                    <img 
+                      src={formData.image_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(formData.name || session?.user?.name || 'User')}&background=${theme.primary.slice(1)}&color=ffffff&size=200&bold=true`} 
+                      className="w-28 h-28 lg:w-36 lg:h-36 rounded-full border-4 border-white dark:border-white/5 shadow-2xl object-cover relative z-10 group-hover:scale-95 transition-all duration-500"
+                      alt="Profile"
+                    />
+                   </div>
                   <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity z-20">
-                    <Camera className="text-white w-8 h-8 lg:w-10 lg:h-10" />
+                    <div className="p-4 rounded-full bg-black/60 backdrop-blur-md">
+                       <Camera className="text-white w-8 h-8" />
+                    </div>
                   </div>
                   <input 
                     type="file" 
@@ -926,124 +924,84 @@ function ProfilePageContent() {
                     accept="image/*"
                     onChange={handleImageChange}
                   />
+                  
                   <motion.div 
-                    className="absolute -bottom-1 -right-1 lg:-bottom-2 lg:-right-2 p-2 lg:p-3 rounded-full shadow-xl border-2 lg:border-4 border-white dark:border-slate-800"
+                    className="absolute bottom-2 right-2 p-3 rounded-2xl shadow-2xl border border-white/10 z-20"
                     style={{ backgroundColor: theme.primary }}
-                    whileHover={{ scale: 1.1 }}
-                    whileTap={{ scale: 0.95 }}
                     animate={{
-                      boxShadow: [
-                        `0 0 20px ${theme.primary}40`,
-                        `0 0 30px ${theme.primary}60`,
-                        `0 0 20px ${theme.primary}40`
-                      ]
+                      y: [0, -4, 0],
+                      boxShadow: [`0 10px 20px ${theme.primary}20`, `0 20px 40px ${theme.primary}40`, `0 10px 20px ${theme.primary}20`]
                     }}
-                    transition={{
-                      duration: 2,
-                      repeat: Infinity,
-                      ease: "easeInOut"
-                    }}
+                    transition={{ duration: 2, repeat: Infinity }}
                   >
-                    <PlanIcon size={16} className="lg:w-5 lg:h-5 text-white" />
+                    <PlanIcon size={18} className="text-white" />
                   </motion.div>
                 </div>
               </div>
 
               {/* User Info */}
               <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="space-y-6"
               >
-                <h1 className="text-xl lg:text-2xl font-black text-slate-900 dark:text-white mb-2 italic tracking-tighter">
-                  {formData.name || session?.user?.name || 'Welcome'}
-                </h1>
-                <p className="text-slate-500 dark:text-gray-400 text-xs lg:text-sm mb-3 lg:mb-4 break-all px-2 font-medium">{session?.user?.email}</p>
-                
-                {formData.company && (
-                  <motion.div 
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="flex items-center justify-center gap-2 text-xs lg:text-sm text-slate-600 dark:text-gray-300 mb-2 font-bold"
-                  >
-                    <Building2 size={12} className="lg:w-3.5 lg:h-3.5" />
-                    <span className="truncate px-2 italic">{formData.company}</span>
-                  </motion.div>
-                )}
-                
-                {(formData.location || userLocation?.country !== 'Unknown') && (
-                  <motion.div 
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    className="flex items-center justify-center gap-2 text-xs lg:text-sm text-slate-600 dark:text-gray-300 mb-2 font-bold"
-                  >
-                    <MapPin size={12} className="lg:w-3.5 lg:h-3.5" />
-                    <span className="truncate px-2 italic">{formData.location || `${userLocation?.city}, ${userLocation?.country}`}</span>
-                  </motion.div>
-                )}
+                <div>
+                   <h1 className="text-2xl lg:text-3xl font-black text-slate-900 dark:text-white mb-1 italic tracking-tighter uppercase leading-none">
+                     {formData.name || session?.user?.name || 'User'}
+                   </h1>
+                   <p className="text-slate-400 dark:text-gray-500 text-[10px] font-black uppercase tracking-[0.2em]">{session?.user?.email}</p>
+                </div>
 
-                {joinDate && (
-                  <div className="flex items-center justify-center gap-2 text-xs lg:text-sm text-slate-500 dark:text-gray-400 mb-3 lg:mb-4 font-black italic uppercase tracking-widest">
-                    <Calendar size={12} className="lg:w-3.5 lg:h-3.5" />
-                    <span>Member since {joinDate.toLocaleDateString()}</span>
+                <div className="space-y-3 pt-6 border-t border-slate-200 dark:border-white/5">
+                  {formData.company && (
+                    <div className="flex items-center gap-4 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-gray-400">
+                      <Building2 size={12} style={{ color: theme.primary }} />
+                      <span className="italic truncate">{formData.company}</span>
+                    </div>
+                  )}
+                  
+                  <div className="flex items-center gap-4 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-gray-400">
+                    <MapPin size={12} style={{ color: theme.primary }} />
+                    <span className="italic truncate">{formData.location || 'Node Scoping...'}</span>
                   </div>
-                )}
-              </motion.div>
-              {/* Profile Completion */}
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.4 }}
-                className="mb-4 lg:mb-6"
-              >
-                <div className="flex items-center justify-between mb-2 font-black italic">
-                  <span className="text-xs lg:text-[10px] uppercase tracking-widest text-slate-500 dark:text-gray-300">Profile Completion</span>
-                  <span className="text-xs lg:text-sm font-black" style={{ color: theme.primary }}>
-                    {completionPercentage()}%
-                  </span>
-                </div>
-                <div className="w-full bg-slate-200 dark:bg-gray-700 rounded-full h-1.5 lg:h-2 overflow-hidden">
-                  <motion.div 
-                    className="h-1.5 lg:h-2 rounded-full"
-                    style={{ backgroundColor: theme.primary }}
-                    initial={{ width: 0 }}
-                    animate={{ width: `${completionPercentage()}%` }}
-                    transition={{ duration: 1, delay: 0.5 }}
-                  />
-                </div>
-              </motion.div>
 
-              {/* Stats Grid */}
-              <motion.div 
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.6 }}
-                className="grid grid-cols-2 gap-3 lg:gap-4 mb-4 lg:mb-6"
-              >
-                <div className="text-center p-3 lg:p-4 bg-white dark:bg-white/5 rounded-xl border border-slate-300 dark:border-white/10 shadow-sm">
-                  <motion.div 
-                    className="text-2xl lg:text-3xl font-black text-slate-900 dark:text-white mb-1 italic tracking-tighter"
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ delay: 0.8, type: "spring", bounce: 0.5 }}
-                  >
-                    {analysisCount}
-                  </motion.div>
-                  <div className="text-[10px] font-black text-slate-500 dark:text-gray-400 uppercase tracking-widest">Analyses</div>
+                  {joinDate && (
+                    <div className="flex items-center gap-4 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-gray-400">
+                      <Calendar size={12} style={{ color: theme.primary }} />
+                      <span className="italic">Member Since {joinDate.getFullYear()}</span>
+                    </div>
+                  )}
                 </div>
-                <div className="text-center p-3 lg:p-4 bg-white dark:bg-white/5 rounded-xl border border-slate-300 dark:border-white/10 shadow-sm">
-                  <motion.div 
-                    className="text-2xl lg:text-3xl font-black mb-1 italic tracking-tighter"
-                    style={{ color: theme.primary }}
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ delay: 1, type: "spring", bounce: 0.5 }}
-                  >
-                    {planFeatures.maxAnalyses === -1 ? '∞' : planFeatures.maxAnalyses}
-                  </motion.div>
-                  <div className="text-[10px] font-black text-slate-500 dark:text-gray-400 uppercase tracking-widest">Limit</div>
+
+                {/* Profile Readiness Bar */}
+                <div className="pt-6">
+                   <div className="flex items-center justify-between mb-2">
+                      <span className="text-[8px] font-black uppercase tracking-[0.3em] text-slate-500 italic">Readiness Protocol</span>
+                      <span className="text-xs font-black italic" style={{ color: theme.primary }}>{completionPercentage()}%</span>
+                   </div>
+                   <div className="w-full h-1.5 bg-slate-200 dark:bg-white/5 rounded-full overflow-hidden">
+                      <motion.div 
+                        className="h-full rounded-full"
+                        style={{ backgroundColor: theme.primary, boxShadow: `0 0 10px ${theme.primary}50` }}
+                        initial={{ width: 0 }}
+                        animate={{ width: `${completionPercentage()}%` }}
+                      />
+                   </div>
+                </div>
+
+                {/* Tactical Quota Grid */}
+                <div className="grid grid-cols-2 gap-4 pt-6">
+                   <div className="p-5 bg-white dark:bg-white/5 rounded-3xl border border-slate-200 dark:border-white/10 group hover:border-blue-500/30 transition-all">
+                      <div className="text-2xl lg:text-3xl font-black text-slate-900 dark:text-white italic tracking-tighter mb-1">{analysisCount}</div>
+                      <div className="text-[8px] font-black text-slate-400 uppercase tracking-widest opacity-60">Scans</div>
+                   </div>
+                   <div className="p-5 bg-white dark:bg-white/5 rounded-3xl border border-slate-200 dark:border-white/10 group hover:border-emerald-500/30 transition-all">
+                      <div className="text-2xl lg:text-3xl font-black italic tracking-tighter mb-1" style={{ color: theme.primary }}>{planFeatures.maxAnalyses === -1 ? '∞' : planFeatures.maxAnalyses}</div>
+                      <div className="text-[8px] font-black text-slate-400 uppercase tracking-widest opacity-60">Limit</div>
+                   </div>
                 </div>
               </motion.div>
+            </div>
 
               {/* Upgrade CTA for Free Users */}
               {plan === 'free' && (
@@ -1074,7 +1032,6 @@ function ProfilePageContent() {
                   </Link>
                 </motion.div>
               )}
-            </div>
           </motion.div>
           {/* Right Content - Tabs */}
           <motion.div 
@@ -1168,46 +1125,64 @@ function ProfilePageContent() {
                           </div>
 
                           {/* Status Badges - High Engagement */}
+                          {/* Status Badges - High Engagement */}
                           <div className="flex flex-wrap items-center justify-center lg:justify-start gap-3 md:gap-4">
                               <div 
-                                className={`px-4 md:px-5 py-2 md:py-2.5 rounded-2xl border flex items-center gap-2 md:gap-3 transition-all duration-500 font-black italic shadow-xl`}
+                                className={`px-5 py-3 rounded-2xl border flex items-center gap-3 transition-all duration-500 font-black italic shadow-xl group hover:scale-105`}
                                 style={{ 
-                                  backgroundColor: completionPercentage() > 80 ? `${theme.primary}20` : 'transparent',
-                                  borderColor: completionPercentage() > 80 ? `${theme.primary}30` : 'inherit',
+                                  backgroundColor: completionPercentage() > 80 ? `${theme.primary}15` : 'transparent',
+                                  borderColor: completionPercentage() > 80 ? `${theme.primary}25` : 'inherit',
                                   color: completionPercentage() > 80 ? theme.primary : 'inherit'
                                 }}
                               >
-                                 <Award size={16} className="md:w-[18px]" />
-                                 <span className="text-[9px] md:text-[10px] uppercase tracking-widest">{completionPercentage() > 80 ? 'Elite Status' : 'Basic User'}</span>
+                                 <Award size={18} className="group-hover:rotate-12 transition-transform" />
+                                 <div className="flex flex-col items-start leading-none">
+                                    <span className="text-[8px] font-black uppercase tracking-[0.2em] opacity-50 mb-1">Status</span>
+                                    <span className="text-[10px] uppercase tracking-widest">{completionPercentage() > 80 ? 'Elite Operative' : 'Prospect'}</span>
+                                 </div>
                               </div>
-                             <div className={`px-4 md:px-5 py-2 md:py-2.5 rounded-2xl border flex items-center gap-2 md:gap-3 transition-all duration-500 group relative font-black italic ${formData.location ? 'bg-blue-500/20 border-blue-500/30 text-blue-600 dark:text-blue-400 shadow-xl' : 'bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-400 dark:text-slate-500'}`}>
-                                <Globe size={16} className={`md:w-[18px] ${formData.location ? 'animate-pulse' : ''}`} />
-                                <span className="text-[9px] md:text-[10px] uppercase tracking-widest">{formData.location ? `Node: ${formData.location.split(',')[0]}` : 'Grid: Not Set'}</span>
+                             <div className={`px-5 py-3 rounded-2xl border flex items-center gap-3 transition-all duration-500 group relative font-black italic hover:scale-105 ${formData.location ? 'bg-blue-500/10 border-blue-500/20 text-blue-500 shadow-xl' : 'bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-400 dark:text-slate-500'}`}>
+                                <Globe size={18} className={`${formData.location ? 'animate-pulse' : ''}`} />
+                                <div className="flex flex-col items-start leading-none">
+                                   <span className="text-[8px] font-black uppercase tracking-[0.2em] opacity-50 mb-1">Node</span>
+                                   <span className="text-[10px] uppercase tracking-widest">{formData.location ? formData.location.split(',')[0] : 'Scanning...'}</span>
+                                </div>
                              </div>
-                             <div className="px-4 md:px-5 py-2 md:py-2.5 rounded-2xl bg-purple-500/10 border border-purple-500/20 text-purple-600 dark:text-purple-400 flex items-center gap-2 md:gap-3 font-black italic">
-                                <Target size={16} className="md:w-[18px]" />
-                                <span className="text-[9px] md:text-[10px] uppercase tracking-widest">Alpha Tier</span>
+                             <div className="px-5 py-3 rounded-2xl bg-purple-500/10 border border-purple-500/20 text-purple-500 flex items-center gap-3 font-black italic hover:scale-105 transition-transform shadow-xl">
+                                <Target size={18} />
+                                <div className="flex flex-col items-start leading-none">
+                                   <span className="text-[8px] font-black uppercase tracking-[0.2em] opacity-50 mb-1">Tier</span>
+                                   <span className="text-[10px] uppercase tracking-widest">Alpha Tier</span>
+                                </div>
                              </div>
                           </div>
 
-                          {/* Critical Actions */}
-                          <div className="pt-6 border-t border-white/10 flex flex-col sm:flex-row items-center gap-6">
-                             <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">Next Steps:</span>
-                             <div className="flex gap-4">
+                          {/* Critical Actions - Term-Level Navigation */}
+                          <div className="pt-8 mt-4 border-t border-slate-200 dark:border-white/5 flex flex-col sm:flex-row items-center gap-8 group">
+                             <div className="flex items-center gap-3">
+                                <div className="w-8 h-[1px] bg-slate-200 dark:bg-white/10 hidden lg:block" />
+                                <span className="text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.4em] italic leading-none">Next Tactical Steps:</span>
+                             </div>
+                             
+                             <div className="flex flex-wrap items-center justify-center gap-6">
                                  {completionPercentage() < 100 && (
                                    <button 
                                      onClick={() => setActiveTab('profile')}
-                                     className="text-[11px] font-bold hover:text-white flex items-center gap-2 group transition-colors"
+                                     className="text-[10px] font-black uppercase tracking-[0.2em] flex items-center gap-3 transition-all hover:scale-105 active:scale-95 group/btn"
                                      style={{ color: theme.primary }}
                                    >
-                                      Finish Profile <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                                      <span className="border-b border-transparent group-hover/btn:border-current transition-all italic">{t('prof_finish_profile')}</span> 
+                                      <ArrowRight size={12} className="group-hover/btn:translate-x-1.5 transition-transform" />
                                    </button>
                                  )}
                                 <button 
                                   onClick={() => router.push('/dashboard')}
-                                  className="text-[11px] font-bold text-blue-400 hover:text-white flex items-center gap-2 group transition-colors"
+                                  className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-500 hover:text-blue-400 flex items-center gap-3 transition-all hover:scale-105 active:scale-95 group/search"
                                 >
-                                   Search Now <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
+                                   <span className="border-b border-transparent group-hover/search:border-current transition-all italic">Launch Reconnaissance</span>
+                                   <div className="p-1 px-1.5 rounded-md bg-blue-500/10 border border-blue-500/20 group-hover/search:bg-blue-500 group-hover/search:text-white transition-all">
+                                      <ArrowRight size={10} className="group-hover/search:translate-x-0.5 transition-transform" />
+                                   </div>
                                 </button>
                              </div>
                           </div>
@@ -1235,33 +1210,43 @@ function ProfilePageContent() {
                         </div>
                      </div>
 
-                     {analysisHistory.length > 0 ? (
-                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
-
-                         {analysisHistory.slice(0, 6).map((item, idx) => (
-                           <motion.div 
-                             key={item.id || idx}
-                             initial={{ opacity: 0, scale: 0.95 }}
-                             animate={{ opacity: 1, scale: 1 }}
-                             whileHover={{ scale: 1.02, translateY: -5 }}
-                             transition={{ delay: idx * 0.1, duration: 0.3 }}
-
-                             className="p-6 rounded-[2rem] bg-slate-50 dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 hover:border-blue-500/30 hover:shadow-2xl hover:shadow-blue-500/10 transition-all cursor-pointer group"
-
-                             onClick={() => router.push(`/dashboard?topic=${encodeURIComponent(item.topic || '')}`)}
-                           >
-                             <div className="flex items-start justify-between mb-3">
-                               <div className="flex items-center gap-2">
-                                 <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
-                                 <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{item.type || 'AI SCAN'}</span>
+                       {analysisHistory.length > 0 ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                          {analysisHistory.slice(0, 6).map((item, idx) => (
+                            <motion.div 
+                              key={item.id || idx}
+                              initial={{ opacity: 0, y: 20 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              whileHover={{ y: -5, boxShadow: `0 20px 40px -20px ${theme.primary}40` }}
+                              transition={{ delay: idx * 0.05 }}
+                              className="group p-6 rounded-[2rem] bg-white dark:bg-white/[0.03] border border-slate-200 dark:border-white/10 hover:border-blue-500/30 transition-all cursor-pointer relative overflow-hidden"
+                              onClick={() => router.push(`/dashboard?topic=${encodeURIComponent(item.topic || '')}`)}
+                            >
+                               <div className="absolute top-0 right-0 w-24 h-24 bg-gradient-to-br from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                               
+                               <div className="flex items-center justify-between mb-4">
+                                  <div className="flex items-center gap-2">
+                                     <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse shadow-[0_0_8px_rgba(59,130,246,0.5)]" />
+                                     <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400 group-hover:text-blue-400 transition-colors">{item.type || 'Neural Scan'}</span>
+                                  </div>
+                                  <span className="text-[9px] font-black text-slate-500 dark:text-slate-600">{new Date(item.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
                                </div>
-                               <span className="text-[9px] font-black text-slate-500">{new Date(item.created_at).toLocaleDateString()}</span>
-                             </div>
-                             <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase italic tracking-tighter mb-1 line-clamp-1">{item.topic || 'Market Analysis'}</h4>
-                             <p className="text-[10px] font-bold text-slate-500 dark:text-slate-400 truncate tracking-wide">{item.location || 'Global Search'}</p>
-                           </motion.div>
-                         ))}
-                       </div>
+
+                               <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase italic tracking-tighter mb-1 truncate leading-tight group-hover:text-blue-500 transition-colors">
+                                  {item.topic || 'Market Analysis'}
+                               </h4>
+                               <div className="flex items-center gap-1.5 opacity-60">
+                                  <MapPin size={10} className="text-slate-400" />
+                                  <span className="text-[10px] font-bold text-slate-400 truncate tracking-wide italic leading-none">{item.location || 'Global Search'}</span>
+                               </div>
+
+                               <div className="mt-6 flex items-center justify-between opacity-0 group-hover:opacity-100 transition-all translate-y-2 group-hover:translate-y-0">
+                                  <span className="text-[8px] font-black uppercase tracking-widest text-blue-500">View Dossier</span>
+                                  <ArrowRight size={12} className="text-blue-500" />
+                               </div>
+                            </motion.div>
+                          ))}
+                        </div>
                      ) : (
                        <div className="text-center py-10 opacity-50 grayscale">
                           <Activity size={48} className="mx-auto mb-4 text-slate-300" />
@@ -1291,30 +1276,65 @@ function ProfilePageContent() {
                     </div>
                     
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8">
-                      {/* Usage Stats */}
-                      <div>
-                        <h3 className="text-lg font-black text-slate-900 dark:text-white mb-4 flex items-center gap-2 italic tracking-tighter">
-                          <Activity size={20} style={{ color: theme.primary }} />
-                          Usage Statistics
+                      {/* Usage Stats - High Density Grid */}
+                      <div className="space-y-6">
+                        <h3 className="text-lg font-black text-slate-900 dark:text-white mb-6 flex items-center gap-3 italic tracking-tighter">
+                          <Activity size={20} className="animate-pulse" style={{ color: theme.primary }} />
+                          Neural Usage Statistics
                         </h3>
-                        <div className="space-y-4">
-                          <div className="p-4 bg-slate-100 dark:bg-white/5 rounded-xl border border-slate-200 dark:border-white/10">
-                            <div className="flex items-center justify-between mb-2 font-black italic">
-                              <span className="text-[10px] uppercase tracking-widest text-slate-500 dark:text-gray-300">Regional Intelligence Scans</span>
-                              <span className="text-sm text-slate-900 dark:text-white">
-                                {analysisCount} / {planFeatures.maxAnalyses === -1 ? '∞' : planFeatures.maxAnalyses}
-                              </span>
-                            </div>
-                            {planFeatures.maxAnalyses !== -1 && (
-                              <div className="w-full bg-slate-200 dark:bg-gray-700 rounded-full h-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-4">
+                          <div className="p-6 bg-slate-900 dark:bg-white/[0.03] rounded-3xl border border-slate-800 dark:border-white/10 relative overflow-hidden group">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 blur-3xl rounded-full" />
+                            <div className="relative z-10">
+                              <div className="flex items-center justify-between mb-4">
+                                <span className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">Regional Scans</span>
+                                <span className="text-xs font-black text-white italic tracking-widest bg-blue-500/20 px-2 py-0.5 rounded-md border border-blue-500/30">
+                                  {analysisCount} <span className="opacity-20 mx-1">/</span> {planFeatures.maxAnalyses === -1 ? '∞' : planFeatures.maxAnalyses}
+                                </span>
+                              </div>
+                              <div className="w-full bg-slate-800 rounded-full h-1.5 mb-2">
                                 <motion.div 
-                                  className="h-2 rounded-full transition-all duration-300"
+                                  className="h-full rounded-full shadow-[0_0_10px_rgba(59,130,246,0.5)]"
                                   style={{ backgroundColor: theme.primary }}
                                   initial={{ width: 0 }}
-                                  animate={{ width: `${Math.min((analysisCount / planFeatures.maxAnalyses) * 100, 100)}%` }}
+                                  animate={{ width: planFeatures.maxAnalyses === -1 ? '95%' : `${Math.min((analysisCount / planFeatures.maxAnalyses) * 100, 100)}%` }}
                                 />
                               </div>
-                            )}
+                              <p className="text-[9px] font-bold text-slate-500 italic">Sector-level reconnaissance bandwidth</p>
+                            </div>
+                          </div>
+
+                          <div className="p-6 bg-slate-900 dark:bg-white/[0.03] rounded-3xl border border-slate-800 dark:border-white/10 relative overflow-hidden group">
+                            <div className="absolute bottom-0 right-0 w-32 h-32 bg-emerald-500/10 blur-3xl rounded-full" />
+                            <div className="relative z-10">
+                              <div className="flex items-center justify-between mb-4">
+                                <span className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">Vault Integrity</span>
+                                <span className="text-xs font-black text-white italic tracking-widest bg-emerald-500/20 px-2 py-0.5 rounded-md border border-emerald-500/30">
+                                  {savedBusinesses.length} <span className="opacity-20 mx-1">/</span> {plan === 'free' ? '0' : '100+'}
+                                </span>
+                              </div>
+                              <div className="w-full bg-slate-800 rounded-full h-1.5 mb-2">
+                                <motion.div 
+                                  className="h-full rounded-full shadow-[0_0_10px_rgba(16,185,129,0.5)] bg-emerald-500"
+                                  initial={{ width: 0 }}
+                                  animate={{ width: plan === 'free' ? '0%' : '24%' }}
+                                />
+                              </div>
+                              <p className="text-[9px] font-bold text-slate-500 italic">Archival node storage utilization</p>
+                            </div>
+                          </div>
+                          
+                          <div className="hidden lg:block p-6 bg-slate-900 dark:bg-white/[0.03] rounded-3xl border border-slate-800 dark:border-white/10">
+                             <div className="flex items-center justify-between">
+                                <div>
+                                   <div className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500 mb-1">Neural Node Status</div>
+                                   <div className="flex items-center gap-2">
+                                      <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                                      <span className="text-xs font-black text-white italic tracking-tighter uppercase whitespace-nowrap">Tactical Core Active</span>
+                                   </div>
+                                </div>
+                                <Cpu size={24} className="text-slate-700 dark:text-gray-700 opacity-30" />
+                             </div>
                           </div>
                         </div>
                       </div>
@@ -1345,25 +1365,28 @@ function ProfilePageContent() {
                                 className="flex items-center justify-between p-3 bg-slate-100 dark:bg-white/5 rounded-xl border border-slate-200 dark:border-white/10 hover:bg-slate-200 dark:hover:bg-white/10 transition-all font-black italic relative group"
                               >
                                 <div className="flex items-center gap-3">
-                                  <feature.icon size={16} className={isIncluded && !feature.value ? "text-blue-500" : "text-slate-400 dark:text-gray-500"} />
-                                  <span className="text-[10px] uppercase tracking-widest text-slate-600 dark:text-gray-300">{feature.label}</span>
+                                  <div className={`p-2 rounded-lg ${isIncluded ? 'bg-blue-500/10' : 'bg-slate-200 dark:bg-white/5'}`}>
+                                    <feature.icon size={14} className={isIncluded && !feature.value ? "text-blue-500" : "text-slate-400 dark:text-gray-500"} />
+                                  </div>
+                                  <span className="text-[10px] uppercase tracking-[0.2em] font-black text-slate-600 dark:text-gray-300 group-hover:text-blue-500 transition-colors">{feature.label}</span>
                                 </div>
                                 
                                 {isIncluded ? (
                                   <span 
-                                    className="text-[8px] font-black px-3 py-1 rounded-full uppercase tracking-tighter border shadow-sm"
+                                    className="text-[8px] font-black px-4 py-1.5 rounded-xl uppercase tracking-widest border shadow-lg transition-all group-hover:scale-105"
                                     style={{ 
-                                      backgroundColor: `${theme.primary}20`,
-                                      borderColor: `${theme.primary}30`,
-                                      color: theme.primary
+                                      backgroundColor: `${theme.primary}10`,
+                                      borderColor: `${theme.primary}20`,
+                                      color: theme.primary,
+                                      boxShadow: `0 4px 10px -2px ${theme.primary}20`
                                     }}
                                   >
-                                    {feature.value || '✓ Included'}
+                                    {feature.value || 'Included'}
                                   </span>
                                 ) : (
                                   <Link 
                                     href="/acquisition-tiers"
-                                    className="text-[8px] font-black px-3 py-1 rounded-full uppercase tracking-tighter border border-slate-300 dark:border-white/10 text-slate-400 dark:text-gray-500 hover:bg-slate-900 hover:text-white dark:hover:bg-white dark:hover:text-slate-900 transition-all"
+                                    className="text-[8px] font-black px-4 py-1.5 rounded-xl uppercase tracking-widest border border-slate-300 dark:border-white/10 text-slate-400 dark:text-gray-500 hover:bg-slate-900 hover:text-white dark:hover:bg-white dark:hover:text-slate-900 transition-all opacity-50 group-hover:opacity-100"
                                   >
                                     Upgrade
                                   </Link>
@@ -1572,9 +1595,16 @@ function ProfilePageContent() {
                               <button 
                                 onClick={() => {
                                   // If the item itself has the full structure, use it directly
-                                  const storageData = item.details?.is_snapshot 
-                                    ? item.details 
-                                    : { business: item.details, area: item.location };
+                                  let storageData: any;
+                                  
+                                  if (item.details?.is_snapshot) {
+                                    storageData = item.details;
+                                  } else {
+                                    // Make sure business object has a title
+                                    const business = { ...(item.details || {}) };
+                                    if (!business.title) business.title = item.business_name;
+                                    storageData = { business, area: item.location };
+                                  }
                                     
                                   sessionStorage.setItem('selected_business', JSON.stringify(storageData));
                                   router.push('/business-details');
@@ -2141,52 +2171,62 @@ function ProfilePageContent() {
                                 
                                 const isDark = document.documentElement.classList.contains('dark');
                                 
-                                // html2canvas crashes on Tailwind v4 oklab/oklch colors
-                                // This is an aggressive fix: we strip all oklab/oklch declarations from the DOM
+                                // EXHAUSTIVE SANITIZATION: html2canvas recursively parses the DOM
+                                // Tailwind v4 uses modern colors (oklab/oklch) which crash jspdf/html2canvas
                                 const canvas = await html2canvas(element, {
                                   scale: 2,
                                   useCORS: true,
                                   backgroundColor: isDark ? "#020617" : "#ffffff",
                                   onclone: (clonedDoc) => {
-                                    // 1. STRIP ALL OKLCH/OKLAB FROM STYLE TAGS (The most direct fix for the crash)
+                                    const allElements = clonedDoc.querySelectorAll('*');
+                                    
+                                    // 1. STRIP ALL STYLE TAGS (Prevents global oklch/oklab definitions)
                                     const styleBlocks = clonedDoc.querySelectorAll('style');
                                     styleBlocks.forEach(style => {
-                                      // Replace oklch/oklab with a safe fallback hex (blue-500)
-                                      // This prevents html2canvas parser from seeing tokens it doesn't recognize
                                       let css = style.innerHTML;
-                                      if (css.includes('oklch') || css.includes('oklab')) {
+                                      if (css.includes('oklch') || css.includes('oklab') || css.includes('lab(') || css.includes('hwb(')) {
+                                        // Cleanse all modern colors to safe hex fallbacks
                                         css = css.replace(/oklch\([^)]+\)/g, '#3b82f6');
                                         css = css.replace(/oklab\([^)]+\)/g, '#3b82f6');
+                                        css = css.replace(/lab\([^)]+\)/g, '#3b82f6');
+                                        css = css.replace(/hwb\([^)]+\)/g, '#3b82f6');
                                         style.innerHTML = css;
                                       }
                                     });
 
-                                    // 2. SANITIZE INLINE STYLES AND COMPUTED STYLES
-                                    const allElements = clonedDoc.querySelectorAll('*');
+                                    // 2. SANITIZE ALL COMPUTED AND INLINE STYLES
                                     allElements.forEach(el => {
                                       const htmlEl = el as HTMLElement;
-                                      
-                                      // Clear any inline styles that might use oklch
-                                      if (htmlEl.style.color?.includes('okl')) htmlEl.style.color = '#3b82f6';
-                                      if (htmlEl.style.backgroundColor?.includes('okl')) htmlEl.style.backgroundColor = '#1e293b';
-                                      if (htmlEl.style.borderColor?.includes('okl')) htmlEl.style.borderColor = '#334155';
-                                      if (htmlEl.style.fill?.includes('okl')) htmlEl.style.fill = '#3b82f6';
-                                      if (htmlEl.style.stroke?.includes('okl')) htmlEl.style.stroke = '#3b82f6';
+                                      if (!htmlEl.style) return;
 
                                       const style = window.getComputedStyle(htmlEl);
-                                      const sanitize = (val: string) => {
-                                        if (!val || val === 'none') return val;
-                                        if (val.includes('oklch') || val.includes('oklab') || val.includes('lab(') || val.includes('hwb(')) {
-                                          return '#3b82f6'; 
+                                      const sanitizeValue = (val: string) => {
+                                        if (!val || val === 'none' || val === 'transparent') return val;
+                                        if (
+                                          val.includes('oklch') || 
+                                          val.includes('oklab') || 
+                                          val.includes('lab(') || 
+                                          val.includes('hwb(') ||
+                                          val.includes('var(--') // CSS vars in v4 often resolve to oklch
+                                        ) {
+                                          if (val.includes('0.5') || val.includes('50%')) return 'rgba(59, 130, 246, 0.5)';
+                                          return isDark ? '#1e293b' : '#f8fafc';
                                         }
                                         return val;
                                       };
 
-                                      // Force apply sanitized computed styles as inline overrides
-                                      htmlEl.style.color = sanitize(style.color);
-                                      htmlEl.style.backgroundColor = sanitize(style.backgroundColor);
-                                      htmlEl.style.borderColor = sanitize(style.borderColor);
-                                      htmlEl.style.boxShadow = sanitize(style.boxShadow);
+                                      // Force apply sanitized styles as inline overrides
+                                      htmlEl.style.color = sanitizeValue(style.color);
+                                      htmlEl.style.backgroundColor = sanitizeValue(style.backgroundColor);
+                                      htmlEl.style.borderColor = sanitizeValue(style.borderColor);
+                                      htmlEl.style.boxShadow = 'none'; 
+                                      htmlEl.style.textShadow = 'none';
+
+                                      // SVG specific styles (Lucide icons)
+                                      if (el.tagName.toLowerCase() === 'svg' || el.parentElement?.tagName.toLowerCase() === 'svg') {
+                                        htmlEl.style.fill = sanitizeValue(style.fill);
+                                        htmlEl.style.stroke = sanitizeValue(style.stroke);
+                                      }
                                     });
 
                                     const el = clonedDoc.getElementById('billing-report');

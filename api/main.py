@@ -129,6 +129,15 @@ async def log_origin(request: Request, call_next):
     return response
 
 # Consolidated Health Check
+@app.post("/api/generate-roadmap")
+async def api_generate_roadmap(request: Dict[str, str]):
+    title = request.get("title")
+    area = request.get("area")
+    if not title or not area:
+        return {"error": "Missing title or area"}
+    from simple_recommendations import generate_ai_roadmap
+    return await asyncio.to_thread(generate_ai_roadmap, title, area)
+
 @app.get("/")
 @app.get("/api/health")
 @app.get("/api/v1/health")
@@ -611,15 +620,32 @@ async def scrape_businesses(payload: ScrapeRequest, db: Session = Depends(get_db
         # Format results using our standard mapping
         results = [format_apify_to_internal(item) for item in raw_items]
         
-        # 💾 SAVE TO HISTORY (As requested by user 'not saving in db')
+        # 🧠 NEURAL INTELLIGENCE LAYER: Generate Landscape Summary (RAG-style)
+        landscape_summary = "Competitive mapping complete. Local market shows standard density."
+        try:
+            competitor_names = ", ".join([r['name'] for r in results[:10]])
+            categories = ", ".join(list(set([r['category'] for r in results])))
+            
+            prompt = f"Analyze this competitive landscape for '{payload.query}' in '{payload.location}'. " \
+                     f"Competitors found: {competitor_names}. Categories: {categories}. " \
+                     f"Provide a 2-sentence professional high-level assessment of market saturation and strategic entry potential."
+            
+            from simple_recommendations import call_pollinations_ai
+            summary_response = await asyncio.to_thread(call_pollinations_ai, prompt)
+            if summary_response:
+                landscape_summary = summary_response
+        except Exception as ai_err:
+            logger.error(f"Landscape AI analysis failed: {ai_err}")
+
+        # 💾 SAVE TO HISTORY
         if payload.email and db_available:
             try:
                 area_label = f"{payload.query} in {payload.location} (Deep Extraction)"
                 db_record = models.SearchHistory(
                     user_email=payload.email,
                     area=area_label,
-                    analysis=json.dumps({"source": "apify_google_maps", "count": len(results)}),
-                    recommendations=results # models.SearchHistory.recommendations is JSON type in models.py
+                    analysis=json.dumps({"source": "apify_google_maps", "count": len(results), "ai_summary": landscape_summary}),
+                    recommendations=results
                 )
                 db.add(db_record)
                 db.commit()
@@ -632,6 +658,7 @@ async def scrape_businesses(payload: ScrapeRequest, db: Session = Depends(get_db
             "success": True,
             "data": results,
             "count": len(results),
+            "summary": landscape_summary,
             "source": "google_maps_apify_deep"
         }
     except Exception as e:
@@ -1239,10 +1266,10 @@ async def get_recommendations(request: RecommendationRequest, db: Session = Depe
             is_generic_placeholder = "Strategic Market Opportunity" in cache_str or "₹5L-₹15L" in cache_str
             is_generic_template = any(t in cache_str for t in ["Local Digital Solutions", "Hyper-Local Logistics", "Eco-Smart Retail Hub"])
             
-            # STRICT COUNT VALIDATION: The V4.2 Strategic Engine MUST return 8-10 items. 
-            # If the cache has fewer than 8, it's definitely legacy data and MUST be refreshed.
+            # STRICT COUNT VALIDATION: The V4.2 Strategic Engine MUST return 12-15 items. 
+            # If the cache has fewer than 12, it's definitely legacy data and MUST be refreshed.
             rec_count = len(cached_recs) if isinstance(cached_recs, list) else 0
-            is_legacy_count = rec_count < 8
+            is_legacy_count = rec_count < 12
             
             # ADDRESS IN TITLE DETECTION: If any recommendation title is low-fidelity
             is_bad_naming = False
@@ -1255,7 +1282,7 @@ async def get_recommendations(request: RecommendationRequest, db: Session = Depe
                             print(f"⚠️  Detected low-fidelity naming in cached title: '{title}'. Forcing refresh...")
                             break
             
-            is_valid_cache = isinstance(cached_recs, list) and rec_count >= 8 and not is_generic_placeholder and not is_generic_template and not is_bad_naming and not is_legacy_count
+            is_valid_cache = isinstance(cached_recs, list) and rec_count >= 15 and not is_generic_placeholder and not is_generic_template and not is_bad_naming and not is_legacy_count
             
             if is_valid_cache:
                 # Deep validation: ensuring the structure has actual business titles, not empty shells
@@ -1456,7 +1483,7 @@ def get_user_history(email: str, db: Session = Depends(get_db)):
                 # Handle potential string-encoded JSON
                 recs = r.recommendations
                 if isinstance(recs, str): recs = json.loads(recs)
-                if not isinstance(recs, list) or len(recs) < 8:
+                if not isinstance(recs, list) or len(recs) < 3:
                     ids_to_purge.append(r.id)
             except: ids_to_purge.append(r.id)
             
@@ -2983,4 +3010,4 @@ if __name__ == "__main__":
         
     print("--- [STARTUP] Engine V4.2 Standardized on UTF-8 (RAG Cluster) ---")
     # Hot-reload enabled for strategic session updates
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=False)
