@@ -220,17 +220,26 @@ async def contact_form_submission(contact: ContactRequest, background_tasks: Bac
                 .content {{ padding: 40px; }}
                 .meta-label {{ text-transform: uppercase; font-size: 11px; font-weight: 900; letter-spacing: 0.15em; color: #64748b; margin-bottom: 8px; }}
                 .subject-box {{ margin-bottom: 32px; }}
-                .subject-text {{ font-size: 22px; font-weight: 800; color: #0f172a; margin: 0; line-height: 1.2; }}
+                .subject-text {{ font-size: 22px; font-weight: 800; color: #0f172a; margin: 0; line-height: 1.2; word-break: break-word; }}
                 .message-box {{ background-color: #f8fafc; padding: 32px; border-radius: 20px; border: 1px solid #f1f5f9; margin-bottom: 32px; }}
-                .message-text {{ font-size: 16px; line-height: 1.7; color: #334155; margin: 0; white-space: pre-wrap; }}
+                .message-text {{ font-size: 16px; line-height: 1.7; color: #334155; margin: 0; white-space: pre-wrap; word-break: break-word; }}
                 .sender-card {{ background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 20px; padding: 24px; }}
-                .sender-row {{ display: flex; justify-content: space-between; border-bottom: 1px solid #f1f5f9; padding: 8px 0; font-size: 14px; width: 100%; }}
-                .sender-row:last-child {{ border: none; }}
-                .label {{ color: #64748b; font-weight: 500; width: 120px; }}
-                .value {{ color: #0f172a; font-weight: 700; text-align: right; flex-grow: 1; }}
+                .label {{ color: #64748b; font-weight: 500; font-size: 14px; padding: 12px 0; word-break: break-word; }}
+                .value {{ color: #0f172a; font-weight: 700; font-size: 14px; text-align: right; padding: 12px 0; word-break: break-word; }}
                 .footer {{ background-color: #fafafa; padding: 24px 40px; text-align: center; border-top: 1px solid #f1f5f9; }}
                 .footer p {{ font-size: 12px; color: #94a3b8; margin: 0; }}
                 .accent-bar {{ height: 8px; background: linear-gradient(90deg, #10b981, #3b82f6); }}
+                
+                @media only screen and (max-width: 600px) {{
+                    .container {{ margin: 0 !important; border-radius: 0 !important; width: 100% !important; }}
+                    .header, .content, .footer {{ padding: 32px 20px !important; }}
+                    .subject-text {{ font-size: 20px !important; }}
+                    .message-box {{ padding: 20px !important; }}
+                    .label, .value {{ display: block !important; width: 100% !important; text-align: left !important; padding: 4px 0 !important; }}
+                    .label {{ padding-top: 12px !important; }}
+                    .value {{ padding-bottom: 12px !important; }}
+                    .sender-card {{ padding: 16px !important; }}
+                }}
             </style>
         </head>
         <body>
@@ -254,34 +263,34 @@ async def contact_form_submission(contact: ContactRequest, background_tasks: Bac
                     <div class="sender-card">
                         <table style="width: 100%; border-collapse: collapse;">
                             <tr style="border-bottom: 1px solid #f1f5f9;">
-                                <td style="padding: 12px 0; color: #64748b; font-size: 14px; font-weight: 500;">Name</td>
-                                <td style="padding: 12px 0; color: #0f172a; font-size: 14px; font-weight: 700; text-align: right;">{contact.name}</td>
+                                <td class="label">Name</td>
+                                <td class="value">{contact.name}</td>
                             </tr>
                             <tr style="border-bottom: 1px solid #f1f5f9;">
-                                <td style="padding: 12px 0; color: #64748b; font-size: 14px; font-weight: 500;">Identity</td>
-                                <td style="padding: 12px 0; color: #10b981; font-size: 14px; font-weight: 700; text-align: right;">{contact.email}</td>
+                                <td class="label">Identity</td>
+                                <td class="value" style="color: #10b981;">{contact.email}</td>
                             </tr>
                             {f'''
                             <tr style="border-bottom: 1px solid #f1f5f9;">
-                                <td style="padding: 12px 0; color: #64748b; font-size: 14px; font-weight: 500;">Company</td>
-                                <td style="padding: 12px 0; color: #0f172a; font-size: 14px; font-weight: 700; text-align: right;">{contact.profile_context.get("company", "Not specified")}</td>
+                                <td class="label">Company</td>
+                                <td class="value">{contact.profile_context.get("company", "Not specified")}</td>
                             </tr>
                             <tr style="border-bottom: 1px solid #f1f5f9;">
-                                <td style="padding: 12px 0; color: #64748b; font-size: 14px; font-weight: 500;">Industry</td>
-                                <td style="padding: 12px 0; color: #0f172a; font-size: 14px; font-weight: 700; text-align: right;">{contact.profile_context.get("industry", "Not specified")}</td>
+                                <td class="label">Industry</td>
+                                <td class="value">{contact.profile_context.get("industry", "Not specified")}</td>
                             </tr>
                             <tr style="border-bottom: 1px solid #f1f5f9;">
-                                <td style="padding: 12px 0; color: #64748b; font-size: 14px; font-weight: 500;">Location</td>
-                                <td style="padding: 12px 0; color: #0f172a; font-size: 14px; font-weight: 700; text-align: right;">{contact.profile_context.get("location", "Not specified")}</td>
+                                <td class="label">Location</td>
+                                <td class="value">{contact.profile_context.get("location", "Not specified")}</td>
                             </tr>
                             <tr style="border-bottom: 1px solid #f1f5f9;">
-                                <td style="padding: 12px 0; color: #64748b; font-size: 14px; font-weight: 500;">Phone</td>
-                                <td style="padding: 12px 0; color: #0f172a; font-size: 14px; font-weight: 700; text-align: right;">{contact.profile_context.get("phone", "Not specified")}</td>
+                                <td class="label">Phone</td>
+                                <td class="value">{contact.profile_context.get("phone", "Not specified")}</td>
                             </tr>
                             ''' if contact.profile_context else ''}
                             <tr>
-                                <td style="padding: 12px 0; color: #64748b; font-size: 14px; font-weight: 500;">Intelligence Logged</td>
-                                <td style="padding: 12px 0; color: #0f172a; font-size: 14px; font-weight: 700; text-align: right;">{request_time}</td>
+                                <td class="label">Intelligence Logged</td>
+                                <td class="value">{request_time}</td>
                             </tr>
                         </table>
                     </div>
