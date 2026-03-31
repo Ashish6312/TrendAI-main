@@ -4,7 +4,7 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { getApiUrl } from "@/config/api";
 
-export type SubscriptionPlan = 'free' | 'starter' | 'professional';
+export type SubscriptionPlan = 'free' | 'starter' | 'professional' | 'growth' | 'enterprise';
 
 export interface SubscriptionTheme {
   primary: string;
@@ -68,6 +68,22 @@ const themes: Record<SubscriptionPlan, SubscriptionTheme> = {
     gradient: 'from-emerald-600 to-emerald-500',
     badge: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
     glow: 'shadow-[0_0_30px_-5px_rgba(16,185,129,0.4)]'
+  },
+  growth: {
+    primary: '#8b5cf6', // Violet
+    secondary: '#a78bfa',
+    accent: '#7c3aed',
+    gradient: 'from-violet-600 to-violet-500',
+    badge: 'bg-violet-500/10 text-violet-600 dark:text-violet-400 border-violet-500/20',
+    glow: 'shadow-[0_0_30px_-5px_rgba(139,92,246,0.4)]'
+  },
+  enterprise: {
+    primary: '#f43f5e', // Rose/Vibrant (Elite Tier)
+    secondary: '#fb7185',
+    accent: '#e11d48',
+    gradient: 'from-rose-600 to-rose-500',
+    badge: 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20',
+    glow: 'shadow-[0_0_30px_-5px_rgba(244,63,94,0.5)]'
   }
 };
 
@@ -113,6 +129,34 @@ const planFeatures = {
     roadmapAccess: true, // 6-Month Strategic Roadmaps
     planName: 'Professional',
     planDescription: 'Unlimited business insights, Neural Profit Engine, and Elite Alpha Vault access for professional growth.'
+  },
+  growth: {
+    maxAnalyses: -1, // Unlimited
+    maxVaultSaves: -1, // Unlimited
+    advancedFeatures: true,
+    prioritySupport: true,
+    customReports: true,
+    apiAccess: true,
+    competitorInsights: true,
+    realTimeAlerts: true,
+    exportToPdf: true,
+    roadmapAccess: true,
+    planName: 'Business Accelerator',
+    planDescription: 'The ultimate growth engine for scaling startups with unrestricted intelligence.'
+  },
+  enterprise: {
+    maxAnalyses: -1, // Unlimited
+    maxVaultSaves: -1, // Unlimited
+    advancedFeatures: true,
+    prioritySupport: true,
+    customReports: true,
+    apiAccess: true,
+    competitorInsights: true,
+    realTimeAlerts: true,
+    exportToPdf: true,
+    roadmapAccess: true,
+    planName: 'Territorial Dominance',
+    planDescription: 'Elite-tier custom market dominance strategies for industry leaders.'
   }
 };
 
@@ -123,7 +167,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
   const [isLoading, setIsLoading] = useState(true);
 
   // Ensure plan is always valid
-  const validPlan = plan && ['free', 'starter', 'professional'].includes(plan) ? plan : 'free';
+  const validPlan = plan && ['free', 'starter', 'professional', 'growth', 'enterprise'].includes(plan) ? plan : 'free';
 
     // Fetch subscription plan with retry logic for production robustness (Render cold starts)
     const fetchSubscriptionPlan = async (retryCount = 0): Promise<SubscriptionPlan | null> => {
@@ -152,29 +196,22 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
         
         let planToSet: SubscriptionPlan = 'free';
         
-        if (rawPlanName.includes('starter') || 
-            rawDisplayName.includes('starter') ||
-            rawDisplayName.includes('venture') ||
-            rawDisplayName.includes('strategist')) {
-          planToSet = 'starter';
-        } else if (rawPlanName.includes('professional') || 
-                   rawPlanName.includes('pro') || 
-                   rawDisplayName.includes('professional') ||
-                   rawPlanName.includes('enterprise') || 
-                   rawPlanName.includes('growth') ||
-                   rawDisplayName.includes('enterprise') ||
-                   rawDisplayName.includes('dominance') ||
-                   rawDisplayName.includes('accelerator') ||
-                   rawDisplayName.includes('pro')) {
+        if (rawPlanName.includes('enterprise') || rawDisplayName.includes('enterprise') || rawDisplayName.includes('dominance')) {
+          planToSet = 'enterprise';
+        } else if (rawPlanName.includes('growth') || rawDisplayName.includes('growth') || rawDisplayName.includes('accelerator')) {
+          planToSet = 'growth';
+        } else if (rawPlanName.includes('professional') || rawPlanName.includes('pro') || rawDisplayName.includes('professional') || rawDisplayName.includes('architect')) {
           planToSet = 'professional';
-        } else {
-          planToSet = 'free';
+        } else if (rawPlanName.includes('starter') || rawDisplayName.includes('starter') || rawDisplayName.includes('venture') || rawDisplayName.includes('strategist')) {
+          planToSet = 'starter';
         }
 
-        // We use the normalized new display names instead of old messy DB data if they are legacy
-        const actualName = planToSet === 'professional' ? 'Professional' : 
-                           planToSet === 'starter' ? 'Starter' : '';
-                           
+        // Display mapping
+        const actualName = planToSet === 'enterprise' ? 'Territorial Dominance' :
+                           planToSet === 'growth' ? 'Business Accelerator' :
+                           planToSet === 'professional' ? 'Growth Architect' : 
+                           planToSet === 'starter' ? 'Starter' : 'Explorer';
+                            
         setPlanState(planToSet);
         setActualPlanName(actualName);
         localStorage.setItem(`subscription_${email}`, planToSet);
@@ -183,7 +220,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       } else {
         // Silently use cached plan if API is warming up (prevents console noise)
         const cachedPlan = localStorage.getItem(`subscription_${email}`) as SubscriptionPlan;
-        if (cachedPlan && ['free', 'starter', 'professional'].includes(cachedPlan)) {
+        if (cachedPlan && ['free', 'starter', 'professional', 'growth', 'enterprise'].includes(cachedPlan)) {
           setPlanState(cachedPlan);
           return cachedPlan;
         }
@@ -197,7 +234,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
 
       // Final quiet fallback on timeout
       const cachedPlan = localStorage.getItem(`subscription_${email}`) as SubscriptionPlan;
-      if (cachedPlan && ['free', 'starter', 'professional'].includes(cachedPlan)) {
+      if (cachedPlan && ['free', 'starter', 'professional', 'growth', 'enterprise'].includes(cachedPlan)) {
         setPlanState(cachedPlan);
         return cachedPlan;
       }
@@ -215,7 +252,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
         // Show cached plan immediately (instant UI, no flicker)
         const cachedPlan = localStorage.getItem(`subscription_${email}`);
         const cachedPlanName = localStorage.getItem(`subscription_name_${email}`);
-        if (cachedPlan && ['free', 'starter', 'professional'].includes(cachedPlan)) {
+        if (cachedPlan && ['free', 'starter', 'professional', 'growth', 'enterprise'].includes(cachedPlan)) {
           setPlanState(cachedPlan as SubscriptionPlan);
           if (cachedPlanName) setActualPlanName(cachedPlanName);
         }
@@ -237,7 +274,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
 
   const setPlan = (newPlan: SubscriptionPlan) => {
     // Validate the new plan before proceeding
-    if (!newPlan || !['free', 'starter', 'professional'].includes(newPlan)) {
+    if (!newPlan || !['free', 'starter', 'professional', 'growth', 'enterprise'].includes(newPlan)) {
       console.warn('Invalid plan provided to setPlan:', newPlan);
       return;
     }
@@ -251,8 +288,10 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
     setPlanState(newPlan);
     
     // Set actual plan name based on the new plan
-    const newActualName = newPlan === 'professional' ? 'Professional' : 
-                          newPlan === 'starter' ? 'Starter' : 'Free';
+    const newActualName = newPlan === 'enterprise' ? 'Territorial Dominance' :
+                          newPlan === 'growth' ? 'Business Accelerator' :
+                          newPlan === 'professional' ? 'Growth Architect' : 
+                          newPlan === 'starter' ? 'Starter' : 'Explorer';
     setActualPlanName(newActualName);
 
     if (session?.user?.email) {

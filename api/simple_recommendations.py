@@ -51,16 +51,6 @@ def save_market_cache():
             json.dump(_MARKET_CACHE, f)
     except: pass
 
-def generate_detailed_roadmap_step_guide(step_title: str, step_description: str, business_type: str, location: str) -> Dict[str, Any]:
-    """Generate high-fidelity implementation details for a roadmap step using advanced intelligence"""
-    if integrated_intelligence:
-        return integrated_intelligence.generate_implementation_guide(step_title, step_description, business_type, location)
-    
-    # Fail-fast if engine is missing (Real-time policy)
-    return {
-        "error": "Intelligence engine unavailable for real-time guidance.",
-        "status": "OFFLINE"
-    }
 
 def parse_real_location_data(area: str) -> Dict[str, Any]:
     """Resolve location details using AI and external APIs (No hardcoded mappings)"""

@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Depends, HTTPException, Request, WebSocket, WebSocketDisconnect, BackgroundTasks
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import Response
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from pydantic import BaseModel
@@ -15,15 +15,14 @@ pwd_context = CryptContext(
 import os
 import asyncio
 import time
+import hashlib
+import json
+import logging
+import traceback
+from typing import Dict, List, Any, Optional
 import urllib.parse
 from dotenv import load_dotenv
 load_dotenv()
-import logging
-import traceback
-import hashlib
-import json
-from typing import Dict, List, Any, Optional
-import logging
 
 # ═══════════════════════════════════════════════════
 # LOGGING CONFIGURATION
@@ -827,16 +826,7 @@ class ProcessPaymentRequest(BaseModel):
 
     status: str = "success"
     payment_method: Optional[str] = None
-    plan_name: str
-    billing_cycle: str
-    currency: Optional[str] = "INR"
     
-class ScrapeRequest(BaseModel):
-    query: str
-    location: str
-    max_results: int = 50
-    email: Optional[str] = None
-
 class DodoCheckoutRequest(BaseModel):
     product_id: str
     quantity: int = 1
