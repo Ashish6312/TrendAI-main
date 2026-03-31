@@ -2525,71 +2525,88 @@ async def create_dodo_checkout_session(request: DodoCheckoutRequest):
         )
         
         # Create checkout session using SDK
-        # We use product_cart for newer SDK versions or direct product_id for older ones
-        # Multiplied by 100 to convert Rupees/Dollars to Paisa/Cents for certain SKU configurations
-        price_amount = request.amount * 100 if request.amount else None
+        # Conversion to integer Paisa/Cents if necessary
+        price_amount_int = int(request.amount * 100) if request.amount else None
         
-        # 1. PRIMARY: Ad-hoc Cart (Instant focus)
+        # 1. PRIMARY: Official SDK v1.x (product_cart focused)
         try:
-            if not getattr(request, 'is_recurring', False):
-                logger.info(f"⚡ RESILIENT ATTEMPT: Instant Payment (Ad-hoc) for {product_id}")
-                cart_item = {
-                    "name": f"{product_id.replace('pdt_', '').replace('_', ' ').title()} - {request.billing_cycle.title()} Strategy",
-                    "amount": price_amount or (request.amount * 100),
+            logger.info(f"⚡ SDK ATTEMPT 1: Using product_cart for {product_id}")
+            
+            # Construct standard cart item
+            cart_item = {
+                "name": f"{product_id.replace('pdt_', '').replace('_', ' ').title()} - {request.billing_cycle.title()} Strategy",
+                "amount": price_amount_int,
+                "quantity": 1
+            }
+            
+            # Map parameters for SDK v1.x
+            create_params = {
+                "product_cart": [cart_item],
+                "customer": {"email": email, "name": request.name},
+                "return_url": return_url
+            }
+            
+            session = client.checkout_sessions.create(**create_params)
+            
+        except Exception as e1:
+            logger.warning(f"⚠️ SDK ATTEMPT 1 Failed: {e1}. Retrying with SDK fallback 2...")
+            
+            # 2. SECONDARY: Simplified Cart (No name, just product_id in cart)
+            # Some versions of Dodo SDK prefer product_id INSIDE the cart
+            try:
+                logger.info(f"⚡ SDK ATTEMPT 2: product_id inside cart for {product_id}")
+                cart_item_simple = {
+                    "product_id": product_id,
                     "quantity": 1
                 }
                 session = client.checkout_sessions.create(
-                    product_cart=[cart_item],
-                    customer={"email": email, "name": request.name},
-                    return_url=return_url
-                )
-            else:
-                logger.info(f"🔄 RESILIENT ATTEMPT: Subscription for {product_id}")
-                session = client.checkout_sessions.create(
-                    product_id=product_id,
-                    customer={"email": email, "name": request.name},
-                    return_url=return_url
-                )
-        except Exception as e1:
-            logger.warning(f"⚠️ Primary Dodo logic failed: {e1}. Retrying with simplified SDK fallback...")
-            # 2. SECONDARY: Simple Product ID (Bypass ad-hoc)
-            try:
-                # Some SDKs use 'cart' instead of 'product_cart'
-                session = client.checkout_sessions.create(
-                    product_id=product_id,
+                    product_cart=[cart_item_simple],
                     customer={"email": email},
                     return_url=return_url
                 )
             except Exception as e2:
-                logger.error(f"❌ Secondary Dodo logic failed: {e2}. Attempting direct response-style fallback...")
-                # 3. TERTIARY: Dict-style fallback (for specific SDK versions)
+                logger.warning(f"⚠️ SDK ATTEMPT 2 Failed: {e2}. Final dict-mode fallback (v0.x legacy)...")
+                # 3. TERTIARY: Dict-style/Legacy Product ID top-level (Supports certain V0.x deployments)
                 try:
-                   session = client.checkout_sessions.create(
-                       billing_email=email,
-                       product_id=product_id,
-                       return_url=return_url
-                   )
+                    # Last ditch effort using keyword args that were common in v0.x
+                    session = client.checkout_sessions.create(
+                        product_id=product_id,
+                        customer={"email": email},
+                        return_url=return_url
+                    )
                 except Exception as e3:
-                    logger.error(f"❌ Final Dodo fallback failed: {e3}")
-                    raise HTTPException(status_code=500, detail=f"Dodo session creation failed across all SDK versions: {str(e3)}")
+                    logger.error(f"❌ ALL SDK ATTEMPTS FAILED: e1={e1}, e2={e2}, e3={e3}")
+                    raise HTTPException(status_code=500, detail=f"Dodo session creation failed across all SDK versions. Error: {str(e1)}")
         
-        # Safely extract response data
-        # Some SDKs return a class, some return a dict, some return a nested data object
-        session_dict = session.__dict__ if hasattr(session, '__dict__') else (session if isinstance(session, dict) else {})
-        res_data = session_dict.get('data', session_dict) if 'data' in session_dict else session_dict
+        # 3. DATA EXTRACTION (High-Resilience)
+        try:
+            if hasattr(session, 'model_dump'):
+                res_data = session.model_dump()
+            elif hasattr(session, 'dict'):
+                res_data = session.dict()
+            elif isinstance(session, dict):
+                res_data = session
+            else:
+                res_data = getattr(session, '__dict__', {})
+        except Exception as edata:
+            logger.warning(f"⚠️ Metadata extraction skipped: {edata}")
+            res_data = {}
 
+        # 4. FINAL URL EXTRACTION
         checkout_url = (
             getattr(session, "checkout_url", None) or 
+            res_data.get('checkout_url') or
             getattr(session, "url", None) or 
-            res_data.get('checkout_url') or 
-            res_data.get('url')
+            res_data.get('url') or
+            (res_data.get('data', {}) if isinstance(res_data.get('data'), dict) else {}).get('checkout_url', '')
         )
         
         checkout_id = (
             getattr(session, "id", None) or 
+            res_data.get('id') or
             getattr(session, "checkout_id", None) or 
-            res_data.get('id') or 
             res_data.get('checkout_id') or 
+            (res_data.get('data', {}) if isinstance(res_data.get('data'), dict) else {}).get('id') or
             f"DODO_{int(time.time())}"
         )
 
