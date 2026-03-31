@@ -35,7 +35,7 @@ interface RecommendationData {
   key_success_factors?: string;
   category?: string;
   ai_source?: string;
-  six_month_plan?: string[];
+  six_month_plan?: (string | { month: string; goal: string })[];
 }
 
 interface EnhancedRecommendationCardProps {
@@ -242,6 +242,31 @@ export default function EnhancedRecommendationCard({
                   <p className="text-sm text-slate-600 dark:text-gray-300 leading-relaxed pl-6">
                     {recommendation.revenue_model}
                   </p>
+                </div>
+              )}
+
+              {/* Strategic Roadmap Preview */}
+              {recommendation.six_month_plan && recommendation.six_month_plan.length > 0 && (
+                <div className="space-y-4 pt-4 border-t border-slate-200 dark:border-white/10">
+                  <div className="flex items-center gap-2">
+                    <CalendarIcon size={16} className="text-blue-500" />
+                    <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">Tactical Roadmap Preview</h4>
+                  </div>
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    {recommendation.six_month_plan.map((step, sIdx) => {
+                      const isObj = typeof step === 'object' && step !== null;
+                      return (
+                        <div key={sIdx} className="p-3 rounded-xl bg-blue-500/5 border border-blue-500/10 hover:border-blue-500/20 transition-all">
+                          <div className="text-[10px] font-black text-blue-500 uppercase tracking-widest mb-1">
+                            {isObj ? step.month : `Phase ${sIdx + 1}`}
+                          </div>
+                          <p className="text-xs text-slate-600 dark:text-gray-400 leading-relaxed font-medium">
+                            {isObj ? step.goal : step}
+                          </p>
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               )}
 

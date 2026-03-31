@@ -135,14 +135,14 @@ function AcquisitionTiersContent() {
 
   return (
     <div className={`min-h-screen ${isDark ? 'bg-[#020617] text-white' : 'bg-slate-50 text-slate-900'} transition-colors duration-500`}>
-      <main className="pt-24 pb-24 px-4 max-w-7xl mx-auto">
-        <div className="text-center space-y-4 mb-16 italic uppercase text-5xl md:text-7xl font-black tracking-tighter leading-none">
+      <main className="pt-6 pb-6 px-4 max-w-7xl mx-auto">
+        <div className="text-center space-y-2 mb-6 italic uppercase text-3xl md:text-4xl font-black tracking-tighter leading-none">
           Acquisition Tiers
-          <div className="mt-4 flex items-center justify-center gap-4 not-italic normal-case text-lg opacity-60 font-medium tracking-normal leading-normal">
+          <div className="mt-2 flex items-center justify-center gap-4 not-italic normal-case text-sm opacity-60 font-medium tracking-normal leading-normal">
             Join 1,000+ entrepreneurs building with AI precision.
           </div>
           
-          <div className="flex items-center justify-center gap-4 mt-8 not-italic normal-case text-base tracking-normal">
+          <div className="flex items-center justify-center gap-4 mt-4 not-italic normal-case text-base tracking-normal">
             <span className={`text-sm font-bold ${billingCycle === 'monthly' ? 'text-emerald-500' : 'opacity-40'}`}>Monthly</span>
             <button
                onClick={() => setBillingCycle(billingCycle === 'monthly' ? 'yearly' : 'monthly')}
@@ -154,12 +154,12 @@ function AcquisitionTiersContent() {
           </div>
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-8 max-w-5xl mx-auto relative z-10">
+        <div className="grid lg:grid-cols-2 gap-4 max-w-5xl mx-auto relative z-10">
           {tiers.map((tier) => (
             <motion.div
               key={tier.id}
               whileHover={{ y: -5 }}
-              className={`p-10 rounded-[2.5rem] border ${tier.popular ? 'border-emerald-500 shadow-[0_0_50px_rgba(16,185,129,0.1)]' : 'border-white/5'} ${isDark ? 'bg-[#0b1120]' : 'bg-white'} relative overflow-hidden flex flex-col`}
+              className={`p-6 rounded-2xl border ${tier.popular ? 'border-emerald-500 shadow-[0_0_30px_rgba(16,185,129,0.1)]' : 'border-white/5'} ${isDark ? 'bg-[#0b1120]' : 'bg-white'} relative overflow-hidden flex flex-col`}
             >
               {tier.popular && (
                 <div className="absolute top-0 right-0 left-0 h-40 bg-gradient-to-b from-emerald-500/10 to-transparent pointer-events-none" />
@@ -171,9 +171,9 @@ function AcquisitionTiersContent() {
                 </div>
               )}
 
-              <div className="relative z-10 space-y-8 flex-grow">
+              <div className="relative z-10 space-y-4 flex-grow">
                 <div className="flex items-center justify-between">
-                  <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${tier.color} flex items-center justify-center shadow-lg transform rotate-3`}>
+                  <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${tier.color} flex items-center justify-center shadow-lg transform rotate-3`}>
                     {tier.icon}
                   </div>
                   {tier.popular && (
@@ -184,13 +184,13 @@ function AcquisitionTiersContent() {
                 </div>
 
                 <div className="space-y-1">
-                  <h3 className="text-3xl font-black tracking-tight">{tier.name}</h3>
+                  <h3 className="text-xl font-black tracking-tight">{tier.name}</h3>
                   <p className="text-sm opacity-60 font-medium">{tier.tagline}</p>
                 </div>
 
-                <div className="py-6 border-y border-white/5">
+                <div className="py-3 border-y border-white/5">
                   <div className="flex items-baseline gap-2">
-                    <span className="text-5xl font-black italic tracking-tighter">₹{billingCycle === 'monthly' ? tier.monthPrice : tier.yearPrice}</span>
+                    <span className="text-3xl font-black italic tracking-tighter">₹{billingCycle === 'monthly' ? tier.monthPrice : tier.yearPrice}</span>
                     <span className="text-sm opacity-50 font-bold uppercase tracking-widest">/ {billingCycle === 'monthly' ? 'MO' : 'YR'}</span>
                   </div>
                   <div className="flex items-center gap-3 mt-2">
@@ -199,23 +199,23 @@ function AcquisitionTiersContent() {
                   </div>
                 </div>
 
-                <ul className="space-y-4">
+                <ul className="space-y-2">
                   {tier.features.map((feature, fIdx) => (
-                    <li key={fIdx} className={`flex items-center gap-4 transition-opacity ${feature.active ? 'opacity-100' : 'opacity-20'}`}>
+                    <li key={fIdx} className={`flex items-center gap-3 transition-opacity ${feature.active ? 'opacity-100' : 'opacity-20'}`}>
                       <div className={`p-1 rounded-lg ${feature.active ? 'bg-emerald-500/20 text-emerald-500' : 'bg-slate-500/10 text-slate-500'}`}>
                         {feature.active ? <Check size={14} strokeWidth={4} /> : <X size={14} strokeWidth={4} />}
                       </div>
-                      <span className="font-bold text-base tracking-tight">{feature.text}</span>
+                      <span className="font-bold text-sm tracking-tight">{feature.text}</span>
                     </li>
                   ))}
                 </ul>
               </div>
 
-              <div className="mt-12 space-y-6 relative z-10">
+              <div className="mt-4 space-y-3 relative z-10">
                 <button
                   onClick={() => handlePayment(tier)}
                   disabled={loading !== null}
-                  className={`w-full py-5 rounded-3xl font-black uppercase tracking-[0.3em] transition-all flex items-center justify-center gap-3 ${tier.popular ? 'bg-emerald-500 hover:bg-emerald-400 text-white shadow-[0_10px_40px_rgba(16,185,129,0.3)]' : 'bg-[#1e293b] hover:bg-[#334155] text-white shadow-xl'} ${loading === tier.id ? 'opacity-50' : ''}`}
+                  className={`w-full py-3 rounded-2xl font-black uppercase tracking-[0.2em] text-sm transition-all flex items-center justify-center gap-3 ${tier.popular ? 'bg-emerald-500 hover:bg-emerald-400 text-white shadow-[0_8px_25px_rgba(16,185,129,0.3)]' : 'bg-[#1e293b] hover:bg-[#334155] text-white shadow-xl'} ${loading === tier.id ? 'opacity-50' : ''}`}
                 >
                   {loading === tier.id ? (
                     <div className="w-5 h-5 border-2 border-white/50 border-t-white rounded-full animate-spin" />

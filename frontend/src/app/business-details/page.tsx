@@ -122,11 +122,8 @@ export default function BusinessDetailsPage() {
         enrichFinancialAnalysis(data.business.title, data.area, data.business)
       ]);
 
-      // Professional Autopilot: Auto-trigger deep extraction if on Pro tier
-      if (typeof plan === 'string' && (plan.toLowerCase().includes('professional') || plan.toLowerCase().includes('enterprise') || plan.toLowerCase().includes('dominance'))) {
-         console.log("🚀 Professional Autopilot: Triggering deep market extraction...");
-         handleDeepScrape();
-      }
+      // Professional Autopilot: No longer auto-triggering to ensure maximum initial velocity
+      // Users can trigger deep extraction manually via the UI button
       
     } catch (error) {
       console.error('❌ Error loading location data:', error);
@@ -146,95 +143,44 @@ export default function BusinessDetailsPage() {
     if (!needsEnrichment) return;
 
     try {
-      console.log(`🤖 Enriching financial intelligence for ${title} in ${area}...`);
+      console.log(`🤖 Requesting High-Fidelity Intelligence enrichment for ${title} in ${area}...`);
       
-      const prompt = `Act as a Technical Market Analysis Engine (TMAE-1). Perform a simulated strategic reconnaissance for the following venture:
-Venture Title: ${title}
-Market Sector: ${business?.category || "Industrial/Commercial"}
-Operational Cluster: ${area} (India-specific context)
+      const apiUrl = getApiUrl();
+      const response = await fetch(`${apiUrl}/api/businesses/enrich`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title,
+          area,
+          category: business?.category || business?.title
+        })
+      });
 
-Synthesize a Technical Simulation Report in PURE JSON format. Ensure all currency valuations are in INR (₹) and calibrated for the ${area} economic landscape.
-
-{
-  "funding_required": "estimated cap-ex simulation (e.g. ₹5L - 12L)",
-  "estimated_revenue": "projected yield per cluster (e.g. ₹3L - 6L)",
-  "roi_percentage": "numerical simulation only (e.g. 145)",
-  "payback_period": "simulated period (e.g. 10-14 Months)",
-  "market_size": "technical sector briefing (4-7 words)",
-  "startup_difficulty": "Easy/Moderate/Hard",
-  "initial_team_size": "numerical simulation (e.g. 3)",
-  "key_success_factors": ["Technical Parameter 1", "Technical Parameter 2", "Technical Parameter 3"],
-  "six_month_plan": ["Phase 1 simulation", "Phase 2 simulation", "Phase 3 simulation", "Phase 4 simulation", "Phase 5 simulation", "Phase 6 simulation"],
-  "profit_niches": [
-    {"niche": "Technical Niche 1", "yield": 20},
-    {"niche": "Technical Niche 2", "yield": 15},
-    {"niche": "Technical Niche 3", "yield": 10}
-  ],
-  "demand_index": 92.4,
-  "strategic_recommendations": [
-    {"title": "Strategic Placement", "description": "Technical strategy for the sector."},
-    {"title": "Market Disruptor", "description": "Tactical disruption vector."},
-    {"title": "Scaling Vector", "description": "Growth acceleration strategy."}
-  ]
-}
-STRICT RULE: RESPOND ONLY WITH PURE JSON. DO NOT EXPLAIN. NO WARNINGS.`;
-
-      const response = await fetch(`https://text.pollinations.ai/${encodeURIComponent(prompt)}`);
-      const text = await response.text();
+      if (!response.ok) throw new Error("Backend Intelligence Engine Sync Failure");
       
-      // Hyper-Robust Neural Data Extraction
-      let jsonStr = "";
-      const firstCurly = text.indexOf('{');
-      const lastCurly = text.lastIndexOf('}');
-      if (firstCurly !== -1 && lastCurly !== -1) {
-        jsonStr = text.substring(firstCurly, lastCurly + 1);
-      } else if (text.includes('```json')) {
-        jsonStr = text.split('```json')[1].split('```')[0].trim();
-      } else if (text.includes('```')) {
-        jsonStr = text.split('```')[1].split('```')[0].trim();
-      }
+      const data = await response.json();
       
-      if (!jsonStr || (!jsonStr.startsWith('{') && !jsonStr.startsWith('['))) {
-         const match = text.match(/\{[\s\S]*\}/);
-         jsonStr = match ? match[0] : "";
-      }
-
-      let result;
-      if (!jsonStr) {
-        console.warn("⚠️ Intelligence gap detected. Synthesizing heuristic fallback...");
-        // Heuristic Intelligence Fallback
-        result = {
-          funding_required: "₹5L - 15L (Heuristic)",
-          estimated_revenue: "₹2.5L - 5L (Heuristic)",
-          roi_percentage: 120,
-          payback_period: "8-18 Months",
-          market_size: "High Demand Sector (India)",
-          competition_level: "Medium",
-          startup_difficulty: "Moderate",
-          initial_team_size: 4,
-          key_success_factors: ["Local Market Dominance", "Cost Effective Operations", "Local SEO Reach"],
-          six_month_plan: ["Month 1: Foundation", "Month 2: Soft Launch", "Month 3: Scaling", "Month 4: Marketing", "Month 5: Growth", "Month 6: Dominance"]
-        };
-      } else {
-        result = JSON.parse(jsonStr);
-      }
-      
-      if (result) {
-        // Update the business data in our state
+      if (data.success && data.data) {
+        const result = data.data;
+        // Update the business data with real AI-generated metrics (No hardcoded fallbacks)
         setBusinessData((prev: any) => {
           if (!prev) return prev;
           const updated = {
             ...prev,
             business: {
               ...prev.business,
-              ...result
+              ...result,
+              // Ensure we mark it as AI-enriched
+              last_enriched: new Date().toISOString()
             }
           };
           sessionStorage.setItem('selected_business', JSON.stringify(updated));
           localStorage.setItem('currentBusinessAnalysis', JSON.stringify(updated));
           return updated;
         });
-        console.log("✅ Strategic intelligence successfully enriched.");
+        console.log("✅ Strategic intelligence successfully enriched via Backend Cluster.");
+      } else {
+        console.warn("⚠️ Intelligence gap detected by backend cluster. Synthesis failed.");
       }
     } catch (err) {
       console.error("❌ Enrichment failed:", err);
@@ -563,6 +509,24 @@ STRICT RULE: RESPOND ONLY WITH PURE JSON. DO NOT EXPLAIN. NO WARNINGS.`;
       tabs={tabs}
       actions={
         <div className="flex items-center gap-3">
+          {plan === 'professional' && (
+            <button
+              onClick={handleDeepScrape}
+              disabled={scraping}
+              className={`px-4 lg:px-6 py-2.5 rounded-2xl flex items-center gap-2 lg:gap-3 transition-all font-black text-[10px] lg:text-xs uppercase tracking-[0.2em] shadow-xl hover:scale-105 active:scale-95 ${
+                scraping
+                  ? 'bg-purple-500/20 text-purple-400 cursor-not-allowed border border-purple-500/30'
+                  : 'bg-purple-600 hover:bg-purple-700 text-white border border-purple-500/30'
+              }`}
+            >
+              {scraping ? (
+                <Loader2 className="animate-spin" size={14} />
+              ) : (
+                <Cpu size={14} />
+              )}
+              <span>{scraping ? 'Extracting...' : 'Neural Deep extraction'}</span>
+            </button>
+          )}
           <button
             onClick={handleSaveToVault}
             disabled={savingToVault}
@@ -1306,11 +1270,7 @@ STRICT RULE: RESPOND ONLY WITH PURE JSON. DO NOT EXPLAIN. NO WARNINGS.`;
                           <div>
                              <h4 className="text-xs font-black uppercase tracking-widest text-slate-400 dark:text-gray-500 mb-4 italic">High-Profit Micro-Niches</h4>
                              <div className="space-y-3">
-                                {(businessData.business.profit_niches || [
-                                  {niche: 'B2B Corporate Supply', yield: 20}, 
-                                  {niche: 'Sustainable Sourcing', yield: 15}, 
-                                  {niche: 'AI-Driven Customization', yield: 10}
-                                ]).map((n: any, i: number) => (
+                                {(businessData.business.profit_niches || []).map((n: any, i: number) => (
                                   <div key={i} className="flex items-center justify-between p-4 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-xl">
                                      <span className="text-sm font-bold text-slate-800 dark:text-white italic">{n.niche}</span>
                                      <div className="text-emerald-500 font-black text-xs">+{n.yield}% yield</div>
@@ -1325,7 +1285,7 @@ STRICT RULE: RESPOND ONLY WITH PURE JSON. DO NOT EXPLAIN. NO WARNINGS.`;
                              <div className="p-6 bg-slate-900 dark:bg-white/5 rounded-3xl border border-slate-800 dark:border-white/10 relative overflow-hidden">
                                 <div className="relative z-10">
                                    <div className="text-4xl font-black text-white italic tracking-tighter mb-2">
-                                     {businessData.business.demand_index || '91.4'}
+                                     {businessData.business.demand_index || 'Analyzing...'}
                                    </div>
                                    <div className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Optimized Entrance Vector</div>
                                 </div>
@@ -1419,11 +1379,7 @@ STRICT RULE: RESPOND ONLY WITH PURE JSON. DO NOT EXPLAIN. NO WARNINGS.`;
                 <div className="lg:col-span-4 space-y-8">
                   <UniformCard title="Strategic Recommendations" icon={<Lightbulb className="w-6 h-6" />}>
                      <div className="space-y-6">
-                        {(businessData.business.strategic_recommendations || [
-                          { title: 'Strategic Placement', description: `Establish the central node in ${businessData.area.split(',')[0]} to capture maximum transit volume.` },
-                          { title: 'Market Disruptor', description: `Undercut existing competitors in the ${businessData.area.split(',')[0]} sector by optimizing neural supply chains.` },
-                          { title: 'Scaling Vector', description: 'Transition to a decentralized model once the first cluster achieves 20% local dominance.' }
-                        ]).map((r: any, i: number) => (
+                        {(businessData.business.strategic_recommendations || []).map((r: any, i: number) => (
                           <div key={i} className="p-4 rounded-2xl bg-slate-900/5 dark:bg-white/[0.03] border border-slate-100 dark:border-white/5 group hover:border-purple-500/20 transition-all duration-300">
                              <div className="text-[10px] font-black text-purple-600 dark:text-purple-400 uppercase tracking-[0.2em] mb-2">{r.title}</div>
                              <p className="text-xs text-slate-600 dark:text-gray-400 leading-relaxed font-bold italic">{r.description}</p>
@@ -1504,10 +1460,10 @@ STRICT RULE: RESPOND ONLY WITH PURE JSON. DO NOT EXPLAIN. NO WARNINGS.`;
               <UniformCard title="Strategic KPIs" icon={<BarChart3 className="w-6 h-6" />}>
                 <div className="grid grid-cols-2 gap-4">
                   {[
-                    { l: 'Target ROI', v: `${businessData?.business?.roi_percentage || '150'}%` },
-                    { l: 'BEP Period', v: '8-12 Months' },
-                    { l: 'M1 Traffic', v: '~2.5K' },
-                    { l: 'Retention', v: '45%' }
+                    { l: 'Target ROI', v: `${businessData?.business?.roi_percentage || 'Analyzing...'}%` },
+                    { l: 'BEP Period', v: businessData?.business?.be_period || 'Analyzing...' },
+                    { l: 'M1 Traffic', v: businessData?.business?.m1_traffic || 'Analyzing...' },
+                    { l: 'Retention', v: businessData?.business?.retention_rate || 'Analyzing...' }
                   ].map((kpi, i) => (
                     <div key={i} className="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10">
                       <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{kpi.l}</div>

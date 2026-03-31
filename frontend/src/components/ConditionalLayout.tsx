@@ -29,7 +29,7 @@ export function ConditionalLayout({ children }: ConditionalLayoutProps) {
   return (
     <>
       <Navbar />
-      <main className="flex-grow navbar-aware">
+      <main className="flex-grow pt-14 sm:pt-16 lg:pt-16">
         {children}
       </main>
       <Footer />

@@ -23,6 +23,14 @@ import traceback
 import hashlib
 import json
 from typing import Dict, List, Any, Optional
+import logging
+
+# ═══════════════════════════════════════════════════
+# LOGGING CONFIGURATION
+# ═══════════════════════════════════════════════════
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -56,10 +64,6 @@ manager = ConnectionManager()
 # Link the intelligence engine's push stream to the FastAPI connection manager
 from integrated_business_intelligence import register_ws_pusher
 register_ws_pusher(manager.broadcast)
-
-
-class OverpassQuery(BaseModel):
-    query: str
 
 class ScrapeRequest(BaseModel):
     query: str
@@ -141,7 +145,43 @@ async def api_generate_roadmap(request: Dict[str, str]):
     if not title or not area:
         return {"error": "Missing title or area"}
     from simple_recommendations import generate_ai_roadmap
-    return await asyncio.to_thread(generate_ai_roadmap, title, area)
+    return await generate_ai_roadmap(title, area)
+
+class EnrichRequest(BaseModel):
+    title: str
+    area: str
+    category: Optional[str] = None
+
+@app.post("/api/businesses/enrich")
+async def api_enrich_business(payload: EnrichRequest):
+    """Robust financial intelligence enrichment for a specific business"""
+    intel = get_intelligence()
+    if intel:
+        try:
+            result = await intel.enrich_business_financials(payload.title, payload.area, payload.category)
+            if result and isinstance(result, dict) and not result.get("error"):
+                return {"success": True, "data": result}
+        except Exception as e:
+            logger.error(f"⚠️ Cluster enrichment failed: {e}")
+            
+    # Fallback to direct AI if cluster fails or is unavailable
+    from simple_recommendations import call_pollinations_ai
+    # Constructed prompt same as in cluster for consistency
+    prompt = f"Act as a Technical Market Analysis Engine. Generate a technical report in PURE JSON for '{payload.title}' in '{payload.area}' (Sector: {payload.category or 'General'}). " \
+             "Include: funding_required, estimated_revenue, roi_percentage, payback_period, market_size, competition_level, startup_difficulty, initial_team_size, key_success_factors, six_month_plan, profit_niches, demand_index, and strategic_recommendations. JSON ONLY."
+    
+    try:
+        content = await asyncio.to_thread(call_pollinations_ai, prompt, "You are a strategic analyst. Respond in valid JSON format ONLY.")
+        if content:
+            import re
+            content = re.sub(r'```json\s*|\s*```', '', content).strip()
+            match = re.search(r'\{.*\}', content, re.DOTALL)
+            if match:
+                return {"success": True, "data": json.loads(match.group())}
+    except Exception as e:
+        logger.error(f"⚠️ Fallback enrichment failed: {e}")
+
+    return {"success": False, "message": "Neural financial enrichment failed."}
 
 @app.get("/")
 @app.get("/api/health")
@@ -225,25 +265,24 @@ async def contact_form_submission(contact: ContactRequest, background_tasks: Bac
                 .content {{ padding: 40px; }}
                 .meta-label {{ text-transform: uppercase; font-size: 11px; font-weight: 900; letter-spacing: 0.15em; color: #64748b; margin-bottom: 8px; }}
                 .subject-box {{ margin-bottom: 32px; }}
-                .subject-text {{ font-size: 22px; font-weight: 800; color: #0f172a; margin: 0; line-height: 1.2; word-break: break-word; }}
+                .subject-text {{ font-size: 22px; font-weight: 800; color: #0f172a; margin: 0; line-height: 1.2; word-break: break-word; overflow-wrap: anywhere; }}
                 .message-box {{ background-color: #f8fafc; padding: 32px; border-radius: 20px; border: 1px solid #f1f5f9; margin-bottom: 32px; }}
-                .message-text {{ font-size: 16px; line-height: 1.7; color: #334155; margin: 0; white-space: pre-wrap; word-break: break-word; }}
+                .message-text {{ font-size: 16px; line-height: 1.7; color: #334155; margin: 0; white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; }}
                 .sender-card {{ background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 20px; padding: 24px; }}
-                .label {{ color: #64748b; font-weight: 500; font-size: 14px; padding: 12px 0; word-break: break-word; }}
-                .value {{ color: #0f172a; font-weight: 700; font-size: 14px; text-align: right; padding: 12px 0; word-break: break-word; }}
+                .info-row {{ border-bottom: 1px solid #f1f5f9; padding: 10px 0; }}
+                .info-row:last-child {{ border-bottom: none; }}
+                .label {{ display: block; color: #64748b; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 3px; }}
+                .value {{ display: block; color: #0f172a; font-weight: 700; font-size: 14px; word-break: break-word; overflow-wrap: anywhere; max-width: 100%; }}
                 .footer {{ background-color: #fafafa; padding: 24px 40px; text-align: center; border-top: 1px solid #f1f5f9; }}
                 .footer p {{ font-size: 12px; color: #94a3b8; margin: 0; }}
                 .accent-bar {{ height: 8px; background: linear-gradient(90deg, #10b981, #3b82f6); }}
-                
+
                 @media only screen and (max-width: 600px) {{
                     .container {{ margin: 0 !important; border-radius: 0 !important; width: 100% !important; }}
                     .header, .content, .footer {{ padding: 32px 20px !important; }}
-                    .subject-text {{ font-size: 20px !important; }}
-                    .message-box {{ padding: 20px !important; }}
-                    .label, .value {{ display: block !important; width: 100% !important; text-align: left !important; padding: 4px 0 !important; }}
-                    .label {{ padding-top: 12px !important; }}
-                    .value {{ padding-bottom: 12px !important; }}
-                    .sender-card {{ padding: 16px !important; }}
+                    .subject-text {{ font-size: 18px !important; }}
+                    .message-box {{ padding: 16px !important; }}
+                    .sender-card {{ padding: 12px !important; }}
                 }}
             </style>
         </head>
@@ -266,38 +305,36 @@ async def contact_form_submission(contact: ContactRequest, background_tasks: Bac
 
                     <div class="meta-label">Origin details</div>
                     <div class="sender-card">
-                        <table style="width: 100%; border-collapse: collapse;">
-                            <tr style="border-bottom: 1px solid #f1f5f9;">
-                                <td class="label">Name</td>
-                                <td class="value">{contact.name}</td>
-                            </tr>
-                            <tr style="border-bottom: 1px solid #f1f5f9;">
-                                <td class="label">Identity</td>
-                                <td class="value" style="color: #10b981;">{contact.email}</td>
-                            </tr>
-                            {f'''
-                            <tr style="border-bottom: 1px solid #f1f5f9;">
-                                <td class="label">Company</td>
-                                <td class="value">{contact.profile_context.get("company", "Not specified")}</td>
-                            </tr>
-                            <tr style="border-bottom: 1px solid #f1f5f9;">
-                                <td class="label">Industry</td>
-                                <td class="value">{contact.profile_context.get("industry", "Not specified")}</td>
-                            </tr>
-                            <tr style="border-bottom: 1px solid #f1f5f9;">
-                                <td class="label">Location</td>
-                                <td class="value">{contact.profile_context.get("location", "Not specified")}</td>
-                            </tr>
-                            <tr style="border-bottom: 1px solid #f1f5f9;">
-                                <td class="label">Phone</td>
-                                <td class="value">{contact.profile_context.get("phone", "Not specified")}</td>
-                            </tr>
-                            ''' if contact.profile_context else ''}
-                            <tr>
-                                <td class="label">Intelligence Logged</td>
-                                <td class="value">{request_time}</td>
-                            </tr>
-                        </table>
+                        <div class="info-row">
+                            <span class="label">Name</span>
+                            <span class="value">{contact.name}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">Email</span>
+                            <span class="value" style="color: #10b981;">{contact.email}</span>
+                        </div>
+                        {f'''
+                        <div class="info-row">
+                            <span class="label">Company</span>
+                            <span class="value">{contact.profile_context.get("company", "Not specified")}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">Industry</span>
+                            <span class="value">{contact.profile_context.get("industry", "Not specified")}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">Location</span>
+                            <span class="value">{contact.profile_context.get("location", "Not specified")}</span>
+                        </div>
+                        <div class="info-row">
+                            <span class="label">Phone</span>
+                            <span class="value">{contact.profile_context.get("phone", "Not specified")}</span>
+                        </div>
+                        ''' if contact.profile_context else ''}
+                        <div class="info-row" style="border-bottom: none;">
+                            <span class="label">Intelligence Logged</span>
+                            <span class="value">{request_time}</span>
+                        </div>
                     </div>
                     {f'''
                     <div style="margin-top: 24px;">
@@ -390,53 +427,61 @@ async def search_overpass(payload: OverpassQuery):
         
     mirrors = [
         'https://overpass-api.de/api/interpreter',
+        'https://lz4.overpass-api.de/api/interpreter',
+        'https://z.overpass-api.de/api/interpreter',
         'https://overpass.kumi.systems/api/interpreter',
-        'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
+        'https://overpass.osm.ch/api/interpreter',
     ]
     
     import asyncio
     
     async def fetch_mirror(client, mirror_url):
         headers = {
-            "User-Agent": "StarterScopeBackend/2.2 (DataScout)",
+            "User-Agent": "StarterScope/4.2 (High-Fidelity Business Recon)",
             "Content-Type": "application/x-www-form-urlencoded"
         }
-        data = f"data={httpx.utils.quote(payload.query)}" if hasattr(httpx, 'utils') else f"data={urllib.parse.quote(payload.query)}"
-        response = await client.post(mirror_url, headers=headers, content=data)
-        response.raise_for_status()
-        return response.json()
+        try:
+            # Overpass usually likes POST requests with raw data
+            encoded_query = f"data={httpx.utils.quote(payload.query)}" if hasattr(httpx, 'utils') else f"data={urllib.parse.quote(payload.query)}"
+            response = await client.post(mirror_url, headers=headers, content=encoded_query, timeout=12.0)
+            
+            if response.status_code == 200:
+                data = response.json()
+                if "elements" in data:
+                    return data
+            raise Exception(f"Failed Status {response.status_code} from {mirror_url}")
+        except Exception as e:
+            # Re-raise to be caught in the racing loop
+            raise e
 
     try:
-        async with httpx.AsyncClient(timeout=15.0) as client:
-            # Race the mirrors - first successful response wins
+        async with httpx.AsyncClient(follow_redirects=True) as client:
+            # Racing execution strategy (Highest performance)
             tasks = [asyncio.create_task(fetch_mirror(client, mirror)) for mirror in mirrors]
             
-            done, pending = await asyncio.wait(
-                tasks,
-                return_when=asyncio.FIRST_COMPLETED
-            )
-            
-            # Cancel lingering tasks
-            for task in pending:
-                task.cancel()
-                
-            for task in done:
+            error_details = []
+            for completed_task in asyncio.as_completed(tasks):
                 try:
-                    return task.result()
-                except Exception as e:
-                    logger.warning(f"Mirror fetch failed: {e}")
-                    continue
+                    result = await completed_task
                     
-            return {"elements": []}
+                    # High Velocity: Terminate all other attempts once we have a clean hit
+                    for t in tasks:
+                        if not t.done(): t.cancel()
+                            
+                    return result
+                except Exception as mirror_err:
+                    error_details.append(str(mirror_err))
+                    continue
+            
+            logger.warning(f"⚠️ Exhausted {len(mirrors)} Overpass mirrors without success.")
+            return {"elements": [], "error": "All intelligence mirrors failed.", "details": error_details}
     except Exception as e:
         logger.error(f"Backend proxy overpass search failed: {e}")
         return {"elements": [], "error": str(e)}
 
 
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+# --- LOGGING INITIALIZED AT TOP ---
 
 # Razorpay removed (Total migration to Dodo Payments completed)
 
@@ -522,6 +567,7 @@ _cached_intelligence = None
 # Global In-Memory Cache for optimization (as requested)
 _SUBSCRIPTION_CACHE = {}
 _USER_CACHE = {}
+_ACTIVE_SEARCHES = set() # Prevent redundant backend searches for the same area
 _CACHE_TTL = 300 # 5 minutes
 
 def get_cached_subscription(email: str, db: Session):
@@ -539,8 +585,20 @@ def get_cached_subscription(email: str, db: Session):
             
     # Cache miss or expired
     sub = get_synced_subscription(db, email)
-    _SUBSCRIPTION_CACHE[email] = (sub, now + _CACHE_TTL)
-    return sub
+    if sub:
+        # Serialized version for cache to avoid DetachedInstanceError
+        sub_data = {
+            "id": sub.id,
+            "plan_name": sub.plan_name,
+            "plan_display_name": sub.plan_display_name,
+            "status": sub.status,
+            "max_analyses": sub.max_analyses,
+            "billing_cycle": sub.billing_cycle,
+            "subscription_end": sub.subscription_end.isoformat() if sub.subscription_end else None
+        }
+        _SUBSCRIPTION_CACHE[email] = (sub_data, now + _CACHE_TTL)
+        return sub_data
+    return None
 
 def invalidate_user_cache(email: str):
     """Clear cache for a specific user after updates"""
@@ -645,8 +703,16 @@ async def scrape_businesses(payload: ScrapeRequest, db: Session = Depends(get_db
         # 🧠 NEURAL INTELLIGENCE LAYER: Generate Landscape Summary (RAG-style)
         landscape_summary = "Competitive mapping complete. Local market shows standard density."
         try:
-            competitor_names = ", ".join([r['name'] for r in results[:10]])
-            categories = ", ".join(list(set([r['category'] for r in results])))
+            # Rigorous defensive filtering for nulls (fixes sequence item NoneType error)
+            comp_list = [str(r.get('name') or 'Unnamed Business') for r in results[:15] if r and isinstance(r, dict)]
+            cat_list = list(set([str(r.get('category') or 'General') for r in results if r and isinstance(r, dict)]))
+            
+            # Final safety check before join
+            comp_list = [name for name in comp_list if name]
+            cat_list = [cat for cat in cat_list if cat]
+            
+            competitor_names = ", ".join(comp_list) if comp_list else "None identified yet"
+            categories = ", ".join(cat_list) if cat_list else "General"
             
             prompt = f"Analyze this competitive landscape for '{payload.query}' in '{payload.location}'. " \
                      f"Competitors found: {competitor_names}. Categories: {categories}. " \
@@ -976,9 +1042,10 @@ async def get_system_location(request: Request):
         return LOCATION_CACHE[client_ip]
 
     apis = [
+        "https://api.bigdatacloud.net/data/reverse-geocode-client" + (f"?ip={client_ip}" if client_ip != "127.0.0.1" else ""),
         f"https://ipapi.co/{client_ip}/json/" if client_ip != "127.0.0.1" else "https://ipapi.co/json/",
-        "https://ip-api.com/json/",
-        "https://api.bigdatacloud.net/data/reverse-geocode-client"
+        "https://ip-api.com/json/" + (client_ip if client_ip != "127.0.0.1" else ""),
+        "https://ipwho.is/" + (client_ip if client_ip != "127.0.0.1" else "")
     ]
     
     for api in apis:
@@ -987,11 +1054,16 @@ async def get_system_location(request: Request):
                 response = await client.get(api, timeout=5.0)
                 if response.status_code == 200:
                     data = response.json()
+                    
+                    # Avoid returning error bodies as success from ip-api or ipwho.is
+                    if data.get("status") == "fail" or data.get("success") is False:
+                        continue
+
                     location_data = {
-                        "country": data.get("country_name") or data.get("country") or "Unknown",
+                        "country": data.get("countryName") or data.get("country_name") or data.get("country") or "Unknown",
                         "city": data.get("city") or "Unknown",
-                        "currency": data.get("currency") or "USD",
-                        "country_code": data.get("country_code") or data.get("countryCode") or "US",
+                        "currency": data.get("currency") or data.get("connection", {}).get("isp") or "USD",
+                        "country_code": data.get("countryCode") or data.get("country_code") or "US",
                         "ip": data.get("ip") or data.get("query") or client_ip
                     }
                     # Save to cache
@@ -1280,14 +1352,19 @@ async def get_recommendations(request: RecommendationRequest, db: Session = Depe
         # Helper to safely parse JSON from DB (Defensive Layer)
         def ensure_json_obj(val):
             if isinstance(val, (dict, list)): return val
-            if isinstance(val, str) and val.strip():
-                try: 
-                    loaded = json.loads(val)
-                    if isinstance(loaded, str): # Handle double-encoded strings
-                        return ensure_json_obj(loaded)
-                    return loaded
-                except: return {"raw_string": val}
-            return []
+            if not val or not isinstance(val, str): return {}
+            
+            val_clean = val.strip()
+            if not val_clean: return {}
+            
+            try: 
+                loaded = json.loads(val_clean)
+                if isinstance(loaded, str): # Handle double-encoded strings
+                    return ensure_json_obj(loaded)
+                return loaded
+            except: 
+                # If it's a plain string (not JSON), return as summary object for the frontend
+                return {"summary": val_clean}
 
         if existing_record:
             cached_recs = ensure_json_obj(existing_record.recommendations)
@@ -1295,26 +1372,17 @@ async def get_recommendations(request: RecommendationRequest, db: Session = Depe
             cache_str = str(cached_recs)
             # Detect old-style generic fallbacks or placeholder data
             is_generic_placeholder = "Strategic Market Opportunity" in cache_str or "₹5L-₹15L" in cache_str
-            is_generic_template = any(t in cache_str for t in ["Local Digital Solutions", "Hyper-Local Logistics", "Eco-Smart Retail Hub"])
+            is_generic_template = any(t in cache_str for t in ["Local Digital Solutions", "Hyper-Local Logistics", "Eco-Smart Retail Hub", "Solar-Powered Cold Storage"])
+            
+            # Punjab Force-Refresh Policy:
+            is_punjab_validation = "punjab" in analysis_area.lower()
             
             # STRICT COUNT VALIDATION: The V4.2 Strategic Engine SHOULD return 12-15 items. 
-            # If the cache has fewer than 10, it's definitely legacy data and MUST be refreshed.
             rec_count = len(cached_recs) if isinstance(cached_recs, list) else 0
-            is_legacy_count = rec_count < 10
+            is_legacy_count = rec_count < 12
             
-            # ADDRESS IN TITLE DETECTION: If any recommendation title is low-fidelity
-            is_bad_naming = False
-            if isinstance(cached_recs, list):
-                for rec in cached_recs:
-                    if isinstance(rec, dict):
-                        title = str(rec.get("title", rec.get("name", "")))
-                        if title.count(",") >= 2 or "India" in title or "zip" in title.lower():
-                            is_bad_naming = True
-                            print(f"⚠️  Detected low-fidelity naming in cached title: '{title}'. Forcing refresh...")
-                            break
-            
-            # Use 10 as the baseline for "valid enough and fast"
-            is_valid_cache = isinstance(cached_recs, list) and rec_count >= 10 and not is_generic_placeholder and not is_generic_template and not is_bad_naming and not is_legacy_count
+            # Use 5 as the baseline for "valid enough and fast"
+            is_valid_cache = isinstance(cached_recs, list) and rec_count >= 5 and not is_generic_placeholder and not is_generic_template and not is_legacy_count and not is_punjab_validation
             
             if is_valid_cache:
                 # Deep validation: ensuring the structure has actual business titles, not empty shells
@@ -1348,98 +1416,49 @@ async def get_recommendations(request: RecommendationRequest, db: Session = Depe
                 db.delete(existing_record)
                 db.commit()
 
-        print("[SUCCESS] No cache found. Calling fresh REAL-TIME intelligence engine...")
-        # Generate dynamic recommendations DIRECTLY from intelligence module (Zero Hardcoding)
-        intelligence = get_intelligence()
-        result = None
+        # 🛡️ SEARCH SINGULARITY LOCK: Prevent duplicate backend searches for the same area
+        search_key = f"{analysis_area.lower()}:{request.user_email.lower()}"
+        if search_key in _ACTIVE_SEARCHES:
+            print(f"🛑 [LOCK] Search already active for {search_key}. Skipping redundant re-trigger.")
+            return {
+                "status": "processing",
+                "message": "AI analysis is already in progress for this area. Please wait a few seconds.",
+                "cached": False,
+                "recommendations": []
+            }
         
-        if intelligence:
-            try:
-                result = await intelligence.generate_data_driven_recommendations(analysis_area, request.user_email, request.language, request.phase)
-                # Validate the result has actual AI-generated recommendations
-                recs = result.get("recommendations", []) if isinstance(result, dict) else []
-                if isinstance(recs, list) and len(recs) > 0:
-                    print(f"[SUCCESS] Generated {len(recs)} real-time recommendations")
-                else:
-                    print(f"⚠️ Engine returned empty recommendations. Message: {result.get('message', 'None')}")
+        _ACTIVE_SEARCHES.add(search_key)
+        try:
+            print("[SUCCESS] No cache found. Calling fresh REAL-TIME intelligence engine...")
+            # Generate dynamic recommendations DIRECTLY from intelligence module (Zero Hardcoding)
+            intelligence = get_intelligence()
+            result = None
+            
+            if intelligence:
+                try:
+                    result = await intelligence.generate_data_driven_recommendations(analysis_area, request.user_email, request.language, request.phase)
+                    # Validate the result has actual AI-generated recommendations
+                    recs = result.get("recommendations", []) if isinstance(result, dict) else []
+                    if isinstance(recs, list) and len(recs) > 0:
+                        print(f"[SUCCESS] Generated {len(recs)} real-time recommendations")
+                    else:
+                        print(f"⚠️ Engine returned empty recommendations. Message: {result.get('message', 'None')}")
+                        result = None
+                except Exception as e:
+                    logger.error(f"Integrated intelligence failed: {e}")
                     result = None
-            except Exception as e:
-                logger.error(f"Integrated intelligence failed: {e}")
-                result = None
+        finally:
+            _ACTIVE_SEARCHES.remove(search_key)
             
-        # ═══════════════════════════════════════════════════════════
-        # ZERO FALLBACK POLICY: No fake data. Ever.
-        # If the AI engine failed, tell the user to wait and
-        # launch a background thread to auto-fix and retry.
-        # ═══════════════════════════════════════════════════════════
         if not result:
-            logger.warning("Intelligence engine unavailable. Launching background self-fix...")
-            
-            # 🔧 BACKGROUND SELF-FIXING TASK
-            _area = analysis_area
-            _email = request.user_email
-            _lang = request.language
-            _phase = request.phase
-            
-            async def background_self_fix():
-                max_retries = 6  
-                wait_seconds = 30  
-                
-                for attempt in range(1, max_retries + 1):
-                    print(f"🔧 [BACKGROUND FIX] Attempt {attempt}/{max_retries} for '{_area}' (waiting {wait_seconds}s)...")
-                    await asyncio.sleep(wait_seconds)
-                    
-                    try:
-                        fix_intelligence = get_intelligence()
-                        if not fix_intelligence:
-                            wait_seconds = min(wait_seconds * 2, 960)
-                            continue
-                        
-                        fix_result = await fix_intelligence.generate_data_driven_recommendations(_area, _email, _lang, _phase)
-                        fix_recs = fix_result.get("recommendations", []) if isinstance(fix_result, dict) else []
-                        
-                        if isinstance(fix_recs, list) and len(fix_recs) > 0:
-                            print(f"✅ [BACKGROUND FIX] Successfully generated recommendations for {_area}!")
-                            try:
-                                from database import SessionLocal
-                                fix_db = SessionLocal()
-                                final_analysis = fix_result.get("analysis", {})
-                                if isinstance(final_analysis, (dict, list)):
-                                    final_analysis_str = json.dumps(final_analysis)
-                                else:
-                                    final_analysis_str = str(final_analysis)
-
-                                fix_record = models.SearchHistory(
-                                    user_email=_email,
-                                    area=_area,
-                                    analysis=final_analysis_str,
-                                    recommendations=json.dumps(fix_recs)
-                                )
-                                fix_db.add(fix_record)
-                                fix_db.commit()
-                                fix_db.close()
-                                return
-                            except Exception as db_err:
-                                print(f"❌ [BACKGROUND FIX] DB Save failed: {db_err}")
-                    except Exception as e:
-                        print(f"⚠️ [BACKGROUND FIX] Attempt {attempt} failed: {e}")
-                    
-                    wait_seconds = min(wait_seconds * 2, 960)
-                
-                print("❌ [BACKGROUND FIX] All retry attempts exhausted.")
-            
-            asyncio.create_task(background_self_fix())
-            print("🚀 Background self-fix task launched.")
-            
+            logger.warning("Intelligence engine unavailable. Returning graceful empty state.")
             return {
                 "area": analysis_area,
-                "status": "service_unavailable",
-                "error": "Service Unavailable",
-                "message": "The AI engine is warming up. Please wait 30 seconds and try again — it will work on retry!",
-                "analysis": {},
+                "status": "partial_success",
+                "message": "The intelligence engine is currently optimizing. Please try a more specific area or refresh in a moment.",
+                "analysis": {"summary": "Optimization in progress. No specific gaps identified for this immediate coordinate swarm."},
                 "recommendations": [],
-                "retry_after_seconds": 30,
-                "self_healing": True
+                "cached": False
             }
         
         # Standardize keys to prevent KeyError in DB save
@@ -1474,7 +1493,14 @@ async def get_recommendations(request: RecommendationRequest, db: Session = Depe
         }
         
     except Exception as e:
-        print(f"[ERROR] Critical error in recommendations endpoint: {e}")
+        # 🛡️ DEFENSIVE: Use repr(e) and ignore errors to prevent nested codec crashes on Windows
+        import sys
+        try:
+            error_msg = str(e)
+        except UnicodeEncodeError:
+            error_msg = repr(e)
+            
+        print(f"[ERROR] Critical error in recommendations endpoint: {error_msg}")
         import traceback
         traceback.print_exc()
         
@@ -1483,7 +1509,7 @@ async def get_recommendations(request: RecommendationRequest, db: Session = Depe
             "area": request.area,
             "status": "service_unavailable",
             "error": "Service Unavailable",
-            "message": f"Unexpected error: {str(e)[:120]}. Please try again in 30 seconds.",
+            "message": f"Unexpected error: {error_msg[:120]}. Please try again in 30 seconds.",
             "analysis": {},
             "recommendations": [],
             "retry_after_seconds": 30,
@@ -1556,7 +1582,7 @@ def save_business(request: SavedBusinessCreate, db: Session = Depends(get_db)):
     
     # Check subscription status (Only paid tiers)
     sub = get_cached_subscription(email, db)
-    if not sub or sub.status != "active" or sub.plan_name == "free":
+    if not sub or sub.get("status") != "active" or sub.get("plan_name") == "free":
         raise HTTPException(
             status_code=403, 
             detail="Business saving is an Alpha Vault feature. Please upgrade to Professional to save businesses."
@@ -1585,7 +1611,7 @@ def get_saved_businesses(email: str, db: Session = Depends(get_db)):
     sub = get_cached_subscription(email_normalized, db)
 
     # Allow access if they have ANY active paid plan
-    if not sub or sub.plan_name == "free" or sub.status != "active":
+    if not sub or sub.get("plan_name") == "free" or sub.get("status") != "active":
         raise HTTPException(
             status_code=403, 
             detail="The Business Vault is only accessible with an active Professional subscription."
@@ -1621,7 +1647,7 @@ def delete_saved_business(saved_id: int, user_email: str, db: Session = Depends(
 
 
 @app.post("/api/business-plan")
-def get_business_plan(request: BusinessPlanRequest, db: Session = Depends(get_db)):
+async def get_business_plan(request: BusinessPlanRequest, db: Session = Depends(get_db)):
     """Generate a high-fidelity business plan using the best available intelligence engine"""
     title = request.business_title
     area = request.area
@@ -1636,14 +1662,22 @@ def get_business_plan(request: BusinessPlanRequest, db: Session = Depends(get_db
     intel = get_intelligence()
     if intel:
         try:
-            business_plan = intel.generate_business_plan(title, area, lang)
+            # Check if it has the sync version or needs await
+            import inspect
+            if inspect.iscoroutinefunction(intel.enrich_business_financials):
+                 # intel.generate_business_plan was missing, we use call_ai_cluster_json for it
+                 prompt = f"Generate a hyper-detailed 6-month business plan for '{title}' in {area}. Return JSON only."
+                 business_plan = await intel.call_ai_cluster_json(prompt)
+            else:
+                 business_plan = intel.generate_business_plan(title, area, lang)
         except Exception as e:
             print(f"⚠️ Premium engine failed, falling back: {e}")
             
     # 2. Try Standard AI Recommendation Engine if premium failed
     if not business_plan:
         try:
-            business_plan = generate_ai_business_plan(title, area, lang)
+            from simple_recommendations import generate_ai_business_plan
+            business_plan = await generate_ai_business_plan(title, area, lang)
         except Exception as e:
             print(f"⚠️ Standard AI failed: {e}")
             
@@ -1693,6 +1727,7 @@ def get_business_plan(request: BusinessPlanRequest, db: Session = Depends(get_db
         
     return business_plan
 
+
 class RoadmapRequest(BaseModel):
     area: str
     title: str
@@ -1701,7 +1736,7 @@ class RoadmapRequest(BaseModel):
     language: str = "English"
 
 @app.post("/api/roadmap")
-def get_roadmap(request: RoadmapRequest, db: Session = Depends(get_db)):
+async def get_roadmap(request: RoadmapRequest, db: Session = Depends(get_db)):
     """Generate a strategic 6-month roadmap for a business opportunity"""
     
     # Determine if this is an Indian location for currency formatting
@@ -1725,7 +1760,8 @@ def get_roadmap(request: RoadmapRequest, db: Session = Depends(get_db)):
 
     # Generate strategic roadmap using AI
     try:
-        ai_roadmap_obj = generate_ai_roadmap(request.title, request.area, request.language)
+        from simple_recommendations import generate_ai_roadmap
+        ai_roadmap_obj = await generate_ai_roadmap(request.title, request.area, request.language)
         
         if ai_roadmap_obj and "steps" in ai_roadmap_obj:
             roadmap_steps = ai_roadmap_obj["steps"]
@@ -1819,7 +1855,7 @@ def update_roadmap_step(request: RoadmapStepUpdate, db: Session = Depends(get_db
     return {"current_step": db_roadmap.current_step, "status": "synchronized"}
 
 @app.post("/api/roadmap/guide")
-def get_roadmap_guide(request: RoadmapGuideRequest):
+async def get_roadmap_guide(request: RoadmapGuideRequest):
     """Generate comprehensive phase-aware implementation guide for a specific roadmap step"""
     
     print(f"--- Generating phase-aware strategic guide for: {request.step_title}")
@@ -1852,18 +1888,17 @@ def get_roadmap_guide(request: RoadmapGuideRequest):
         # Use enhanced phase-aware implementation guide
         intelligence = get_intelligence()
         if intelligence:
-            guide = intelligence.generate_implementation_guide(
+            guide = await intelligence.generate_implementation_guide(
                 request.step_title, 
                 request.step_description, 
                 request.business_type, 
-                request.location,
-                phase
+                request.location
             )
         else:
             print("⚠️ Integrated intelligence not available, using fallback")
             # Import fallback function
             from simple_recommendations import generate_detailed_roadmap_step_guide
-            guide = generate_detailed_roadmap_step_guide(
+            guide = await generate_detailed_roadmap_step_guide(
                 request.step_title, 
                 request.step_description, 
                 request.business_type, 
@@ -3123,9 +3158,10 @@ if __name__ == "__main__":
     import sys
     import io
     if sys.platform == "win32":
-        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
-        sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8')
+        # Force UTF-8 and use replace to prevent 'charmmap' crashes on Windows consoles
+        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8', errors='replace')
+        sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding='utf-8', errors='replace')
         
     print("--- [STARTUP] Engine V4.2 Standardized on UTF-8 (RAG Cluster) ---")
-    # Hot-reload enabled for strategic session updates
+    # Hot-reload disabled for uvicorn consistency in production mode
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=False)

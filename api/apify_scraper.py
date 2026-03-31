@@ -12,42 +12,7 @@ def get_apify_client():
         return None
     return ApifyClient(api_key)
 
-def scrape_google_maps_contacts(
-    search_queries: List[str], 
-    location: str, 
-    max_results: int = 50,
-    scrape_reviews: bool = True,
-    scrape_contacts: bool = True
-) -> List[Dict[str, Any]]:
-    """
-    Scrape comprehensive business data from Google Maps via Apify.
-    Uses 'gnomonic_coral/google-maps-contact-extractor' (dpWePxnzRER4fPvM0).
-    """
-    client = get_apify_client()
-    if not client:
-        return []
-
-    # Prepare the Actor input based on the user's requirements
-    run_input = {
-        "searchStringsArray": search_queries,
-        "locationQuery": location,
-        "maxCrawledPlacesPerSearch": max_results,
-        "language": "en",
-        "scrapePlaceDetailPage": True,
-        "scrapeReviews": scrape_reviews,
-        "scrapeContacts": scrape_contacts,
-        "scrapeOpeningHours": True,
-        "scrapePriceLevel": True,
-        "scrapeImages": False,
-        "maxImages": 0,
-        "scrapeSocialMediaProfiles": True,
-        "skipClosedPlaces": False,
-    }
-
-    try:
-        print(f"🚀 Starting Deep Google Maps Scraping for {search_queries} in {location}...")
-        # Use the specific actor provided by the user
-        run = client.actor("dpWePxnzRER4fPvM0").call(run_input=run_input)
+         run = client.actor("dpWePxnzRER4fPvM0").call(run_input=run_input)
         
         results = []
         # Fetch results from the default dataset

@@ -11,6 +11,7 @@ import { useClickOutside } from "@/hooks/useClickOutside";
 import { useSubscription } from "@/context/SubscriptionContext";
 import { useTheme } from "next-themes";
 import { SystemStatusPulse } from "./GlobalFallbacks";
+import { useSearch } from "@/context/SearchContext";
 
 const languages = [
   { code: "English", name: "English" },
@@ -27,6 +28,7 @@ export default function Navbar() {
   const pathname = usePathname();
   const { plan, theme: subscriptionTheme, planFeatures, actualPlanName } = useSubscription();
   const { theme, setTheme } = useTheme();
+  const { clearSearch } = useSearch();
   const [showLangs, setShowLangs] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
@@ -65,10 +67,10 @@ export default function Navbar() {
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 backdrop-blur-xl border-b border-slate-300 dark:border-white/5 bg-white/70 dark:bg-[#020617]/70 transition-all duration-300">
       {/* Primary Nav Content - Elevated Layer */}
-      <div className="relative z-30 responsive-container px-4 sm:px-6 lg:px-8 h-14 sm:h-20 lg:h-24 flex items-center justify-between gap-2 sm:gap-4">
+      <div className="relative z-30 responsive-container px-4 sm:px-6 lg:px-8 h-14 sm:h-16 lg:h-16 flex items-center justify-between gap-2 sm:gap-4">
         {/* LEFT: LOGO */}
         <div className="flex shrink-0">
-          <div className="flex items-center gap-2 sm:gap-3 group cursor-pointer" onClick={() => router.push('/')}>
+          <div className="flex items-center gap-2 sm:gap-3 group cursor-pointer" onClick={() => { clearSearch(); router.push('/'); }}>
             <div 
               className="w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 rounded-2xl flex items-center justify-center shadow-2xl group-hover:scale-105 transition-all duration-300 overflow-hidden border border-white/10"
               style={{ 
@@ -106,6 +108,7 @@ export default function Navbar() {
               <Link
                 key={link.path}
                 href={link.path}
+                onClick={link.path !== '/dashboard' ? clearSearch : undefined}
                 className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-300 group relative ${isActive
                     ? 'text-slate-900 dark:text-white'
                     : 'text-slate-500 dark:text-gray-500 hover:text-slate-900 dark:hover:text-white'
@@ -154,7 +157,10 @@ export default function Navbar() {
                         <Link
                           key={link.path}
                           href={link.path}
-                          onClick={() => setShowMobileMenu(false)}
+                          onClick={() => {
+                            setShowMobileMenu(false);
+                            if (link.path !== '/dashboard') clearSearch();
+                          }}
                           className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all duration-200 ${isActive
                               ? 'bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/50 dark:to-indigo-950/50 text-blue-700 dark:text-blue-300 border border-blue-200/50 dark:border-blue-800/50'
                               : 'text-slate-600 dark:text-gray-300 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white'
@@ -367,6 +373,7 @@ export default function Navbar() {
                     <div className="p-2">
                       <button
                         onClick={() => {
+                          clearSearch();
                           router.push('/profile');
                           setShowProfile(false);
                         }}
