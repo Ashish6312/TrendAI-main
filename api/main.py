@@ -659,6 +659,12 @@ class RecommendationRequest(BaseModel):
     language: str = "English"
     phase: str = "discovery"  # Business development phase
 
+class ScrapeRequest(BaseModel):
+    query: str
+    location: str
+    max_results: int = 10
+    email: Optional[str] = None
+
 @app.post("/api/businesses/scrape")
 async def scrape_businesses(payload: ScrapeRequest, db: Session = Depends(get_db)):
     """Deep extract Google Maps business contacts via Apify (PRO feature)"""
