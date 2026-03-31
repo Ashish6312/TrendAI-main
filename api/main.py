@@ -839,6 +839,7 @@ class DodoCheckoutRequest(BaseModel):
     return_url: str
     amount: Optional[int] = None
     billing_cycle: Optional[str] = "yearly"
+    is_recurring: bool = False # Default to False (Instant Payment) as requested
 
 class DodoPaymentConfirmation(BaseModel):
     payment_id: str
@@ -2533,9 +2534,20 @@ async def create_dodo_checkout_session(request: DodoCheckoutRequest):
         price_amount = request.amount * 100 if request.amount else None
         
         try:
-            cart_item = {"product_id": product_id, "quantity": request.quantity or 1}
-            if price_amount:
-                cart_item["amount"] = price_amount # Use 'amount' or 'price' depending on SDK version
+            # INSTANT VS AUTO-PAY LOGIC
+            if not getattr(request, 'is_recurring', False):
+                logger.info(f"⚡ Initiating INSTANT PAYMENT (One-time) for: {product_id}")
+                # For one-time payments, we use an ad-hoc product description to avoid dashboard subscription constraints
+                cart_item = {
+                    "name": f"{product_id.replace('pdt_', '').replace('_', ' ').title()} - {request.billing_cycle.title()} Strategy",
+                    "amount": price_amount or (request.amount * 100),
+                    "quantity": request.quantity or 1
+                }
+            else:
+                logger.info(f"🔄 Initiating AUTO-PAY (Subscription) for product: {product_id}")
+                cart_item = {"product_id": product_id, "quantity": request.quantity or 1}
+                if price_amount:
+                   cart_item["amount"] = price_amount
                 
             session = client.checkout_sessions.create(
                 product_cart=[cart_item],
@@ -2651,8 +2663,11 @@ async def process_dodo_payload(payload: Dict[str, Any]):
     
     logger.info(f"🔔 Processing Dodo Event: {event_type} | ID: {data.get('payment_id') or data.get('subscription_id')}")
     
-    # Handle both one-time payments and subscription activations
-    if event_type in ["payment.succeeded", "subscription.activated", "subscription.created"]:
+    # Handle both one-time payments and subscription activations (including failures for history)
+    is_success = event_type in ["payment.succeeded", "subscription.activated", "subscription.created"]
+    is_failure = event_type in ["payment.failed", "payment.cancelled"]
+    
+    if is_success or is_failure:
         payment_id = data.get("payment_id") or data.get("subscription_id")
         customer = data.get("customer", {})
         email = (customer.get("email") or "").lower().strip()
@@ -2699,6 +2714,9 @@ async def process_dodo_payload(payload: Dict[str, Any]):
         from database import SessionLocal
         db = SessionLocal()
         try:
+            # Determine status for database
+            payment_status = "success" if is_success else ("failed" if event_type == "payment.failed" else "cancelled")
+            
             # 1. Update Payment History
             payment_id_str = str(payment_id)
             existing = db.query(models.PaymentHistory).filter(models.PaymentHistory.dodo_payment_id == payment_id_str).first()
@@ -2708,25 +2726,32 @@ async def process_dodo_payload(payload: Dict[str, Any]):
                     dodo_payment_id=payment_id_str,
                     amount=amount,
                     currency=data.get("currency") or "INR",
-                    status="success",
+                    status=payment_status,
                     plan_name=plan_name,
                     billing_cycle=billing_cycle,
-                    payment_method="dodo"
+                    payment_method="dodo",
+                    invoice_url=data.get("invoice_url") or data.get("receipt_url"),
+                    failure_reason=data.get("failure_reason") or (data.get("error_message") if is_failure else None)
                 )
                 db.add(payment_record)
+            elif existing and is_success:
+                # Update status if it was previously pending/failed but now succeeded
+                existing.status = "success"
+                existing.invoice_url = data.get("invoice_url") or data.get("receipt_url")
             
-            # 2. Update/Create Subscription
-            subscription_data = SubscriptionCreate(
-                user_email=email,
-                plan_name=mapped_plan,
-                plan_display_name=plan_name,
-                billing_cycle=billing_cycle,
-                price=amount,
-                currency=data.get("currency") or "INR",
-                max_analyses=-1 if mapped_plan in ['professional', 'growth', 'enterprise'] else 100,
-                features={}
-            )
-            create_subscription(subscription_data, db)
+            # 2. Update/Create Subscription (ONLY ON SUCCESS)
+            if is_success:
+                subscription_data = SubscriptionCreate(
+                    user_email=email,
+                    plan_name=mapped_plan,
+                    plan_display_name=plan_name,
+                    billing_cycle=billing_cycle,
+                    price=amount,
+                    currency=data.get("currency") or "INR",
+                    max_analyses=-1 if mapped_plan in ['professional', 'growth', 'enterprise'] else 100,
+                    features={}
+                )
+                create_subscription(subscription_data, db)
             
             db.commit()
             invalidate_user_cache(email)
@@ -2829,7 +2854,8 @@ async def process_payment_immediately(request: Request, db: Session = Depends(ge
             status="success",
             plan_name=plan_name,
             billing_cycle=billing_cycle,
-            payment_method="dodo"
+            payment_method="dodo",
+            invoice_url=body.get("invoice_url") or body.get("receipt_url")
         )
         
         payment_record = create_payment_record(payment_data, db)
@@ -2942,7 +2968,8 @@ def get_user_profile(email: str, db: Session = Depends(get_db)):
                 "plan_name": payment.plan_name,
                 "billing_cycle": payment.billing_cycle,
                 "payment_date": payment.payment_date.isoformat() if payment.payment_date else payment.created_at.isoformat(),
-                "payment_method": payment.payment_method
+                "payment_method": payment.payment_method,
+                "invoice_url": payment.invoice_url
             }
             for payment in recent_payments
         ]

@@ -34,7 +34,7 @@ function AcquisitionTiersContent() {
     const cycleParam = searchParams.get('cycle');
     const amountParam = searchParams.get('amount');
 
-    if ((paymentStatus === 'success' || status === 'succeeded') && planId) {
+    if (status === 'succeeded' && planId) {
       setPaymentDetails({
         payment_id: paymentId || 'DODO_' + Date.now(),
         order_id: 'ORDER_' + Date.now(),
@@ -46,6 +46,15 @@ function AcquisitionTiersContent() {
       setShowSuccessModal(true);
       const newUrl = window.location.pathname;
       window.history.replaceState({}, '', newUrl);
+    } else if (status === 'failed' || status === 'cancelled') {
+        addNotification({
+          type: 'alert',
+          title: 'Payment Incomplete',
+          message: status === 'failed' ? 'The payment could not be processed. Please try again or use another method.' : 'Payment was cancelled. No charges were made.',
+          priority: 'high'
+        });
+        const newUrl = window.location.pathname;
+        window.history.replaceState({}, '', newUrl);
     }
   }, [searchParams, billingCycle]);
 
@@ -74,9 +83,10 @@ function AcquisitionTiersContent() {
           quantity: 1,
           email: session.user.email,
           name: session.user.name || 'TrendAI Customer',
-          return_url: `${window.location.origin}/acquisition-tiers?payment=success&plan=${tier.id}&cycle=${billingCycle}&amount=${amount}&checkout_id=`,
+          return_url: `${window.location.origin}/acquisition-tiers?plan=${tier.id}&cycle=${billingCycle}&amount=${amount}`,
           amount: amount,
-          billing_cycle: billingCycle
+          billing_cycle: billingCycle,
+          is_recurring: false // Force Instant Payment (No Auto-pay)
         })
       });
 
