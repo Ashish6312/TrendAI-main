@@ -2668,12 +2668,25 @@ async def process_dodo_payload(payload: Dict[str, Any]):
     is_failure = event_type in ["payment.failed", "payment.cancelled"]
     
     if is_success or is_failure:
-        payment_id = data.get("payment_id") or data.get("subscription_id")
+        # Robust ID detection (handles different Dodo event structures)
+        payment_id = (
+            data.get("payment_id") or 
+            data.get("id") or 
+            data.get("subscription_id") or 
+            data.get("checkout_id")
+        )
+        
         customer = data.get("customer", {})
-        email = (customer.get("email") or "").lower().strip()
+        # Robust email detection
+        email = (
+            customer.get("email") or 
+            data.get("email") or 
+            data.get("customer_email") or 
+            ""
+        ).lower().strip()
         
         if not email:
-            logger.error("❌ Webhook payload missing customer email")
+            logger.error(f"❌ Webhook payload missing customer email for ID: {payment_id}")
             return {"status": "error", "message": "Missing email"}
 
         # Amount in Dodo is typically in cents/paisa
