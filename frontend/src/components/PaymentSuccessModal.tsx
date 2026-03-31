@@ -10,6 +10,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useNotifications } from "@/context/NotificationContext";
 import { useSubscription, SubscriptionPlan } from "@/context/SubscriptionContext";
 import { useSession } from "next-auth/react";
+import { getApiUrl } from "@/config/api";
 
 interface PaymentSuccessModalProps {
   isOpen: boolean;
@@ -105,7 +106,7 @@ export default function PaymentSuccessModal({ isOpen, onClose, paymentData, isPa
     const processPayment = async () => {
       hasProcessed.current = true;
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://trendai-api.onrender.com';
+        const apiUrl = getApiUrl();
         const payload = {
           user_email: session?.user?.email || "",
           dodo_payment_id: payment_id,

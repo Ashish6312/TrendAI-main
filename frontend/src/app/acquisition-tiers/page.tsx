@@ -58,18 +58,12 @@ function AcquisitionTiersContent() {
     setLoading(tier.id);
     try {
       const apiUrl = getApiUrl();
-      const dodoProductIdMap: Record<string, Record<string, string>> = {
-        'starter': {
-          'monthly': process.env.NEXT_PUBLIC_DODO_STARTER_MONTHLY_ID || 'pdt_0Nb1b0yMVRxjrlGF6L4BT',
-          'yearly': process.env.NEXT_PUBLIC_DODO_STARTER_YEARLY_ID || 'pdt_0NbF7kyfPVbNBhxmWQHp5'
-        },
-        'professional': {
-          'monthly': process.env.NEXT_PUBLIC_DODO_PROFESSIONAL_MONTHLY_ID || 'pdt_0Nb1b6gUkBEwL40Pd3IPC',
-          'yearly': process.env.NEXT_PUBLIC_DODO_PROFESSIONAL_YEARLY_ID || 'pdt_0NbF8QfBIb551VXZMggGQ'
-        }
+      const dodoProductIdMap: Record<string, string> = {
+        'starter': process.env.NEXT_PUBLIC_DODO_STARTER_ID || 'pdt_0NbF7kyfPVbNBhxmWQHp5',
+        'professional': process.env.NEXT_PUBLIC_DODO_PROFESSIONAL_ID || 'pdt_0NbF8QfBIb551VXZMggGQ'
       };
 
-      const productId = dodoProductIdMap[tier.id][billingCycle];
+      const productId = dodoProductIdMap[tier.id];
       const amount = billingCycle === 'monthly' ? tier.monthPrice : tier.yearPrice;
 
       const resSession = await fetch(`${apiUrl}/api/dodo/create-session`, {

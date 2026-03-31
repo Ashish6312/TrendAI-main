@@ -2646,75 +2646,94 @@ async def dodo_webhook_heartbeat():
 
 async def process_dodo_payload(payload: Dict[str, Any]):
     """Internal logic to process verified Dodo webhook payload and activate subscriptions"""
-    logger.info(f"🔔 Processing Dodo Event: {payload.get('type')}")
-    
     event_type = payload.get("type")
     data = payload.get("data", payload)
     
-    if event_type == "payment.succeeded":
-        payment_id = data.get("payment_id")
+    logger.info(f"🔔 Processing Dodo Event: {event_type} | ID: {data.get('payment_id') or data.get('subscription_id')}")
+    
+    # Handle both one-time payments and subscription activations
+    if event_type in ["payment.succeeded", "subscription.activated", "subscription.created"]:
+        payment_id = data.get("payment_id") or data.get("subscription_id")
         customer = data.get("customer", {})
         email = (customer.get("email") or "").lower().strip()
         
-        # Amount in Dodo is in cents
-        amount_cents = data.get("total_amount") or data.get("amount") or 0
-        amount = float(amount_cents) / 100
+        if not email:
+            logger.error("❌ Webhook payload missing customer email")
+            return {"status": "error", "message": "Missing email"}
+
+        # Amount in Dodo is typically in cents/paisa
+        amount_raw = data.get("total_amount") or data.get("amount") or 0
+        amount = float(amount_raw) / 100
         
-        # Determine plan from product_id or amount
+        # Determine plan and billing cycle
         product_cart = data.get("product_cart", [])
-        product_id = product_cart[0].get("product_id") if product_cart else None
+        product_id = product_cart[0].get("product_id") if product_cart else data.get("product_id")
         
+        # Default logic
+        plan_name = "Professional"
+        billing_cycle = "monthly"
+        
+        # Detect plan from product_id string
         if product_id:
-            if "professional" in product_id.lower():
+            pid_low = product_id.lower()
+            if "professional" in pid_low or "pro" in pid_low:
                 plan_name = "Professional"
-            elif "starter" in product_id.lower():
+            elif "starter" in pid_low:
                 plan_name = "Starter"
-            else:
-                plan_name = "Starter" # Fallback
+            
+            # Detect billing cycle from product_id or amount
+            if "year" in pid_low or "annual" in pid_low or amount > 1000:
+                billing_cycle = "yearly"
         else:
-            plan_name = "Professional" if amount > 300 else "Starter"
+            # Fallback based on amount thresholds (Rupee logic)
+            if amount > 1000:
+                billing_cycle = "yearly"
+                plan_name = "Professional" if amount > 3000 else "Starter"
+            else:
+                billing_cycle = "monthly"
+                plan_name = "Professional" if amount > 400 else "Starter"
             
         mapped_plan = normalize_plan_name(plan_name)
+        logger.info(f"✨ Fulfilling {event_type}: Email={email}, Plan={mapped_plan}, Cycle={billing_cycle}, Amt={amount}")
         
         from database import SessionLocal
         db = SessionLocal()
         try:
             # 1. Update Payment History
-            # Check if this payment already recorded
-            existing = db.query(models.PaymentHistory).filter(models.PaymentHistory.dodo_payment_id == payment_id).first()
+            payment_id_str = str(payment_id)
+            existing = db.query(models.PaymentHistory).filter(models.PaymentHistory.dodo_payment_id == payment_id_str).first()
             if not existing:
                 payment_record = models.PaymentHistory(
                     user_email=email,
-                    dodo_payment_id=payment_id,
+                    dodo_payment_id=payment_id_str,
                     amount=amount,
                     currency=data.get("currency") or "INR",
                     status="success",
                     plan_name=plan_name,
-                    billing_cycle="monthly", # Default
+                    billing_cycle=billing_cycle,
                     payment_method="dodo"
                 )
                 db.add(payment_record)
             
-            # 2. Update Subscription
-            # Use SubscriptionCreate model if available
+            # 2. Update/Create Subscription
             subscription_data = SubscriptionCreate(
                 user_email=email,
                 plan_name=mapped_plan,
                 plan_display_name=plan_name,
-                billing_cycle="monthly",
+                billing_cycle=billing_cycle,
                 price=amount,
                 currency=data.get("currency") or "INR",
-                max_analyses=-1 if mapped_plan == 'professional' else 100,
+                max_analyses=-1 if mapped_plan in ['professional', 'growth', 'enterprise'] else 100,
                 features={}
             )
             create_subscription(subscription_data, db)
             
             db.commit()
             invalidate_user_cache(email)
-            logger.info(f"✅ Dodo Subscription Activated via Webhook: {email} | Plan: {plan_name}")
+            logger.info(f"✅ Dodo Fullfillment Complete: {email} | Plan: {plan_name} ({billing_cycle})")
             return {"status": "success"}
         except Exception as e:
-            logger.error(f"❌ Error processing Dodo webhook: {e}")
+            logger.error(f"❌ Error during fulfillment logic: {e}")
             db.rollback()
             return {"status": "error", "message": str(e)}
         finally:
