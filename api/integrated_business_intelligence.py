@@ -149,10 +149,11 @@ class IntegratedBusinessIntelligence:
             {rag_context if rag_context else "Synthesize market gaps based on general geographic trends."}
             
             STRICT FIDELITY REQUIREMENTS:
-            1. NO PLACEHOLDERS. Never use '₹5L-₹15L' or 'Regional market'.
-            2. CALC-ROI: Every ROI must be a unique calculation (e.g. 24%, 182%).
-            3. DRILL-DOWN: Specific audience (e.g. 'Commuter IT Workers in Salt Lake, Kolkata').
-            4. UNIQUE USP: Strategic competitive advantage.
+            1. NO PLACEHOLDERS. Every field must have a specific, calculated value.
+            2. CALC-ROI: Every 'roi_percentage' must be unique (e.g. 52, 118).
+            3. BEP-VAL: Specific 'be_period' (e.g. '4.5 Months', '1.2 Years').
+            4. TRAFFIC: 'm1_traffic' (e.g. '1.5k MAU', '125 local leads').
+            5. RETENTION: 'retention_rate' (e.g. '82%', 'High Repeat LTV').
             
             Return ONLY valid JSON:
             {{
@@ -169,8 +170,15 @@ class IntegratedBusinessIntelligence:
                         "market_gap": "Underserved micro-niche in {area}",
                         "target_audience": "Specific demographics",
                         "investment_range": "Estimated startup capital (e.g. ₹12.5L)",
+                        "funding_required": "Same as investment range",
+                        "roi_percentage": number,
                         "roi_potential": "Projected annual returns (e.g. 55%)",
+                        "be_period": "Break-even target (e.g. 6 Months)",
+                        "m1_traffic": "Projected M1 customer/lead volume",
+                        "retention_rate": "Target retention (e.g. 78%)",
                         "implementation_difficulty": "Low/Medium/High",
+                        "competition_level": "Low/Medium/High with a reason.",
+                        "demand_index": "Numerical index (e.g. 92%)",
                         "market_size": "City/State scope",
                         "six_month_plan": [{{ "month": "1-2", "goal": "..." }}, {{ "month": "3-4", "goal": "..." }}, {{ "month": "5-6", "goal": "..." }}]
                     }}
@@ -578,7 +586,7 @@ class IntegratedBusinessIntelligence:
         
         # Determine logical ROI and Investment based on area (pseudo-random but consistent)
         area_seed = len(area)
-        base_roi = 25 + (area_seed % 15)
+        base_roi = 32 + (area_seed % 12)
         curr = "₹" if "India" in area else "$"
         
         return {
@@ -593,8 +601,15 @@ class IntegratedBusinessIntelligence:
                     "market_gap": "High demand for real-time corridor monitoring and logistics resilience.",
                     "target_audience": "Local agricultural collectives and regional SME manufacturing units.",
                     "investment_range": f"{curr}25L - 45L",
+                    "funding_required": f"{curr}35L (Estimated)",
+                    "roi_percentage": base_roi,
                     "roi_potential": f"{base_roi}% Annually",
+                    "be_period": "4.5 Months",
+                    "m1_traffic": "1,200 Active Regional Vectors",
+                    "retention_rate": "82%",
                     "implementation_difficulty": "Medium",
+                    "competition_level": "Low (First-Mover Edge)",
+                    "demand_index": "92%",
                     "market_size": f"{curr}250 Cr+ {primary_area} Corridor",
                     "competitive_advantage": "Exclusive localized logistics monitoring stack.",
                     "revenue_model": "Managed Service Fees + Platform Subscriptions",
@@ -611,8 +626,15 @@ class IntegratedBusinessIntelligence:
                     "market_gap": "Unsaturated sector with high institutional support for sustainability.",
                     "target_audience": "Export-oriented organic farms and regional fertilizer distributors.",
                     "investment_range": f"{curr}15L - 28L",
-                    "roi_potential": f"{base_roi + 8}% Annually",
+                    "funding_required": f"{curr}18L (Estimated)",
+                    "roi_percentage": base_roi + 5,
+                    "roi_potential": f"{base_roi + 5}% Annually",
+                    "be_period": "6.2 Months",
+                    "m1_traffic": "45 Corporate B2B Leads",
+                    "retention_rate": "90% (Annual Subscription)",
                     "implementation_difficulty": "Medium-High",
+                    "competition_level": "Low (High Barrier to Entry)",
+                    "demand_index": "88%",
                     "market_size": "Export Grade / Global Standard",
                     "competitive_advantage": "Proprietary residue digestion technology.",
                     "revenue_model": "Direct Product Sales + Waste Processing Fees",
