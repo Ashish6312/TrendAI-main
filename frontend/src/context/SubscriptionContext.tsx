@@ -181,8 +181,7 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
         localStorage.setItem(`subscription_name_${email}`, actualName);
         return planToSet;
       } else {
-        console.warn(`⚠️ Subscription API returned ${response.status}, using cached plan`);
-        // Try to use cached plan
+        // Silently use cached plan if API is warming up (prevents console noise)
         const cachedPlan = localStorage.getItem(`subscription_${email}`) as SubscriptionPlan;
         if (cachedPlan && ['free', 'starter', 'professional'].includes(cachedPlan)) {
           setPlanState(cachedPlan);
@@ -191,18 +190,12 @@ export function SubscriptionProvider({ children }: { children: React.ReactNode }
       }
     } catch (error: any) {
       if (retryCount < 2) {
-        console.warn(`🔄 Subscription fetch attempt ${retryCount + 1} failed, retrying in 2s...`);
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        // Exponential backoff for cold starts - silent retry
+        await new Promise(resolve => setTimeout(resolve, 3000 * (retryCount + 1)));
         return fetchSubscriptionPlan(retryCount + 1);
       }
 
-      if (error.name === 'AbortError') {
-        console.warn('⚠️ Subscription fetch timed out after retries, using cached plan');
-      } else {
-        console.warn('⚠️ Subscription fetch failed after retries, using cached plan:', error.message);
-      }
-      
-      // Try to use cached plan on error
+      // Final quiet fallback on timeout
       const cachedPlan = localStorage.getItem(`subscription_${email}`) as SubscriptionPlan;
       if (cachedPlan && ['free', 'starter', 'professional'].includes(cachedPlan)) {
         setPlanState(cachedPlan);

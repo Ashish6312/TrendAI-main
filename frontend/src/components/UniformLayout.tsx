@@ -1,7 +1,7 @@
 "use client";
 
 import { ReactNode } from 'react';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, MapPin } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { useSubscription } from '@/context/SubscriptionContext';
@@ -52,26 +52,29 @@ export default function UniformLayout({
               
               <div className="hidden md:block h-16 w-px bg-slate-200 dark:bg-white/10" />
               
-              <div className="space-y-2">
-                <h1 className="text-2xl sm:text-4xl lg:text-5xl font-black text-slate-900 dark:text-white tracking-tighter leading-none italic uppercase">
+              <div className="space-y-4">
+                <h1 className="text-3xl sm:text-4xl lg:text-6xl font-extrabold text-slate-900 dark:text-white tracking-tight leading-[1.1]">
                   {title}
                 </h1>
-                <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                <div className="flex flex-wrap items-center gap-4">
                   {subtitle && (
-                    <p className="text-sm sm:text-base font-bold text-slate-500 dark:text-gray-400 uppercase tracking-widest opacity-80">
+                    <p className="text-sm sm:text-base font-semibold text-slate-500 dark:text-gray-400 uppercase tracking-[0.1em] opacity-70">
                       {subtitle}
                     </p>
                   )}
                   {location && (
                     <div 
-                      className="flex items-center gap-2 px-3 py-1 rounded-full bg-slate-500/5 border"
-                      style={{ borderColor: `${theme.primary}30`, backgroundColor: `${theme.primary}05` }}
+                      className="flex items-center gap-2.5 px-4 py-1.5 rounded-xl border-2 transition-all hover:scale-105"
+                      style={{ 
+                        borderColor: `${theme.primary}20`, 
+                        backgroundColor: `${theme.primary}08`,
+                        boxShadow: `0 4px 20px -5px ${theme.primary}15`
+                      }}
                     >
-                      <span 
-                        className="w-1.5 h-1.5 rounded-full animate-pulse shadow-lg"
-                        style={{ backgroundColor: theme.primary, boxShadow: `0 0 8px ${theme.primary}` }}
-                      ></span>
-                      <span className="text-[10px] sm:text-xs font-black uppercase tracking-widest" style={{ color: theme.primary }}>{location}</span>
+                      <MapPin size={14} style={{ color: theme.primary }} className="animate-bounce-slow flex-shrink-0" />
+                      <span className="text-[11px] sm:text-xs font-bold uppercase tracking-[0.15em] whitespace-nowrap" style={{ color: theme.primary }}>
+                        {location}
+                      </span>
                     </div>
                   )}
                 </div>

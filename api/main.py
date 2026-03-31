@@ -65,11 +65,6 @@ manager = ConnectionManager()
 from integrated_business_intelligence import register_ws_pusher
 register_ws_pusher(manager.broadcast)
 
-class ScrapeRequest(BaseModel):
-    query: str
-    location: str
-    max_results: int = 50
-    email: Optional[str] = None
 
 class ContactRequest(BaseModel):
     name: str

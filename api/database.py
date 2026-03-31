@@ -64,9 +64,10 @@ else:
     engine_kwargs = {
         "connect_args": connect_args,
         "pool_pre_ping": True,
-        "pool_recycle": 300,
+        "pool_recycle": 120,
         "pool_size": 20,
         "max_overflow": 40,
+        "pool_use_lifo": True,
         "echo": False,
     }
 

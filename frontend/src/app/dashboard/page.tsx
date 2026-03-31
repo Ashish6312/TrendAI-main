@@ -433,57 +433,18 @@ function DashboardContent() {
       sessionStorage.setItem('active_reconnaissance', 'true');
     }
 
-    // Initialize WebSocket for real-time progress updates
-    let socket: WebSocket | null = null;
-    try {
-      const wsUrl = apiUrl.includes('https') ? apiUrl.replace(/^https/, 'wss') : apiUrl.replace(/^http/, 'ws');
-      socket = new WebSocket(`${wsUrl}/ws/analysis`);
-
-      socket.onopen = () => {
-        socket?.send("ping"); // Keep-alive
-      };
-
-      socket.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          if (data.type === 'status') {
-             // PROFESSIONAL HIDER: Map technical logs to strategic messages
-             const msg = data.message || "";
-             if (msg.includes('Searching') || msg.includes('Overpass') || msg.includes('found')) {
-               setLoadingMessage("Synchronizing Regional Market Data...");
-             } else if (msg.includes('AI') || msg.includes('Parsing') || msg.includes('Resolved')) {
-               setLoadingMessage("Synthesizing Strategic Intelligence...");
-             } else if (msg.includes('Scrape') || msg.includes('contact')) {
-               setLoadingMessage("Extracting Deep Market Gaps...");
-             } else if (msg.length > 5) {
-               setLoadingMessage(msg);
-             }
-          }
-          if (data.type === 'analysis_progress') {
-            setLoadingMessage(data.message);
-            // V6.1 Elite Swarm progress mapping
-            setLoadingProgress(prev => {
-              if (data.message.includes('Gathering') || data.message.includes('Initializing')) return Math.max(prev, 15);
-              if (data.message.includes('Analyzing')) return Math.max(prev, 35);
-              if (data.message.includes('Generating')) return Math.max(prev, 55);
-              if (data.message.includes('AI Analysis')) return Math.max(prev, 75);
-              if (data.message.includes('Finalizing')) return Math.max(prev, 90);
-              return prev;
-            });
-          }
-        } catch (err) { /* ignore */ }
-      };
-
-      socket.onerror = (e) => console.warn("WebSocket analysis feed unavailable:", e);
-    } catch (err) {
-      console.warn("Could not initiate WebSocket feed:", err);
-    }
-
     const progressInterval = setInterval(() => {
       setLoadingProgress(prev => {
-        if (prev >= 98) return prev;
-        const increment = Math.random() * (prev < 50 ? 5 : prev < 80 ? 1 : 0.2);
-        return Math.min(prev + increment, 98);
+        const next = prev >= 98 ? prev : prev + (Math.random() * (prev < 50 ? 5 : prev < 85 ? 1 : 0.1));
+        
+        // Dynamic Messaging based on Phase
+        if (next < 25) setLoadingMessage("Synchronizing Regional Market Data...");
+        else if (next < 50) setLoadingMessage("Extracting Deep Market Gaps...");
+        else if (next < 75) setLoadingMessage("Synthesizing Strategic Intelligence...");
+        else if (next < 90) setLoadingMessage("Finalizing Neural Recommendations...");
+        else setLoadingMessage("Optimizing Growth Directives...");
+        
+        return next;
       });
     }, 1000);
 
@@ -492,7 +453,7 @@ function DashboardContent() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          area: searchArea, // Use the determined search area
+          area: searchArea,
           user_email: session?.user?.email,
           language: language,
           timestamp: Date.now()
@@ -505,19 +466,18 @@ function DashboardContent() {
 
       const data = await response.json();
 
-      // ZERO FALLBACK: Always use the high-fidelity AI synthesis directly from the cluster.
       setResult(data);
       setLastResult(data);
       if (searchArea) setLastArea(searchArea);
 
       setLoadingProgress(100);
-      if (socket) socket.close();
+      setLoadingMessage("Intelligence Synthesis Complete");
+      
       setTimeout(() => {
         setResult(data);
         clearInterval(progressInterval);
         setLoading(false);
 
-        // 🔐 UNLOCK: Ready for next reconnaissance
         if (typeof window !== 'undefined') {
           sessionStorage.removeItem('active_reconnaissance');
         }
@@ -534,12 +494,10 @@ function DashboardContent() {
         fetchHistory();
       }, 500);
     } catch (error) {
-      console.error("Failed to fetch recommendations", error);
-      if (socket) socket.close();
+      console.error("Analysis Reconnaissance Failed:", error);
       clearInterval(progressInterval);
       setLoading(false);
 
-      // 🚨 EMERGENCY UNLOCK: Reset state on reconnaissance failure
       if (typeof window !== 'undefined') {
         sessionStorage.removeItem('active_reconnaissance');
       }
@@ -547,7 +505,7 @@ function DashboardContent() {
       addNotification({
         type: 'alert',
         title: 'Analysis Failed',
-        message: 'Failed to analyze market data. Please check your connection and try again.',
+        message: 'The Intelligence Cluster encountered a connection timeout. Please try again.',
         priority: 'high'
       });
     }
@@ -644,7 +602,10 @@ function DashboardContent() {
                   profileLocation ? {
                     label: profileLocation.split(',')[0],
                     active: true,
-                    icon: <Globe2 size={12} className="text-blue-400" />,
+                    icon: <div className="flex items-center gap-1">
+                            <MapPin size={12} className="text-blue-500 animate-bounce-slow" />
+                            <CheckCircle2 size={12} className="text-blue-400" />
+                          </div>,
                     special: true
                   } : null,
                   { label: t('dash_vector_predict'), active: false, icon: <Cpu size={12} /> },
@@ -860,25 +821,42 @@ function DashboardContent() {
                   <button
                     type="submit"
                     disabled={loading || (!area && !profileLocation) || hasReachedAnalysisLimit(analysisCount)}
-                    className="w-full h-12 bg-gradient-to-br from-[#8A2BE2] via-[#a855f7] to-[#7c3aed] hover:brightness-110 text-white font-black rounded-lg flex flex-col items-center justify-center gap-1 transition-all active:scale-[0.98] shadow-[0_10px_30px_-8px_rgba(168,85,247,0.4)] relative overflow-hidden group disabled:opacity-50 disabled:grayscale disabled:cursor-not-allowed"
+                    className="w-full h-16 bg-slate-900 dark:bg-white group relative overflow-hidden rounded-2xl transition-all duration-300 hover:scale-[1.01] active:scale-[0.98] shadow-2xl shadow-black/20 disabled:opacity-50 disabled:grayscale disabled:cursor-not-allowed border border-white/10 dark:border-slate-200"
                   >
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-                    <div className="flex items-center gap-3">
-                      {loading ? (
-                        <Loader2 className="animate-spin" size={24} />
-                      ) : (
-                        <Sparkle size={24} fill="currentColor" className="group-hover:rotate-12 transition-transform" />
+                    {/* Background Glow Effect */}
+                    <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/0 via-emerald-500/10 to-emerald-500/0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+                    
+                    <div className="relative z-10 flex flex-col items-center justify-center h-full">
+                      <div className="flex items-center gap-3">
+                        {loading ? (
+                          <Loader2 className="animate-spin text-emerald-500 dark:text-emerald-600" size={24} />
+                        ) : (
+                          <Sparkle 
+                            size={20} 
+                            fill="currentColor" 
+                            className="text-emerald-500 dark:text-emerald-600 transition-transform group-hover:rotate-12 group-hover:scale-110" 
+                          />
+                        )}
+                        <span className="text-xl font-bold tracking-tight text-white dark:text-slate-900">
+                          {loading ? t('dash_analyzing') : hasReachedAnalysisLimit(analysisCount) ? 'Recon Limit Reached' : t('dash_analyze_btn')}
+                        </span>
+                      </div>
+                      
+                      {area && !hasReachedAnalysisLimit(analysisCount) && !loading && (
+                        <div className="flex items-center gap-1.5 mt-1">
+                          <div className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />
+                          <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-[0.25em]">
+                            {area.split(',')[0]} Verified
+                          </span>
+                        </div>
                       )}
-                      <span className="text-xl italic tracking-tighter uppercase">
-                        {loading ? t('dash_analyzing') : hasReachedAnalysisLimit(analysisCount) ? 'Limit Reached' : t('dash_analyze_btn')}
-                      </span>
+                      
+                      {hasReachedAnalysisLimit(analysisCount) && (
+                        <span className="text-[9px] font-bold text-red-500 uppercase tracking-[0.2em] mt-1">
+                          Neural Credits Depleted
+                        </span>
+                      )}
                     </div>
-                    {area && !hasReachedAnalysisLimit(analysisCount) && (
-                      <span className="text-[9px] font-black text-white/60 uppercase tracking-[0.2em]">{area.split(',')[0]} Detected</span>
-                    )}
-                    {hasReachedAnalysisLimit(analysisCount) && (
-                      <span className="text-[9px] font-black text-white/60 uppercase tracking-[0.2em]">Upgrade Required</span>
-                    )}
                   </button>
                 </div>
 

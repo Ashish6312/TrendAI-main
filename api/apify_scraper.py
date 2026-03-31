@@ -11,8 +11,33 @@ def get_apify_client():
         print("⚠️ APIFY_API_KEY not found in environment")
         return None
     return ApifyClient(api_key)
+def scrape_google_maps_contacts(search_queries: List[str], location: Optional[str] = None, max_results: int = 20, scrape_reviews: bool = False, scrape_contacts: bool = True) -> List[Dict[str, Any]]:
+    """
+    Triggers the Apify google-maps-contact-extractor actor and returns high-fidelity results.
+    """
+    client = get_apify_client()
+    if not client:
+        return []
+        
+    # Standardize location search if provided
+    queries = [f"{q} in {location}" if location else q for q in search_queries]
+    
+    run_input = {
+        "queries": queries,
+        "maxResults": max_results,
+        "locationDisplayName": location or "India", # Ensure the actor geolocates correctly
+        "exportPlaceUrls": True,
+        "includeReviews": scrape_reviews,
+        "includeImages": False,
+        "includeOpeningHours": True,
+        "scrapeWebsite": scrape_contacts,
+        "language": "en"
+    }
 
-         run = client.actor("dpWePxnzRER4fPvM0").call(run_input=run_input)
+    try:
+        print(f"📡 [RECONNAISSANCE] Spawning Apify actor for {len(queries)} target vectors...")
+        # dpWePxnzRER4fPvM0 is the ID for google-maps-contact-extractor
+        run = client.actor("dpWePxnzRER4fPvM0").call(run_input=run_input)
         
         results = []
         # Fetch results from the default dataset
@@ -25,6 +50,7 @@ def get_apify_client():
     except Exception as e:
         print(f"❌ Apify Actor execution failed: {e}")
         return []
+
 
 def format_apify_to_internal(apify_item: Dict[str, Any]) -> Dict[str, Any]:
     """

@@ -345,11 +345,11 @@ Ensure the tone is elite, technical, and data-dense. Respond ONLY with valid JSO
             Your <span className="text-emerald-500">Growth Plan</span>
           </h1>
           <div className="flex flex-col items-center gap-2">
-            <div className="text-xl font-bold text-slate-500 dark:text-gray-400 italic">
+            <div className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white">
               {businessData.business.title}
             </div>
-            <div className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-slate-400">
-              <MapPin size={14} className="text-emerald-500" /> {businessData.area}
+            <div className="flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.2em] text-slate-500 dark:text-gray-400">
+              <MapPin size={14} className="text-emerald-500 animate-bounce-slow" /> {businessData.area}
             </div>
           </div>
         </div>
