@@ -2729,22 +2729,32 @@ async def process_dodo_payload(payload: Dict[str, Any]):
         # Detect plan from product_id string
         if product_id:
             pid_low = product_id.lower()
-            if "professional" in pid_low or "pro" in pid_low:
+            if "enterprise" in pid_low or "dominance" in pid_low:
+                plan_name = "Enterprise"
+            elif "growth" in pid_low or "accelerator" in pid_low:
+                plan_name = "Growth"
+            elif "professional" in pid_low or "pro" in pid_low or "architect" in pid_low:
                 plan_name = "Professional"
-            elif "starter" in pid_low:
+            elif "starter" in pid_low or "venture" in pid_low:
                 plan_name = "Starter"
             
             # Detect billing cycle from product_id or amount
-            if "year" in pid_low or "annual" in pid_low or amount > 1000:
+            if "year" in pid_low or "annual" in pid_low or amount >= 1700:
                 billing_cycle = "yearly"
         else:
             # Fallback based on amount thresholds (Rupee logic)
-            if amount > 1000:
+            if amount >= 1700:
                 billing_cycle = "yearly"
-                plan_name = "Professional" if amount > 3000 else "Starter"
+                if amount >= 20000: plan_name = "Enterprise"
+                elif amount >= 8000: plan_name = "Growth"
+                elif amount >= 4000: plan_name = "Professional"
+                else: plan_name = "Starter"
             else:
                 billing_cycle = "monthly"
-                plan_name = "Professional" if amount > 400 else "Starter"
+                if amount >= 2000: plan_name = "Enterprise"
+                elif amount >= 900: plan_name = "Growth"
+                elif amount >= 400: plan_name = "Professional"
+                else: plan_name = "Starter"
             
         mapped_plan = normalize_plan_name(plan_name)
         logger.info(f"✨ Fulfilling {event_type}: Email={email}, Plan={mapped_plan}, Cycle={billing_cycle}, Amt={amount}")
@@ -2898,33 +2908,23 @@ async def process_payment_immediately(request: Request, db: Session = Depends(ge
         
         payment_record = create_payment_record(payment_data, db)
         
-        # Map plan names for subscription
+        # Map plan names for intent tracking
         mapped_plan = normalize_plan_name(plan_name)
         
-        # Create/update subscription immediately
-        subscription_data = SubscriptionCreate(
-            user_email=user_email,
-            plan_name=mapped_plan,
-            plan_display_name=plan_name,
-            billing_cycle=billing_cycle,
-            price=float(amount),
-            currency="INR",
-            max_analyses=-1 if mapped_plan in ['professional', 'enterprise'] else 5,
-            features={}
-        )
+        # ⚠️ [SECURITY] Instant subscription upgrade is disabled per production hardening.
+        # All plans are now applied EXCLUSIVELY via verified Dodo Webhook (process_dodo_payload).
+        # We only record the intent here for tracking while the Webhook propagates.
         
-        subscription_record = create_subscription(subscription_data, db)
-        
-        logger.info(f"✅ Payment and subscription processed: {payment_id} -> {mapped_plan}")
+        logger.info(f"⌛ Payment synchronization intent received: {payment_id} for {user_email}. Waiting for Webhook verification...")
         
         return {
-            "status": "success",
-            "message": "Payment processed successfully",
+            "status": "pending",
+            "message": "Payment intent synchronized. Awaiting webhook verification.",
             "payment_id": str(payment_id),
             "plan_name": str(mapped_plan),
             "plan_display_name": str(plan_name),
-            "subscription_active": True,
-            "max_analyses": -1 if mapped_plan in ['professional', 'enterprise'] else 5,
+            "subscription_active": False,
+            "max_analyses": 0,
             "timestamp": datetime.now().isoformat()
         }
         

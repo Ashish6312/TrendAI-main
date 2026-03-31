@@ -36,28 +36,27 @@ export default function PaymentSuccessModal({ isOpen, onClose, paymentData, isPa
 
   const { payment_id, order_id, plan: planParam, amount, currency, billing: billingCycle } = paymentData || {};
 
-  // Robust mapping for all naming variants
+  // Robust mapping for all naming variants in the 5-tier architecture
   const planMapping: Record<string, SubscriptionPlan> = {
     'Starter': 'starter',
-    'Venture Strategist': 'starter',
-    'Market Explorer': 'free',
-    'Professional': 'professional',
+    'Starter Strategist': 'starter',
     'Growth Architect': 'professional',
-    'Growth Accelerator': 'professional',
-    'Business Accelerator': 'professional',
-    'Enterprise': 'professional',
-    'Market Dominator': 'professional',
-    'Territorial Dominance': 'professional',
-    'Enterprise Dominance': 'professional',
+    'Professional': 'professional',
+    'Business Accelerator': 'growth',
+    'Growth Accelerator': 'growth',
+    'Territorial Dominance': 'enterprise',
+    'Enterprise Dominance': 'enterprise',
+    'Market Influencer': 'starter',
+    'Venture Strategist': 'starter',
+    'Explorer': 'free',
     'free': 'free',
     'starter': 'starter',
-    'growth': 'professional',
-    'pro': 'professional',
     'professional': 'professional',
-    'enterprise': 'professional'
+    'growth': 'growth',
+    'enterprise': 'enterprise'
   };
   
-  const currentPlan = planMapping[planParam] || 'free';
+  const currentPlan = planMapping[planParam] || (planParam?.toLowerCase().includes('enterprise') ? 'enterprise' : planParam?.toLowerCase().includes('growth') ? 'growth' : 'professional');
 
   // Plan features for display
   const planFeaturesDetails = {
@@ -75,13 +74,24 @@ export default function PaymentSuccessModal({ isOpen, onClose, paymentData, isPa
       analyses: -1,
       features: ['Unlimited Strategic Scans', 'Neural Profit Engine', '24/7 Priority Support', 'Strategic Roadmaps', 'Full API Access', 'Custom Reports'],
       color: '#10b981'
+    },
+    'Growth': {
+      analyses: -1,
+      features: ['AI Growth Acceleration', 'Multi-market Dominance', 'Global Scouting Swarm', 'Enterprise Resilience'],
+      color: '#8b5cf6'
+    },
+    'Enterprise': {
+      analyses: -1,
+      features: ['Territorial Dominance', 'Custom Neural Architecture', 'Dedicated Data Cluster', 'Elite White-glove Support'],
+      color: '#f43f5e'
     }
   };
 
   const currentPlanFeatures = (planFeaturesDetails[planParam as keyof typeof planFeaturesDetails] || 
-                             (planParam?.includes('professional') ? planFeaturesDetails['Professional'] : 
-                              planParam?.includes('starter') ? planFeaturesDetails['Starter'] : 
-                              planFeaturesDetails['Professional']));
+                             (planParam?.toLowerCase().includes('enterprise') ? planFeaturesDetails['Enterprise'] : 
+                              planParam?.toLowerCase().includes('acceleration') ? planFeaturesDetails['Growth'] : 
+                              planParam?.toLowerCase().includes('professional') ? planFeaturesDetails['Professional'] : 
+                              planFeaturesDetails['Starter']));
 
   useEffect(() => {
     if (isOpen) {
@@ -103,51 +113,58 @@ export default function PaymentSuccessModal({ isOpen, onClose, paymentData, isPa
   useEffect(() => {
     if (!isOpen || hasProcessed.current || !session?.user?.email || !payment_id) return;
 
-    const processPayment = async () => {
+    const pollForSubscription = async () => {
       hasProcessed.current = true;
-      try {
-        const apiUrl = getApiUrl();
-        const payload = {
-          user_email: session?.user?.email || "",
-          dodo_payment_id: payment_id,
-          order_id: order_id,
-          amount: parseFloat(amount),
-          plan_name: planParam,
-          billing_cycle: billingCycle
-        };
+      let attempts = 0;
+      const maxAttempts = 15; // 45 seconds total (3s interval)
+      const apiUrl = getApiUrl();
+      const targetPlan = currentPlan;
 
-        console.log('🚀 Synchronizing payment with backend:', payload);
+      console.log(`📡 [POLLING] Waiting for Webhook activation... Target: ${targetPlan}`);
 
-        const response = await fetch(`${apiUrl}/api/process-payment`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
+      const interval = setInterval(async () => {
+        attempts++;
+        try {
+          const response = await fetch(`${apiUrl}/api/subscriptions/${session?.user?.email}`);
+          if (response.ok) {
+            const result = await response.json();
+            const currentSubPlan = result.plan_name;
+            
+            console.log(`🔄 [POLLING] Attempt ${attempts}: Current backend plan: ${currentSubPlan}`);
 
-        if (response.ok) {
-          const result = await response.json();
-          console.log('✅ Payment synchronization successful:', result);
-          setPlan(result.plan_name);
+            // Success condition: Backend profile matches or exceeds target tier
+            const planHierarchy = { free: 0, starter: 1, professional: 2, growth: 3, enterprise: 4 };
+            if (planHierarchy[currentSubPlan as keyof typeof planHierarchy] >= planHierarchy[targetPlan as keyof typeof planHierarchy]) {
+              clearInterval(interval);
+              setPlan(currentSubPlan);
+              addNotification({
+                type: 'payment',
+                title: 'Activation Complete',
+                message: `${result.plan_display_name} protocols are now online.`,
+                priority: 'high'
+              });
+            }
+          }
+        } catch (e) {
+          console.warn('Polling check failed - continuing...', e);
+        }
+
+        if (attempts >= maxAttempts) {
+          clearInterval(interval);
+          console.warn('⚠️ [POLLING] Timeout waiting for webhook. The plan will update silently in the background.');
           addNotification({
-            type: 'payment',
-            title: 'Synergy Activated',
-            message: `${result.plan_display_name} protocols are now online.`,
-            priority: 'high'
-          });
-        } else {
-          const errorData = await response.json().catch(() => ({}));
-          console.error('❌ Payment synchronization failed:', { 
-            status: response.status, 
-            statusText: response.statusText,
-            errorData 
+            type: 'system',
+            title: 'Synergy Syncing',
+            message: "Our neural network is reconciling your payment. Your features will activate within 1-2 minutes.",
+            priority: 'medium'
           });
         }
-      } catch (error) {
-        console.error('❌ Critical payment sync error:', error);
-      }
+      }, 3000);
+
+      return () => clearInterval(interval);
     };
 
-    processPayment();
+    pollForSubscription();
   }, [isOpen, session, payment_id, order_id, amount, planParam, billingCycle, setPlan, addNotification]);
 
   const handleAction = (url: string) => {
