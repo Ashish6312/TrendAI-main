@@ -2542,9 +2542,9 @@ async def create_dodo_checkout_session(request: DodoCheckoutRequest):
         # 1. PRIMARY: Ad-hoc Cart (Instant focus)
         try:
             if not getattr(request, 'is_recurring', False):
-                logger.info(f"⚡ RESILIENT ATTEMPT: Instant Payment (Ad-hoc) for {productId}")
+                logger.info(f"⚡ RESILIENT ATTEMPT: Instant Payment (Ad-hoc) for {product_id}")
                 cart_item = {
-                    "name": f"{productId.replace('pdt_', '').replace('_', ' ').title()} - {request.billing_cycle.title()} Strategy",
+                    "name": f"{product_id.replace('pdt_', '').replace('_', ' ').title()} - {request.billing_cycle.title()} Strategy",
                     "amount": price_amount or (request.amount * 100),
                     "quantity": 1
                 }
@@ -2554,9 +2554,9 @@ async def create_dodo_checkout_session(request: DodoCheckoutRequest):
                     return_url=return_url
                 )
             else:
-                logger.info(f"🔄 RESILIENT ATTEMPT: Subscription for {productId}")
+                logger.info(f"🔄 RESILIENT ATTEMPT: Subscription for {product_id}")
                 session = client.checkout_sessions.create(
-                    product_id=productId,
+                    product_id=product_id,
                     customer={"email": email, "name": request.name},
                     return_url=return_url
                 )
@@ -2566,7 +2566,7 @@ async def create_dodo_checkout_session(request: DodoCheckoutRequest):
             try:
                 # Some SDKs use 'cart' instead of 'product_cart'
                 session = client.checkout_sessions.create(
-                    product_id=productId,
+                    product_id=product_id,
                     customer={"email": email},
                     return_url=return_url
                 )
@@ -2576,7 +2576,7 @@ async def create_dodo_checkout_session(request: DodoCheckoutRequest):
                 try:
                    session = client.checkout_sessions.create(
                        billing_email=email,
-                       product_id=productId,
+                       product_id=product_id,
                        return_url=return_url
                    )
                 except Exception as e3:
