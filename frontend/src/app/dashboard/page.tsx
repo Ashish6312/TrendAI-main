@@ -8,8 +8,8 @@ import {
   Loader2, TrendingUp, MapPin,
   Target, BarChart3, Globe2, Lightbulb,
   ArrowRight, FileText, Clock, ChevronRight,
-  Cpu, Download, Share2, Play, CheckCircle2, AlertCircle, Sparkle, Bookmark,
-  ShieldCheck, Activity
+  Cpu, Download, Share2, Play, CheckCircle2, AlertCircle, Sparkles, Bookmark,
+  ShieldCheck, Activity, Globe
 } from "lucide-react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
@@ -852,7 +852,7 @@ function DashboardContent() {
                         {loading ? (
                           <Loader2 className="animate-spin text-emerald-500 dark:text-emerald-600" size={24} />
                         ) : (
-                          <Sparkle 
+                          <Sparkles 
                             size={20} 
                             fill="currentColor" 
                             className="text-emerald-500 dark:text-emerald-600 transition-transform group-hover:rotate-12 group-hover:scale-110" 
@@ -1499,7 +1499,7 @@ function DashboardContent() {
 
                     <div className="text-center mb-6">
                       <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-4 flex items-center justify-center gap-3">
-                        <Sparkle className="text-emerald-500 animate-pulse" size={24} />
+                        <Sparkles className="text-emerald-500 animate-pulse" size={24} />
                         Live Strategic Intelligence
                       </h3>
                       <p className="text-slate-600 dark:text-gray-400 text-lg font-medium">
@@ -1657,7 +1657,7 @@ function DashboardContent() {
                       className="text-center p-3 shadow-lg border border-slate-200/50 dark:border-white/10"
                     >
                       <div className="w-9 h-9 rounded-lg bg-blue-500/20 flex items-center justify-center mb-2 mx-auto">
-                        <Globe2 className="text-blue-500" size={18} />
+                        <Globe className="text-blue-500" size={18} />
                       </div>
                       <h3 className="text-sm font-bold text-slate-900 dark:text-white mb-1">Market Analysis</h3>
                       <p className="text-[11px] text-slate-600 dark:text-gray-400">Real-time market analytics</p>

@@ -4,7 +4,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { 
   CheckCircle, ArrowRight, Star, Sparkles, Crown, Zap, 
   Download, Mail, Calendar, CreditCard, Shield, Gift, 
-  Target, TrendingUp, X 
+  Target, TrendingUp, X, Rocket
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNotifications } from "@/context/NotificationContext";
@@ -188,13 +188,13 @@ export default function PaymentSuccessModal({ isOpen, onClose, paymentData, isPa
   const PlanIcon = planIcons[currentPlan] || Target;
 
   const content = (
-    <div className={`relative ${isPage ? 'min-h-screen flex items-center justify-center p-4' : 'w-full max-w-sm'}`}>
+    <div className={`relative ${isPage ? 'min-h-screen flex items-center justify-center p-4' : 'w-full max-w-[320px]'}`}>
       
-      {/* Premium Confetti Animation */}
+      {/* Premium CONFETTI Layer */}
       <AnimatePresence>
         {showConfetti && (
           <div className="fixed inset-0 pointer-events-none z-[100]">
-            {[...Array(50)].map((_, i) => (
+            {[...Array(40)].map((_, i) => (
               <motion.div
                 key={i}
                 className="absolute"
@@ -206,19 +206,18 @@ export default function PaymentSuccessModal({ isOpen, onClose, paymentData, isPa
                 animate={{ 
                   y: typeof window !== 'undefined' ? window.innerHeight + 20 : 1000, 
                   rotate: 360 * (Math.random() > 0.5 ? 1 : -1),
-                  x: Math.random() * 200 - 100
+                  x: Math.random() * 100 - 50
                 }}
                 exit={{ opacity: 0 }}
                 transition={{
-                  duration: 3 + Math.random() * 2,
+                  duration: 2 + Math.random() * 2,
                   ease: "easeOut",
-                  delay: Math.random() * 2,
+                  delay: Math.random() * 1,
                 }}
               >
-                {i % 3 === 0 ? <Star size={12} className="text-emerald-400" /> : 
-
-                 i % 3 === 1 ? <Zap size={10} className="text-blue-400" /> : 
-                 <div className="w-2 h-2 rounded-full" style={{ background: theme.primary }} />}
+                {i % 3 === 0 ? <Star size={8} className="text-emerald-400" /> : 
+                 i % 3 === 1 ? <Sparkles size={8} className="text-blue-400" /> : 
+                 <div className="w-1.5 h-1.5 rounded-full" style={{ background: '#10b981' }} />}
               </motion.div>
             ))}
           </div>
@@ -226,10 +225,10 @@ export default function PaymentSuccessModal({ isOpen, onClose, paymentData, isPa
       </AnimatePresence>
 
       <motion.div
-        initial={isPage ? { opacity: 0, scale: 0.9 } : { opacity: 0, y: 50 }}
+        initial={isPage ? { opacity: 0, scale: 0.9 } : { opacity: 0, y: 30 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.9, y: 50 }}
-        className={`relative bg-white dark:bg-slate-950 border border-slate-200 dark:border-white/10 rounded-[2rem] shadow-2xl overflow-hidden ${isPage ? 'w-full max-w-sm' : ''}`}
+        exit={{ opacity: 0, scale: 0.9, y: 30 }}
+        className={`relative bg-white dark:bg-[#020617] border border-slate-200 dark:border-white/10 rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.3)] overflow-hidden ${isPage ? 'w-full max-w-[320px]' : ''}`}
       >
         {/* Background Accents */}
         <div className="absolute inset-0 pointer-events-none">
@@ -246,50 +245,48 @@ export default function PaymentSuccessModal({ isOpen, onClose, paymentData, isPa
           </button>
         )}
 
-        <div className="relative z-10 p-5 sm:p-6 space-y-3">
+        <div className="relative z-10 p-4 sm:p-5 space-y-4">
           {/* Header */}
-          <div className="text-center space-y-6">
+          <div className="text-center space-y-4 pt-2">
             <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ type: "spring", bounce: 0.5, delay: 0.2 }}
-              className="inline-flex items-center justify-center p-4 rounded-full bg-emerald-500/20 border-2 border-emerald-500 shadow-[0_0_30px_rgba(16,185,129,0.3)]"
+              initial={{ scale: 0, rotate: -180 }}
+              animate={{ scale: 1, rotate: 0 }}
+              transition={{ type: "spring", damping: 12, stiffness: 200, delay: 0.2 }}
+              className="inline-flex items-center justify-center p-3 rounded-full bg-emerald-500/10 border border-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.2)]"
             >
-              <CheckCircle size={48} className="text-emerald-500" />
+              <CheckCircle size={32} className="text-emerald-500" />
             </motion.div>
 
-            <div className="space-y-2">
-              <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white italic tracking-tighter">Payment Successful!</h1>
-              <p className="text-slate-500 dark:text-slate-400 font-medium tracking-tight">Your strategic upgrade has been authorized.</p>
+            <div className="space-y-1">
+              <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white italic tracking-tight">Success!</h1>
+              <p className="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest">Upgrade Authorized</p>
             </div>
 
             <motion.div
-              initial={{ y: 20, opacity: 0 }}
+              initial={{ y: 10, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.4 }}
-              className="inline-flex items-center gap-3 px-6 py-2 rounded-full bg-slate-900/5 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 backdrop-blur-md"
+              className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/5 border border-white/10 backdrop-blur-md"
             >
-              <PlanIcon size={18} style={{ color: currentPlanFeatures.color }} />
-              <span className="font-black text-sm uppercase tracking-[0.2em]" style={{ color: currentPlanFeatures.color }}>
+              <PlanIcon size={14} style={{ color: currentPlanFeatures.color }} />
+              <span className="font-black text-[10px] uppercase tracking-[0.2em]" style={{ color: currentPlanFeatures.color }}>
                 {planParam}
               </span>
-              <Crown size={14} style={{ color: currentPlanFeatures.color }} />
             </motion.div>
           </div>
 
-          {/* Details Grid */}
-          <div className="grid grid-cols-3 gap-2 bg-slate-900/5 dark:bg-white/5 rounded-2xl p-4 border border-slate-900/10 dark:border-white/10 backdrop-blur-sm">
+          {/* Details Bar */}
+          <div className="grid grid-cols-2 gap-2 bg-slate-900/5 dark:bg-white/5 rounded-xl p-3 border border-slate-900/10 dark:border-white/10">
             {[
-              { label: 'Payment ID', value: payment_id, icon: CreditCard },
-              { label: 'Amount', value: `${currency} ${parseFloat(amount).toLocaleString()}`, icon: Gift, color: currentPlanFeatures.color },
+              { label: 'Amount', value: `${currency} ${parseFloat(amount).toLocaleString()}`, icon: CreditCard, color: currentPlanFeatures.color },
               { label: 'Cycle', value: billingCycle, icon: Calendar }
             ].map((detail, i) => (
-              <div key={i} className="text-center space-y-0.5">
-                <div className="flex items-center justify-center w-6 h-6 rounded-lg bg-white/5 mx-auto mb-1">
-                  <detail.icon size={10} style={{ color: detail.color || '#94a3b8' }} />
+              <div key={i} className="text-center">
+                <p className="text-[7px] font-black uppercase tracking-[0.2em] text-slate-500 mb-0.5">{detail.label}</p>
+                <div className="flex items-center justify-center gap-1.5">
+                  <detail.icon size={8} style={{ color: detail.color || '#94a3b8' }} />
+                  <p className="font-bold text-slate-900 dark:text-white text-[11px]" style={detail.color ? { color: detail.color } : {}}>{detail.value}</p>
                 </div>
-                <p className="text-[8px] font-black uppercase tracking-widest text-slate-500">{detail.label}</p>
-                <p className="font-bold text-slate-900 dark:text-white text-[10px] truncate px-1" style={detail.color ? { color: detail.color } : {}}>{detail.value}</p>
               </div>
             ))}
           </div>
@@ -315,30 +312,33 @@ export default function PaymentSuccessModal({ isOpen, onClose, paymentData, isPa
             </div>
           </div>
 
-          {/* Next Actions */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {/* Fast Actions */}
+          <div className="grid grid-cols-2 gap-3">
             {[
-              { title: 'Dashboard', desc: 'Start Analyzing', icon: TrendingUp, url: '/dashboard', primary: true },
-              { title: 'Profile', desc: 'Sync Data', icon: Shield, url: '/profile' },
-              { title: 'Billing', desc: 'View Invoice', icon: Download, url: '/profile?tab=billing' }
+              { title: 'START', desc: 'Scan Now', icon: Rocket, url: '/dashboard', primary: true },
+              { title: 'VAULT', desc: 'Sync Data', icon: Shield, url: '/profile' }
             ].map((action, i) => (
               <motion.button
                 key={i}
-                whileHover={{ y: -5, scale: 1.02 }}
+                whileHover={{ y: -3, scale: 1.02 }}
                 onClick={() => handleAction(action.url)}
-                className={`p-5 rounded-2xl border text-left space-y-3 transition-all ${
+                className={`p-3.5 rounded-2xl border text-center space-y-1 transition-all ${
                   action.primary 
-                    ? 'bg-gradient-to-br from-indigo-600 to-emerald-500 text-white border-transparent shadow-xl ring-2 ring-emerald-500/20' 
-                    : 'bg-slate-900/5 dark:bg-white/5 text-slate-900 dark:text-white border-slate-900/10 dark:border-white/10 hover:bg-slate-900/10 dark:hover:bg-white/10'
+                    ? 'bg-emerald-500 text-slate-950 border-transparent shadow-[0_10px_20px_rgba(16,185,129,0.2)]' 
+                    : 'bg-white/5 text-white border-white/10 hover:bg-white/10'
                 }`}
               >
-                <action.icon size={20} className={action.primary ? 'text-white' : ''} style={!action.primary ? { color: theme.primary } : {}} />
+                <action.icon size={16} className="mx-auto" />
                 <div>
-                  <p className={`font-black uppercase tracking-widest text-[9px] ${action.primary ? 'text-white/60' : 'text-slate-500'}`}>{action.title}</p>
-                  <p className="font-bold text-xs">{action.desc}</p>
+                  <p className={`font-black uppercase tracking-widest text-[8px] ${action.primary ? 'text-slate-900/60' : 'text-slate-500'}`}>{action.title}</p>
+                  <p className="font-bold text-[10px]">{action.desc}</p>
                 </div>
               </motion.button>
             ))}
+          </div>
+
+          <div className="text-center pt-2">
+            <button onClick={onClose} className="text-[10px] font-bold text-slate-500 hover:text-emerald-500 uppercase tracking-[0.2em] transition-colors">Dismiss Intelligence</button>
           </div>
 
           {/* Footer Footer */}
