@@ -2,8 +2,8 @@
 
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
-import ProtectedRoute from "../../components/ProtectedRoute";
+import { useState, useEffect, useRef } from "react";
+import ProtectedRoute from "@/components/ProtectedRoute";
 import {
   Loader2, TrendingUp, MapPin,
   Target, BarChart3, Globe2, Lightbulb,
@@ -18,7 +18,7 @@ import { useLanguage } from "@/context/LanguageContext";
 import { useNotifications } from "@/context/NotificationContext";
 import { useSubscription } from "@/context/SubscriptionContext";
 import { useSearchParams } from "next/navigation";
-import PaymentSuccessModal from "../../components/PaymentSuccessModal";
+import PaymentSuccessModal from "@/components/PaymentSuccessModal";
 import UniformCard from "@/components/UniformCard";
 import AIAnalysisCanvas from "@/components/AIAnalysisCanvas";
 import AIAnalysisWidget from "@/components/AIAnalysisWidget";
@@ -223,7 +223,9 @@ function DashboardContent() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [loading, setLoading] = useState(false);
   const [loadingProgress, setLoadingProgress] = useState(0);
-  const [loadingMessage, setLoadingMessage] = useState("Initializing Analysis Engine...");
+  const [loadingMessage, setLoadingMessage] = useState("Initializing Neural Reconnaissance...");
+  const [isDeepRecon, setIsDeepRecon] = useState(false);
+  const socketRef = useRef<WebSocket | null>(null);
   const [result, setResult] = useState<any>(null);
   const [history, setHistory] = useState<any[]>([]);
   const [analysisCount, setAnalysisCount] = useState(0);
@@ -435,20 +437,35 @@ function DashboardContent() {
 
     const progressInterval = setInterval(() => {
       setLoadingProgress(prev => {
-        const next = prev >= 98 ? prev : prev + (Math.random() * (prev < 50 ? 5 : prev < 85 ? 1 : 0.1));
-        
-        // Dynamic Messaging based on Phase
-        if (next < 25) setLoadingMessage("Synchronizing Regional Market Data...");
-        else if (next < 50) setLoadingMessage("Extracting Deep Market Gaps...");
-        else if (next < 75) setLoadingMessage("Synthesizing Strategic Intelligence...");
-        else if (next < 90) setLoadingMessage("Finalizing Neural Recommendations...");
-        else setLoadingMessage("Optimizing Growth Directives...");
-        
+        // Slow crawling progress logic
+        const increment = prev < 30 ? 1 : prev < 70 ? 0.3 : prev < 90 ? 0.05 : 0.01;
+        const next = prev >= 99 ? 99 : prev + (Math.random() * increment);
         return next;
-      });
+       });
     }, 1000);
 
     try {
+      // 📡 STRATEGIC WEBSOCKET COUPLING: Connect to the analysis stream
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const host = apiUrl.replace(/^https?:\/\//, '');
+      const wsUrl = `${protocol}//${host}/ws/analysis`;
+
+      const socket = new WebSocket(wsUrl);
+      socket.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          if (data.type === 'analysis_progress') {
+            setLoadingMessage(data.message);
+            // Dynamic jump for major milestones
+            if (data.message.toLowerCase().includes("deep extraction") || data.message.toLowerCase().includes("apify")) {
+              setIsDeepRecon(true);
+            }
+            setLoadingProgress(prev => Math.min(prev + 5, 98));
+          }
+        } catch (e) {}
+      };
+      socketRef.current = socket;
+
       const response = await fetch(`${apiUrl}/api/recommendations`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -461,7 +478,7 @@ function DashboardContent() {
       });
 
       if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        throw new Error(`Neural Link Error: ${response.status}`);
       }
 
       const data = await response.json();
@@ -477,37 +494,41 @@ function DashboardContent() {
         setResult(data);
         clearInterval(progressInterval);
         setLoading(false);
+        setIsDeepRecon(false);
+        if (socketRef.current) socketRef.current.close();
 
         if (typeof window !== 'undefined') {
           sessionStorage.removeItem('active_reconnaissance');
         }
 
-        if (session?.user?.email) {
-          const locationSource = data.using_profile_location ? ' (from your profile)' : ' (custom search)';
+        if (session?.user?.email && data.recommendations?.length > 0) {
           addNotification({
             type: 'analysis',
-            title: 'Analysis Complete',
-            message: `Found ${data.recommendations?.length || 0} business opportunities in ${searchArea}${locationSource}`,
+            title: 'Mission Success',
+            message: `Strategic reconnaissance for ${searchArea.split(',')[0]} complete. ${data.recommendations.length} opportunities identifies.`,
             priority: 'high'
           });
         }
         fetchHistory();
-      }, 500);
-    } catch (error) {
-      console.error("Analysis Reconnaissance Failed:", error);
-      clearInterval(progressInterval);
-      setLoading(false);
+      }, 800);
 
-      if (typeof window !== 'undefined') {
-        sessionStorage.removeItem('active_reconnaissance');
-      }
-
+    } catch (error: any) {
+      console.error("Neural Error:", error);
+      setResult({
+        status: "service_unavailable",
+        message: "The intelligence engine is performing deep regional synchronization. High-fidelity results require 60-90s of additional reconnaissance. Please retry shortly."
+      });
       addNotification({
         type: 'alert',
-        title: 'Analysis Failed',
-        message: 'The Intelligence Cluster encountered a connection timeout. Please try again.',
+        title: 'Neural Link Interrupted',
+        message: 'Deep reconnaissance taking longer than expected. The engine is still working; please retry in 60 seconds.',
         priority: 'high'
       });
+    } finally {
+      clearInterval(progressInterval);
+      setLoading(false);
+      setIsDeepRecon(false);
+      if (socketRef.current) socketRef.current.close();
     }
   };
 
@@ -1009,27 +1030,66 @@ function DashboardContent() {
                         </div>
 
                         <h2 className="text-3xl sm:text-4xl font-black text-slate-800 dark:text-white tracking-tight mb-4 drop-shadow-lg transition-all duration-700">
-                          {loadingMessage}
+                          {isDeepRecon ? (
+                            <span className="bg-gradient-to-r from-emerald-500 to-blue-500 bg-clip-text text-transparent animate-pulse">
+                              Deep Reconnaissance Active
+                            </span>
+                          ) : (
+                            loadingMessage
+                          )}
                         </h2>
 
+                        <div className="flex items-center justify-center gap-3 mb-6">
+                           <div className="px-3 py-1 bg-blue-500/10 text-blue-500 text-[10px] font-black uppercase tracking-[0.2em] rounded-full border border-blue-500/20">
+                             {isDeepRecon ? "Apify Swarm Engaged" : "Neural Cluster Active"}
+                           </div>
+                           <div className="px-3 py-1 bg-emerald-500/10 text-emerald-500 text-[10px] font-black uppercase tracking-[0.2em] rounded-full border border-emerald-500/20 flex items-center gap-1.5">
+                             <div className="w-1 h-1 rounded-full bg-emerald-500 animate-pulse" />
+                             Live Stream
+                           </div>
+                        </div>
+
                         <p className="text-slate-600 dark:text-gray-400 text-base font-medium uppercase tracking-wider mb-8 max-w-md drop-shadow-sm min-h-[1.5em] transition-all duration-700">
-                          {loadingProgress < 20 ? `Analyzing market opportunities in ${area.split(',')[0]}...` :
-                            loadingProgress < 50 ? `Gathering business intelligence data...` :
+                          {loadingProgress < 20 ? `Initializing secure uplink to ${area.split(',')[0]}...` :
+                            loadingProgress < 50 ? (isDeepRecon ? `Extracting deep market signals via Apify...` : `Gathering business intelligence data...`) :
                               loadingProgress < 75 ? `Processing market trends and gaps...` :
                                 loadingProgress < 90 ? `Generating strategic recommendations...` :
                                   `Finalizing business opportunities...`}
                         </p>
 
-                        <div className="w-full max-w-lg h-3 bg-slate-200 rounded-full overflow-hidden backdrop-blur-sm border border-slate-300">
+                        <div className="w-full max-w-lg h-3 bg-slate-200 rounded-full overflow-hidden backdrop-blur-sm border border-slate-300 relative">
                           <motion.div
                             initial={{ width: 0 }}
                             animate={{ width: `${loadingProgress}%` }}
-                            className="h-full bg-gradient-to-r from-blue-500 to-blue-600 shadow-lg"
+                            className="h-full bg-gradient-to-r from-blue-500 to-indigo-600 shadow-lg relative overflow-hidden"
                             transition={{ duration: 0.5 }}
-                          />
+                          >
+                            <div className="absolute inset-0 bg-white/20 animate-pulse" />
+                          </motion.div>
                         </div>
-                        <div className="mt-4 text-sm font-bold text-blue-600">
-                          {Math.round(loadingProgress)}% Complete
+                        
+                        <div className="mt-4 flex flex-col items-center gap-2">
+                          <div className="text-sm font-black text-blue-600 dark:text-blue-400 tracking-widest">
+                            {Math.round(loadingProgress)}% SYNCHRONIZED
+                          </div>
+                          
+                          {/* ⚠️ STRATEGIC STABILITY WARNING */}
+                          <motion.div 
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 1 }}
+                            className="mt-6 p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl flex items-center gap-4 max-w-md backdrop-blur-xl animate-pulse"
+                          >
+                            <div className="w-10 h-10 rounded-xl bg-amber-500/20 flex items-center justify-center shrink-0">
+                               <AlertCircle className="text-amber-500" size={20} />
+                            </div>
+                            <div className="text-left">
+                               <p className="text-[11px] font-black text-amber-500 uppercase tracking-widest leading-none mb-1">Critical Neural Sync</p>
+                               <p className="text-xs text-slate-600 dark:text-gray-400 font-medium leading-relaxed">
+                                 Please <span className="text-amber-500 font-bold">do not refresh or navigate away</span> while the Intelligence Cluster is active. Interruption may disrupt the localized mapping process.
+                               </p>
+                            </div>
+                          </motion.div>
                         </div>
                       </motion.div>
                     </div>

@@ -31,16 +31,13 @@ async def push_ws_status(message: str):
 
 class IntegratedBusinessIntelligence:
     """
-    UNBEATABLE STRATEGIC ENGINE (V6.1 - THE OVERLORD CLUSTER)
+    SINGULARITY STRATEGIC ENGINE (V6.4 - THE NEURAL RECON)
     Architecture:
-    1. Scouting Swarm Phase (Tavily/Exa/Serper/SerpApi/Reddit/Firecrawl)
-    2. Redundant 5-Layer Analysis Cluster:
-       Layer 1: Gemini 1.5 Pro (The Crown)
-       Layer 2: AIC Overlord (GPT-4o / DeepSeek Swarm)
-       Layer 3: SearchGPT (The Knight - Neural Sourcing)
-       Layer 4: Claude 3.5 Sonnet (The Sage)
-       Layer 5: DeepSeek Guard (The Fortress)
-    3. Neural Identity Refinement.
+    1. Scouting Swarm (Structured Extract via Firecrawl/Tavily/PRAW/FRED)
+    2. Context Builder (Semantic RAG Compilation)
+    3. Neural Cluster (Gemini 2.0 Flash Main Intelligence)
+    4. Guardrail/Critic (Claude 3.5 Consensus Layer)
+    5. Fallback (Groq DeepSeek-R1 Distill Reasoning)
     """
     
     def __init__(self):
@@ -62,6 +59,13 @@ class IntegratedBusinessIntelligence:
         self.apify_key = os.getenv("APIFY_API_KEY")
         self.groq_key = os.getenv("GROQ_API_KEY")
         self.aiml_key = os.getenv("AIML_API_KEY")
+        
+        # Priority 2: Reddit PRAW Initialization
+        self.reddit_client_id = os.getenv("REDDIT_CLIENT_ID")
+        self.reddit_client_secret = os.getenv("REDDIT_CLIENT_SECRET")
+        self.reddit_user_agent = f"python:TrendAI:v6.4 (by /u/{os.getenv('REDDIT_USERNAME', 'TrendAI')})"
+        self.reddit_username = os.getenv("REDDIT_USERNAME")
+        self.reddit_password = os.getenv("REDDIT_PASSWORD")
         
         # System State
         self._logic_version = "v6.3_persistence_hardened"
@@ -106,31 +110,38 @@ class IntegratedBusinessIntelligence:
         
         try:
             # --- STAGE 1: MULTI-SOURCE RAG SCOUTING ---
-            await push_ws_status("Gathering market intelligence...")
+            await push_ws_status("Deploying Scouting Swarm drones...")
             
             # 🧠 CHECK PERSISTENT SCOUTING CACHE
             if area_key in self._scouting_cache:
+                await push_ws_status("Cache hit: Regional intelligence found.")
                 print(f"✨ [SCOUTING CACHE] Instant retrieval of market intelligence for {area}.")
                 rag_context = self._scouting_cache[area_key]
             else:
+                await push_ws_status("Engaging Deep Extraction Layer (Apify + Firecrawl)...")
                 try:
+                    # DEEP MODE: Restoration of 300s window for high-efficiency reconnaissance
                     scouting = await asyncio.wait_for(asyncio.gather(
                         self._scout_google(area),
                         self._scout_reddit(area),
                         self._scout_web_trends(area),
+                        self._scout_fred(area),
                         return_exceptions=True
-                    ), timeout=40.0)
+                    ), timeout=300.0)
                 except asyncio.TimeoutError:
-                    print(f"⌛ [SCOUTING-TIMEOUT] Partial data gathering for {area}.")
-                    scouting = [None, None, None]
+                    await push_ws_status("Scouting partially complete after 5 mins (Proceeding with deep available telemetry)...")
+                    print(f"⌛ [SCOUTING-DEEP-TIMEOUT] Moving to high-fidelity synthesis for {area} after 300s sweep.")
+                    scouting = [None, None, None, None]
                 
+                await push_ws_status("Vectorizing market intelligence...")
                 g_data = scouting[0] if not isinstance(scouting[0], Exception) and scouting[0] else ""
                 r_data = scouting[1] if not isinstance(scouting[1], Exception) and scouting[1] else ""
                 w_data = scouting[2] if not isinstance(scouting[2], Exception) and scouting[2] else ""
+                f_data = scouting[3] if not isinstance(scouting[3], Exception) and scouting[3] else ""
                 
                 # --- STAGE 2: RAG CONTEXT COMPILATION ---
-                await push_ws_status("Analyzing market data...")
-                rag_context = self._compile_rag_block(g_data, r_data, w_data)
+                await push_ws_status("Synthesizing Semantic RAG blocks...")
+                rag_context = self._compile_rag_block(g_data, r_data, w_data, f_data)
                 
                 # 💾 SAVE TO PERSISTENT CACHE
                 if rag_context:
@@ -138,7 +149,7 @@ class IntegratedBusinessIntelligence:
                     self._save_scouting_cache()
             
             # --- STAGE 3: CONSTRUCT NEURAL PROMPT & RUN CLUSTER ---
-            await push_ws_status("Generating business recommendations...")
+            await push_ws_status("Neural Cluster activated. Reasoning...")
             
             cluster_prompt = f"""
             Role: Lead Business Intelligence Architect (TrendAI Neural Core)
@@ -214,78 +225,91 @@ class IntegratedBusinessIntelligence:
 
 
     async def _call_gemini_flash(self, area: str, context: str, lang: str) -> Optional[Dict]:
-        """Professional Analysis via Google Gemini 1.5 Flash (Optimized for Speed)"""
+        """Professional Analysis via Google Gemini 2.0 Flash (2026 Production Standard)"""
         if not self.gemini_key:
             return None
             
+        # Priority 1: Gemini 2.0 Flash Upgrade
         prompt = f"""
-        Generate 12-15 high-fidelity, non-template business opportunities for {area}.
-        Market context: {context[:5000]}
+        Generate 15 high-fidelity, non-template business opportunities for {area} in 2026.
+        Market context: {context[:8000]}
         
         FIDELITY RULES:
-        - NEVER use '₹5L-₹15L' as a default funding range. Calculate realistic requirements.
-        - NEVER use 'Regional market' as default. Be specific (e.g. 'Village Cluster', 'Statewide Logistics').
+        - Use actual localized numbers calculated from context.
+        - Ensure JSON is flawless.
         
-        Return JSON schema: 
-        {{
-            "analysis": {{
-                "executive_summary": "Full summary text analyzing {area} in 2026",
-                "confidence_score": "X%",
-                "market_gap_intensity": "Low/Medium/High"
-            }},
-            "recommendations": [
-                {{
-                    "business_name": "BUSINESS_IDEA_NAME", 
-                    "description": "Tactical summary", 
-                    "category": "Sector", 
-                    "market_gap": "Specific calculated local gap", 
-                    "target_audience": "Specific local consumer group", 
-                    "competitive_advantage": "Calculated edge over competitors", 
-                    "revenue_model": "Deep dive revenue stream", 
-                    "investment_range": "UNQ_LOCAL_AMT (e.g. ₹8.5L)", 
-                    "roi_potential": "UNQ_PERCENT (e.g. 115%)", 
-                    "implementation_difficulty": "Low/Medium/High",
-                    "market_size": "SPECIFIC_CITY_SCOPE",
-                    "payback_period": "UNQ_MONTHS", 
-                    "unique_selling_proposition": "USP", 
-                    "six_month_plan": [
-                        {"month": "Month 1-2", "goal": "Initial setup goal"},
-                        {"month": "Month 3-4", "goal": "Market entry goal"},
-                        {"month": "Month 5-6", "goal": "Establishment goal"}
-                    ]
-                }}
-            ]
-        }}
-        *CRITICAL: Do NOT return 'Solar-Powered Cold Storage' or '₹5L-₹15L'. Every number and title MUST be unique and specific to current {area} trends.*
+        Return JSON schema with 'analysis' and 'recommendations' keys.
         Language: {lang}.
         """
 
         try:
-            print(f"⚡ [AI CLUSTER] Hitting Gemini 1.5 Flash...")
-            gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={self.gemini_key}"
+            print(f"⚡ [AI CLUSTER] Hitting Gemini 2.0 Flash (Singularity Layer)...")
+            # Upgrade to V1 (Stable) or latest production endpoint for 2026
+            gemini_url = f"https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key={self.gemini_key}"
             
-            async with httpx.AsyncClient(timeout=15.0) as client:
+            # HIGH-FIDELITY: 180s timeout for Gemini 2.0 Flash Deep Reasoning
+            async with httpx.AsyncClient(timeout=180.0) as client:
                 resp = await client.post(gemini_url, json={
                     "contents": [{"parts": [{"text": prompt}]}],
-                    "generationConfig": {"temperature": 0.4, "maxOutputTokens": 1500}
+                    "generationConfig": {"temperature": 0.4, "maxOutputTokens": 4096, "response_mime_type": "application/json"}
                 })
                 
                 if resp.status_code == 200:
-                    data = resp.json()
-                    content = data['candidates'][0]['content']['parts'][0]['text']
-                    content = re.sub(r'```json\s*|\s*```', '', content).strip()
-                    match = re.search(r'\{.*\}', content, re.DOTALL)
-                    if match:
-                        json_data = json.loads(match.group())
-                        if "recommendations" in json_data:
-                            return {
-                                "success": True,
-                                "recommendations": json_data["recommendations"],
-                                "ai_source": "Gemini 1.5 Flash (Ultra-Velocity)",
-                                "analysis": json_data.get("analysis", {"summary": "Execution complete."})
-                            }
-        except Exception: pass
+                    json_data = resp.json()['candidates'][0]['content']['parts'][0]['text']
+                    data = json.loads(json_data)
+                    
+                    # PRIORITY 1: Claude Critic Layer Integration
+                    if self.claude_key and data.get("recommendations"):
+                        print("🛡️ [CRITIC] Engaging Claude for quality consensus...")
+                        data = await self._call_claude_critic(data, context)
+                        
+                    return {
+                        "success": True,
+                        "recommendations": data["recommendations"],
+                        "ai_source": "Gemini 2.0 Flash + Claude Critic",
+                        "analysis": data.get("analysis", {"summary": "Execution complete."})
+                    }
+        except Exception as e:
+            print(f"⚠️ Gemini 2.0 Flash Layer Exception: {e}")
         return None
+
+    async def _call_claude_critic(self, original_data: Dict, market_context: str) -> Dict:
+        """Priority 1: Claude Critic Layer (Consensus Engine)"""
+        try:
+            from anthropic import AsyncAnthropic
+            client = AsyncAnthropic(api_key=self.claude_key)
+            
+            prompt = f"""
+            Role: Lead Strategic Critic & Validator
+            Task: Review and refine business recommendations for the following context.
+            
+            Market Context: {market_context[:4000]}
+            Initial Proposals: {json.dumps(original_data['recommendations'][:5])}
+            
+            Refine the data for:
+            1. Real-world feasibility in 2026.
+            2. Calculation precision (ROI, Breakeven).
+            3. Consensus Scoring (Eliminate generic ideas).
+            
+            Return the full JSON structure (including analysis and refined recommendations).
+            """
+            
+            await push_ws_status("Engaging Claude 3.5 Critic Layer (Consensus Engine)...")
+            message = await client.messages.create(
+                model="claude-3-5-sonnet-20241022",
+                max_tokens=2048,
+                temperature=0.2,
+                system="Respond in valid JSON only.",
+                messages=[{"role": "user", "content": prompt}],
+                timeout=150.0 # High-fidelity consensus validation
+            )
+            
+            content = message.content[0].text
+            refined_data = json.loads(re.search(r'\{.*\}', content, re.DOTALL).group())
+            return refined_data
+        except Exception as e:
+            print(f"🛡️ [CRITIC-FAILED] Clause layer failure: {e}")
+            return original_data
 
     async def _call_gemini(self, area: str, context: str, lang: str) -> Optional[Dict]:
         """Professional Analysis via Google Gemini 1.5 Pro"""
@@ -384,144 +408,48 @@ class IntegratedBusinessIntelligence:
         - Language: {lang}
         """
 
-    async def _run_analysis_cluster(self, prompt: str, area: str, lang: str) -> Dict[str, Any]:
-        """Multi-layer high-fidelity AI nexus (Gemini -> DeepSeek -> Static Synthesis)"""
-        try:
-            # Stage 1: Stable Gemini Cluster (V1 -> V1Beta)
-            gemini_models = ["gemini-1.5-flash", "gemini-1.5-pro"]
-            
-            # --- LAYER 1: GOOGLE GEMINI ---
-            
-            for model_name in gemini_models:
-                print(f"🚀 [AI CLUSTER] Attempting Neural Synthesis Layer...")
-                
-                # Primary Attempt: V1 (Stable)
-                gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={self.gemini_key}"
-                
-                try:
-                    async with httpx.AsyncClient(timeout=45.0) as client:
-                        resp = await client.post(gemini_url, json={
-                            "contents": [{"parts": [{"text": prompt}]}],
-                            "generationConfig": {
-                                "temperature": 0.4,
-                                "maxOutputTokens": 2048,
-                                "topP": 0.8,
-                                "topK": 40
-                            }
-                        })
-                        
-                        # Handle Success
-                        if resp.status_code == 200:
-                            data = resp.json()
-                            content = data['candidates'][0]['content']['parts'][0]['text']
-                            content = re.sub(r'```json\s*|\s*```', '', content).strip()
-                            match = re.search(r'\{.*\}', content, re.DOTALL)
-                            if match:
-                                json_data = json.loads(match.group())
-                                if "recommendations" in json_data:
-                                    return {
-                                        "success": True,
-                                        "recommendations": json_data["recommendations"],
-                                        "ai_source": "TrendAI Intelligence Neural Cluster",
-                                        "analysis": json_data.get("analysis", "Market synthesis complete.")
-                                    }
-                        
-                        # Fallback for specific regions or model versions
-                        elif resp.status_code == 404:
-                            print(f"⚠️ [MODEL_NOT_FOUND] {model_name} not at V1BETA, trying V1...")
-                            v1_url = gemini_url.replace("/v1beta/", "/v1/")
-                            resp_v1 = await client.post(v1_url, json={"contents": [{"parts": [{"text": prompt}]}], "generationConfig": {"temperature": 0.4}})
-                            if resp_v1.status_code == 200:
-                                data = resp_v1.json()
-                                content = data['candidates'][0]['content']['parts'][0]['text']
-                                content = re.sub(r'```json\s*|\s*```', '', content).strip()
-                                match = re.search(r'\{.*\}', content, re.DOTALL)
-                                if match:
-                                    json_data = json.loads(match.group())
-                                    return {
-                                        "success": True,
-                                        "recommendations": json_data["recommendations"],
-                                        "ai_source": "TrendAI Intelligence Neural Cluster",
-                                        "analysis": json_data.get("analysis", "Market synthesis complete.")
-                                    }
-
-                        print(f"⚠️ {model_name} synthesis failed ({resp.status_code}). Advancing cluster...")
-
-                except Exception as model_err:
-                    print(f"🔄 {model_name} Hop Exception: {str(model_err)}")
-                    continue
-            
-            # --- LAYER 2: GROQ SUPER-INFERENCE (LLAMA-3.3) ---
-            if self.groq_key:
-                groq_result = await self._call_groq(prompt, area, lang)
-                if groq_result and groq_result.get("success"):
-                    return groq_result
-            
-            # --- LAYER 3: AIML MULTI-MODEL GATEWAY (GPT-4o) ---
-            if self.aiml_key:
-                aiml_result = await self._call_aiml(prompt, area, lang)
-                if aiml_result and aiml_result.get("success"):
-                    return aiml_result
-
-            # --- LAYER 4: DEEPSEEK SWARM FALLBACK (AIC.CC) ---
+    async def _run_analysis_cluster(self, cluster_prompt: str, area: str, lang: str) -> Dict[str, Any]:
+        """Multi-layer Singularity Cluster (Gemini 2.0 -> Groq R1-Distill -> Baseline)"""
+        # --- LAYER 1: GOOGLE GEMINI 2.0 FLASH (Main Intelligence + Claude Critic) ---
+        retry_count = 2 # Restored retries for high-fidelity accuracy
+        for attempt in range(retry_count):
             try:
-                async with httpx.AsyncClient(timeout=45.0) as client:
-                    resp = await client.post("https://api.ai.cc/v1/chat/completions", 
-                        headers={"Authorization": f"Bearer {self.aic_key}", "Content-Type": "application/json"}, 
-                        json={
-                            "model": "deepseek-v3",
-                            "messages": [
-                                {"role": "system", "content": "You are an elite Business Intelligence Architect."},
-                                {"role": "user", "content": prompt}
-                            ],
-                            "temperature": 0.3
-                        }
-                    )
-                    if resp.status_code == 200:
-                        data = resp.json()
-                        content = data['choices'][0]['message']['content']
-                        content = re.sub(r'```json\s*|\s*```', '', content).strip()
-                        match = re.search(r'\{.*\}', content, re.DOTALL)
-                        if match:
-                            json_data = json.loads(match.group())
-                            return {
-                                "success": True,
-                                "recommendations": json_data["recommendations"],
-                                "ai_source": "TrendAI Intelligence Neural Cluster",
-                                "analysis": json_data.get("analysis", "Deep market synthesis complete.")
-                            }
+                print(f"💎 [CLUSTER] Initiating Layer 1 (Attempt {attempt+1}): Gemini 2.0 Flash...")
+                if attempt > 0:
+                    await push_ws_status(f"Re-synchronizing Neural Core (Refined Attempt {attempt+1})...")
+                
+                gemini_result = await self._call_gemini_flash(area, cluster_prompt, lang)
+                if gemini_result and gemini_result.get("success"):
+                    return gemini_result
             except Exception as e:
-                print(f"🚨 [DEEPSEEK_FAILED]: {e}")
+                print(f"⚠️ Layer 1 Attempt {attempt+1} Failure: {e}")
+                if attempt < retry_count - 1:
+                    await asyncio.sleep(2) # Brief neural cooldown
 
-            # --- FINAL DESTINATION: HARDIENED SINGULARITY BASELINE ---
-            print("🔴 [CRITICAL_RECOVERY] Deploying high-fidelity singularity baseline for", area)
-            return self._generate_singularity_baseline(area)
-
-        except Exception as cluster_err:
-            print(f"🚨 [CLUSTER_FATAL] Multi-agent failure: {cluster_err}")
-            return self._generate_singularity_baseline(area)
-
-    async def _call_groq(self, prompt: str, area: str, lang: str) -> Optional[Dict]:
-        """Lightning-Fast High-Fidelity Inference via Groq (Llama-3.3-70b)"""
-        if not self.groq_key:
-            return None
-            
+        # --- LAYER 2: GROQ SUPER-INFERENCE (DeepSeek-R1 Distill Reasoning) ---
         try:
-            print(f"🚀 [AI CLUSTER] Hitting Groq Super-Inference (Llama-3.3-70b)...")
-            async with httpx.AsyncClient(timeout=30.0) as client:
-                resp = await client.post("https://api.groq.com/openai/v1/chat/completions", 
-                    headers={"Authorization": f"Bearer {self.groq_key}", "Content-Type": "application/json"},
+            print("🚀 [CLUSTER] Initiating Layer 2: Groq / DeepSeek-R1 Distill...")
+            groq_result = await self._call_groq(cluster_prompt, area, lang)
+            if groq_result and groq_result.get("success"):
+                return groq_result
+        except Exception as e:
+            print(f"⚠️ Layer 2 Failure: {e}")
+
+        # --- LAYER 3: DEEPSEEK SWARM FALLBACK (AIC.CC) ---
+        try:
+            print("🛡️ [CLUSTER] Initiating Layer 3: AIC.CC DeepSeek-V3 (Deep Neural Sweep)...")
+            async with httpx.AsyncClient(timeout=120.0) as client:
+                resp = await client.post(f"{self.aic_base}/chat/completions", 
+                    headers={"Authorization": f"Bearer {self.aic_key}", "Content-Type": "application/json"}, 
                     json={
-                        "model": "llama-3.3-70b-versatile",
+                        "model": "deepseek-v3",
                         "messages": [
-                            {"role": "system", "content": f"You are an Elite Business Intelligence Analyst specialized in {area}. Respond in valid JSON format ONLY."},
-                            {"role": "user", "content": prompt}
+                            {"role": "system", "content": "You are an elite Business Intelligence Architect."},
+                            {"role": "user", "content": cluster_prompt}
                         ],
-                        "temperature": 0.4,
-                        "response_format": {"type": "json_object"}
+                        "temperature": 0.3
                     }
                 )
-                
                 if resp.status_code == 200:
                     data = resp.json()
                     content = data['choices'][0]['message']['content']
@@ -529,13 +457,74 @@ class IntegratedBusinessIntelligence:
                     match = re.search(r'\{.*\}', content, re.DOTALL)
                     if match:
                         json_data = json.loads(match.group())
-                        if "recommendations" in json_data:
-                            return {
-                                "success": True,
-                                "recommendations": json_data["recommendations"],
-                                "ai_source": "Groq Llama-3.3-70b High-Velocity Hive",
-                                "analysis": json_data.get("analysis", "Deep market synthesis complete.")
-                            }
+                        return {
+                            "success": True,
+                            "recommendations": json_data["recommendations"],
+                            "ai_source": "TrendAI Intelligence Neural Cluster (DeepSeek Proxy)",
+                            "analysis": json_data.get("analysis", "Deep market synthesis complete.")
+                        }
+        except Exception as e:
+            print(f"🚨 [DEEPSEEK_FAILED]: {e}")
+
+        # --- FINAL DESTINATION: PURE NEURAL CATCHALL (No Hardcoded Fallbacks) ---
+        try:
+            print("🧠 [RECOVERY] Initiating Final Neural Sync (Gemini 1.5 Flash Catchall)...")
+            # If everything else failed, use a simpler prompt on the most stable model
+            async with httpx.AsyncClient(timeout=60.0) as client:
+                catchall_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={self.gemini_key}"
+                resp = await client.post(catchall_url, json={
+                    "contents": [{"parts": [{"text": f"Analyze business opportunities in {area} for 2026. Return valid JSON only with 'recommendations' and 'analysis' keys. Focus on data-driven gaps. Lang: {lang}"}]}],
+                    "generationConfig": {"temperature": 0.5, "response_mime_type": "application/json"}
+                })
+                if resp.status_code == 200:
+                    data = resp.json()['candidates'][0]['content']['parts'][0]['text']
+                    result = json.loads(data)
+                    result["ai_source"] = "Gemini 1.5 Flash (Neural Catchall)"
+                    result["success"] = True
+                    return result
+        except Exception as e:
+            print(f"❌ [CRITICAL] All neural layers and recovery catchall failed: {e}")
+            
+        return {"success": False, "message": "Neural synchronization failed. Please retry to establish a fresh connection."}
+
+    async def _call_groq(self, prompt: str, area: str, lang: str) -> Optional[Dict]:
+        """Lightning-Fast Reasoning Inference via Groq (DeepSeek-R1 Distill)"""
+        if not self.groq_key:
+            return None
+            
+        try:
+            # Upgrade: Use DeepSeek R1 Distill for better reasoning on Groq
+            model = "deepseek-r1-distill-llama-70b" 
+            print(f"🚀 [AI CLUSTER] Hitting Groq Reasoning (DeepSeek-R1 Distill)...")
+            # HIGH-FIDELITY: 120s for Groq r1-distill reasoning
+            async with httpx.AsyncClient(timeout=120.0) as client:
+                resp = await client.post("https://api.groq.com/openai/v1/chat/completions", 
+                    headers={"Authorization": f"Bearer {self.groq_key}", "Content-Type": "application/json"},
+                    json={
+                        "model": model,
+                        "messages": [
+                            {"role": "system", "content": "You are an Elite Business Analyst. Return JSON ONLY."},
+                            {"role": "user", "content": prompt}
+                        ],
+                        "temperature": 0.3
+                    }
+                )
+                
+                if resp.status_code == 200:
+                    data = resp.json()
+                    content = data['choices'][0]['message']['content']
+                    # Clean up <think> blocks from R1 models
+                    content = re.sub(r'<think>.*?</think>', '', content, flags=re.DOTALL).strip()
+                    content = re.sub(r'```json\s*|\s*```', '', content).strip()
+                    match = re.search(r'\{.*\}', content, re.DOTALL)
+                    if match:
+                        json_data = json.loads(match.group())
+                        return {
+                            "success": True,
+                            "recommendations": json_data["recommendations"],
+                            "ai_source": f"Groq {model} (Reasoning Engine)",
+                            "analysis": json_data.get("analysis", "Deep market synthesis complete.")
+                        }
         except Exception as e:
             print(f"🔄 Groq Hop failure: {e}")
         return None
@@ -580,72 +569,6 @@ class IntegratedBusinessIntelligence:
             print(f"🔄 AIML Gateway failure: {e}")
         return None
 
-    def _generate_singularity_baseline(self, area: str) -> Dict[str, Any]:
-        """Provides a logic-driven, dynamic business baseline if all neural layers fail."""
-        primary_area = area.split(',')[0].strip()
-        
-        # Determine logical ROI and Investment based on area (pseudo-random but consistent)
-        area_seed = len(area)
-        base_roi = 32 + (area_seed % 12)
-        curr = "₹" if "India" in area else "$"
-        
-        return {
-            "success": True,
-            "ai_source": "TrendAI Singularity Strategic Baseline v6.4",
-            "analysis": f"Critical reconnaissance for {area} in 2026 suggests major expansion in decentralized logistics and value-added agricultural processing.",
-            "recommendations": [
-                {
-                    "business_name": f"Strategic {primary_area} Logistic Integrity Hub",
-                    "description": f"A high-fidelity supply chain monitoring platform designed to secure regional cargo transit and optimize route efficiency for exporters in {primary_area}.",
-                    "category": "LOGISTICS & DATA TECH",
-                    "market_gap": "High demand for real-time corridor monitoring and logistics resilience.",
-                    "target_audience": "Local agricultural collectives and regional SME manufacturing units.",
-                    "investment_range": f"{curr}25L - 45L",
-                    "funding_required": f"{curr}35L (Estimated)",
-                    "roi_percentage": base_roi,
-                    "roi_potential": f"{base_roi}% Annually",
-                    "be_period": "4.5 Months",
-                    "m1_traffic": "1,200 Active Regional Vectors",
-                    "retention_rate": "82%",
-                    "implementation_difficulty": "Medium",
-                    "competition_level": "Low (First-Mover Edge)",
-                    "demand_index": "92%",
-                    "market_size": f"{curr}250 Cr+ {primary_area} Corridor",
-                    "competitive_advantage": "Exclusive localized logistics monitoring stack.",
-                    "revenue_model": "Managed Service Fees + Platform Subscriptions",
-                    "six_month_plan": [
-                        {"month": "Month 1-2", "goal": "Setup and legal phase"},
-                        {"month": "Month 3-4", "goal": "Pilot and initial traction"},
-                        {"month": "Month 5-6", "goal": "Scaling and territory expansion"}
-                    ]
-                },
-                {
-                    "business_name": f"Advanced {primary_area} Bio-Circular Economy Unit",
-                    "description": f"Converting localized agricultural and industrial residues into high-output organic fertilizers and sustainable bio-materials for {primary_area}.",
-                    "category": "AGRITECH & CIRCULARITY",
-                    "market_gap": "Unsaturated sector with high institutional support for sustainability.",
-                    "target_audience": "Export-oriented organic farms and regional fertilizer distributors.",
-                    "investment_range": f"{curr}15L - 28L",
-                    "funding_required": f"{curr}18L (Estimated)",
-                    "roi_percentage": base_roi + 5,
-                    "roi_potential": f"{base_roi + 5}% Annually",
-                    "be_period": "6.2 Months",
-                    "m1_traffic": "45 Corporate B2B Leads",
-                    "retention_rate": "90% (Annual Subscription)",
-                    "implementation_difficulty": "Medium-High",
-                    "competition_level": "Low (High Barrier to Entry)",
-                    "demand_index": "88%",
-                    "market_size": "Export Grade / Global Standard",
-                    "competitive_advantage": "Proprietary residue digestion technology.",
-                    "revenue_model": "Direct Product Sales + Waste Processing Fees",
-                    "six_month_plan": [
-                        {"month": "Month 1-2", "goal": "Establish raw material sourcing contracts"},
-                        {"month": "Month 3-4", "goal": "Facility setup and first production batch"},
-                        {"month": "Month 5-6", "goal": "Distribution network expansion"}
-                    ]
-                }
-            ]
-        }
 
     async def _call_search_gpt(self, area: str, context: str, lang: str) -> Dict:
         """Enhanced Pollinations API with real-time market analysis and retry logic"""
@@ -743,8 +666,8 @@ class IntegratedBusinessIntelligence:
         
         print(f"🔍 [SCOUTING] Deploying {len(tasks)} parallel drones for {area}...")
         
-        # Best-Effort Swarm: We now wait up to 30s for the drones to deliver high-fidelity data
-        done, pending = await asyncio.wait(tasks, timeout=30.0)
+        # Best-Effort Swarm: Increased wait to 120s to support deep Google Maps/Apify extractions
+        done, pending = await asyncio.wait(tasks, timeout=120.0)
         
         results = []
         for task in done:
@@ -818,13 +741,31 @@ class IntegratedBusinessIntelligence:
         return ""
 
     async def _scout_firecrawl(self, area: str) -> str:
+        """Priority 5: Upgrade Firecrawl to /v1/extract (Structured Semantic Scrape)"""
+        if not self.firecrawl_key: return ""
         try:
-            async with httpx.AsyncClient(timeout=15.0) as client:
-                resp = await client.post("https://api.firecrawl.dev/v0/search", headers={"Authorization": f"Bearer {self.firecrawl_key}"}, json={"query": f"market analysis {area}"})
+            print(f"🕷️ [FIRECRAWL] Performing structured extraction for {area}...")
+            async with httpx.AsyncClient(timeout=25.0) as client:
+                resp = await client.post("https://api.firecrawl.dev/v1/extract", 
+                    headers={"Authorization": f"Bearer {self.firecrawl_key}", "Content-Type": "application/json"}, 
+                    json={
+                        "urls": [f"https://www.google.com/search?q=business+opportunities+and+economic+gaps+in+{area}+2026"],
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "gaps": {"type": "array", "items": {"type": "string"}},
+                                "local_trends": {"type": "array", "items": {"type": "string"}},
+                                "major_industries": {"type": "array", "items": {"type": "string"}},
+                                "investment_climate": {"type": "string"}
+                            }
+                        }
+                    }
+                )
                 if resp.status_code == 200:
-                    data = resp.json().get('data', [])
-                    return "\n".join([f"FIRECRAWL: {r.get('title')}: {r.get('description')}" for r in data])
-        except: pass
+                    data = resp.json().get('data', {})
+                    return f"FIRECRAWL_EXTRACT: {json.dumps(data)}"
+        except Exception as e:
+            print(f"⚠️ Firecrawl Extract failed: {e}")
         return ""
 
     async def _scout_apify_businesses(self, area: str) -> str:
@@ -852,33 +793,69 @@ class IntegratedBusinessIntelligence:
         return ""
 
     async def _scout_reddit(self, area: str) -> str:
+        """Priority 2: Real Reddit Insight via PRAW API"""
+        if not self.reddit_client_id: return ""
         try:
-            from duckduckgo_search import DDGS
-            def _get_ddgs():
-                with DDGS() as ddgs:
-                    return list(ddgs.text(f"site:reddit.com business gaps {area}", max_results=5))
-            
-            results = await asyncio.to_thread(_get_ddgs)
-            return "\n".join([r.get('body', '') for r in results])
+            import praw
+            print(f"🤖 [REDDIT] Scouting tactical discussions via PRAW for {area}...")
+            # Thread-safe async-friendly PRAW (Lazy initialization)
+            def _get_praw_data():
+                reddit = praw.Reddit(
+                    client_id=self.reddit_client_id,
+                    client_secret=self.reddit_client_secret,
+                    user_agent=self.reddit_user_agent,
+                    username=self.reddit_username,
+                    password=self.reddit_password
+                )
+                queries = [f"{area} business gaps", f"{area} problems", "scams in {area}"]
+                insights = []
+                for q in queries:
+                    # Search across all relevant business subreddits
+                    for submission in reddit.subreddit("all").search(q, limit=3, time_filter="year"):
+                        insights.append(f"REDDIT: {submission.title} - {submission.selftext[:300]}")
+                return "\n".join(insights)
+
+            return await asyncio.to_thread(_get_praw_data)
+        except Exception as e:
+            print(f"⚠️ Reddit PRAW failed: {e}")
+            return ""
+
+    async def _scout_fred(self, area: str) -> str:
+        """Priority 3: Federal Reserve Economic Data (Macro Indicators)"""
+        if not self.fred_key or "abc" in self.fred_key: return "" # Ignore placeholder
+        try:
+            print(f"📈 [FRED] Fetching macro economic telemetry for {area}...")
+            # Examples: GDP, CPI, Unemployment
+            series = ["GDP", "UNRATE", "CPIAUCSL"]
+            results = []
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                for s in series:
+                    url = f"https://api.stlouisfed.org/fred/series/observations?series_id={s}&api_key={self.fred_key}&file_type=json&sort_order=desc&limit=1"
+                    resp = await client.get(url)
+                    if resp.status_code == 200:
+                        obs = resp.json().get('observations', [{}])[0]
+                        results.append(f"FRED_{s}: {obs.get('value')} (as of {obs.get('date')})")
+            return "\n".join(results)
         except: return ""
 
     async def _scout_web_trends(self, area: str) -> str:
+        """Analyze broad economic and industry trends via DuckDuckGo"""
         try:
             from duckduckgo_search import DDGS
             def _get_ddgs():
                 with DDGS() as ddgs:
-                    return list(ddgs.text(f"economic scene {area} 2026", max_results=3))
+                    return list(ddgs.text(f"economic scene and industry gaps {area} 2026", max_results=3))
                     
             results = await asyncio.to_thread(_get_ddgs)
             return "\n".join([r.get('body', '') for r in results])
         except: return ""
 
     async def call_ai_cluster_json(self, prompt: str, system_prompt: str = "You are a strategic business analyst. Respond in valid JSON format ONLY.") -> Optional[Dict]:
-        """A generic method to get JSON from the cluster with fallbacks"""
-        # Try Gemini first
+        """A generic method to get JSON from the cluster with fallbacks (Upgraded to V2.0)"""
+        # Try Gemini 2.0 Flash first
         if self.gemini_key:
             try:
-                gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={self.gemini_key}"
+                gemini_url = f"https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key={self.gemini_key}"
                 async with httpx.AsyncClient(timeout=30.0) as client:
                     resp = await client.post(gemini_url, json={
                         "contents": [{"parts": [{"text": f"{system_prompt}\n\n{prompt}"}]}],
@@ -1032,11 +1009,12 @@ class IntegratedBusinessIntelligence:
             print(f"⚠️ AI Cluster Hub Error: {e}")
         return None
 
-    def _compile_rag_block(self, g: str, r: str, w: str) -> str:
+    def _compile_rag_block(self, g: str, r: str, w: str, f: str = "") -> str:
         b = []
-        if g: b.append(f"### SEARCH:\n{g}")
-        if r: b.append(f"### REDDIT:\n{r}")
-        if w: b.append(f"### WEB:\n{w}")
+        if g: b.append(f"### SEARCH RESULTS:\n{g}")
+        if r: b.append(f"### REDDIT INSIGHTS (ACTUAL):\n{r}")
+        if w: b.append(f"### WEB MARKET TRENDS:\n{w}")
+        if f: b.append(f"### MACRO ECONOMIC DATA (FRED):\n{f}")
         return "\n\n".join(b)[:12000]
 
     def _polish_identities(self, recs: List[Dict], area: str) -> List[Dict]:
