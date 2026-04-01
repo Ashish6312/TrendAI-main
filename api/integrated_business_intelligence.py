@@ -229,7 +229,7 @@ class IntegratedBusinessIntelligence:
 
 
     async def _call_gemini_flash(self, area: str, context: str, lang: str) -> Optional[Dict]:
-        """Professional Analysis via Google Gemini 2.0 Flash (2026 Production Standard)"""
+        """Professional Analysis via Google Gemini 2.5 Flash (2026 Production Standard)"""
         if not self.gemini_key:
             return None
             
@@ -267,7 +267,14 @@ class IntegratedBusinessIntelligence:
                     return None
 
                 json_data = resp.json()['candidates'][0]['content']['parts'][0]['text']
-                data = json.loads(json_data)
+                
+                # Robust extraction to handle potential malformed strings or extra text
+                match = re.search(r'\{.*\}', json_data, re.DOTALL)
+                if match:
+                    data = json.loads(match.group())
+                else:
+                    logger.error("❌ Gemini Layer: No valid JSON found in response.")
+                    return None
                 
                 # PRIORITY 1: Claude Critic Layer Integration
                 if self.claude_key and data.get("recommendations"):
@@ -277,11 +284,11 @@ class IntegratedBusinessIntelligence:
                 return {
                     "success": True,
                     "recommendations": data["recommendations"],
-                    "ai_source": "Gemini 2.0 Flash + Claude Critic",
+                    "ai_source": "Gemini 2.5 Flash + Claude Critic",
                     "analysis": data.get("analysis", {"summary": "Execution complete."})
                 }
         except Exception as e:
-            print(f"⚠️ Gemini 2.0 Flash Layer Exception: {e}")
+            print(f"⚠️ Gemini 2.5 Flash Layer Exception: {e}")
         return None
 
     async def _call_claude_critic(self, original_data: Dict, market_context: str) -> Dict:
@@ -323,7 +330,7 @@ class IntegratedBusinessIntelligence:
             return original_data
 
     async def _call_gemini(self, area: str, context: str, lang: str) -> Optional[Dict]:
-        """Professional Analysis via Google Gemini 1.5 Pro"""
+        """Professional Analysis via Google Gemini 2.5 Pro (High Context Hub)"""
         if not self.gemini_key:
             return None
             
@@ -421,11 +428,11 @@ class IntegratedBusinessIntelligence:
 
     async def _run_analysis_cluster(self, cluster_prompt: str, area: str, lang: str) -> Dict[str, Any]:
         """Multi-layer Singularity Cluster (Gemini 2.0 -> Groq R1-Distill -> Baseline)"""
-        # --- LAYER 1: GOOGLE GEMINI 2.0 FLASH (Main Intelligence + Claude Critic) ---
+        # --- LAYER 1: GOOGLE GEMINI 2.5 FLASH (Main Intelligence + Claude Critic) ---
         retry_count = 2 # Restored retries for high-fidelity accuracy
         for attempt in range(retry_count):
             try:
-                print(f"💎 [CLUSTER] Initiating Layer 1 (Attempt {attempt+1}): Gemini 2.0 Flash...")
+                print(f"💎 [CLUSTER] Initiating Layer 1 (Attempt {attempt+1}): Gemini 2.5 Flash...")
                 if attempt > 0:
                     await push_ws_status(f"Re-synchronizing Neural Core (Refined Attempt {attempt+1})...")
                 
@@ -880,15 +887,14 @@ class IntegratedBusinessIntelligence:
         # Try Gemini 2.0 Flash first
         if self.gemini_key:
             try:
-                gemini_url = f"https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key={self.gemini_key}"
+                gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={self.gemini_key}"
                 async with httpx.AsyncClient(timeout=30.0) as client:
                     resp = await client.post(gemini_url, json={
                         "contents": [{"parts": [{"text": f"{system_prompt}\n\n{prompt}"}]}],
-                        "generationConfig": {"temperature": 0.2, "maxOutputTokens": 2048}
+                        "generationConfig": {"temperature": 0.2, "maxOutputTokens": 2048, "response_mime_type": "application/json"}
                     })
                     if resp.status_code == 200:
                         content = resp.json()['candidates'][0]['content']['parts'][0]['text']
-                        content = re.sub(r'```json\s*|\s*```', '', content).strip()
                         match = re.search(r'\{.*\}', content, re.DOTALL)
                         if match:
                             return json.loads(match.group())
@@ -1017,22 +1023,7 @@ class IntegratedBusinessIntelligence:
         print(f"⚠️ [ENRICHMENT FAIL] AI synthesis cluster failed for {title}")
         return {"success": False, "message": "Neural financial enrichment failed."}
 
-    async def call_ai_cluster_json(self, prompt: str) -> Optional[Dict]:
-        """Generic JSON synthesis for any prompt via the fastest available model"""
-        # Try Flash for max speed
-        gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={self.gemini_key}"
-        try:
-            async with httpx.AsyncClient(timeout=15.0) as client:
-                resp = await client.post(gemini_url, json={
-                    "contents": [{"parts": [{"text": prompt + " Return JSON only."}]}],
-                    "generationConfig": {"temperature": 0.2, "response_mime_type": "application/json"}
-                })
-                if resp.status_code == 200:
-                    text = resp.json()['candidates'][0]['content']['parts'][0]['text']
-                    return json.loads(text)
-        except Exception as e:
-            print(f"⚠️ AI Cluster Hub Error: {e}")
-        return None
+    # Consistently use the robust implementation of call_ai_cluster_json defined at line 885
 
     def _compile_rag_block(self, g: str, r: str, w: str, f: str = "") -> str:
         b = []

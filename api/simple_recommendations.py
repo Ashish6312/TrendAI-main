@@ -72,11 +72,11 @@ def parse_real_location_data(area: str) -> Dict[str, Any]:
             
             if gemini_key:
                 try:
-                    # Switch to V1 for stability
-                    gemini_url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={gemini_key}"
+                    # Switch to V1beta for reliability in 2026
+                    gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={gemini_key}"
                     resp = requests.post(gemini_url, json={
                         "contents": [{"parts": [{"text": prompt}]}],
-                        "generationConfig": {"temperature": 0.1, "maxOutputTokens": 256}
+                        "generationConfig": {"temperature": 0.1, "maxOutputTokens": 256, "response_mime_type": "application/json"}
                     }, timeout=10)
                     if resp.status_code == 200:
                         content = resp.json()['candidates'][0]['content']['parts'][0]['text']
