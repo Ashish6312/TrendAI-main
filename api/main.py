@@ -1370,12 +1370,12 @@ async def get_recommendations(request: RecommendationRequest, db: Session = Depe
             # Punjab Force-Refresh Policy:
             is_punjab_validation = "punjab" in analysis_area.lower()
             
-            # STRICT COUNT VALIDATION: The V4.2 Strategic Engine SHOULD return 12-15 items. 
+            # RELAXED COUNT VALIDATION: The V4.2 Strategic Engine returns high-fidelity items. 
             rec_count = len(cached_recs) if isinstance(cached_recs, list) else 0
-            is_legacy_count = rec_count < 12
+            is_legacy_count = rec_count < 1
             
-            # Use 5 as the baseline for "valid enough and fast"
-            is_valid_cache = isinstance(cached_recs, list) and rec_count >= 5 and not is_generic_placeholder and not is_generic_template and not is_legacy_count and not is_punjab_validation
+            # Use 1 as the baseline for "valid enough and fast" for high-fidelity 2026 intelligence
+            is_valid_cache = isinstance(cached_recs, list) and rec_count >= 1 and not is_generic_placeholder and not is_generic_template and not is_legacy_count and not is_punjab_validation
             
             if is_valid_cache:
                 # Deep validation: ensuring the structure has actual business titles, not empty shells
@@ -1534,7 +1534,7 @@ def get_user_history(email: str, db: Session = Depends(get_db)):
                 # Handle potential string-encoded JSON
                 recs = r.recommendations
                 if isinstance(recs, str): recs = json.loads(recs)
-                if not isinstance(recs, list) or len(recs) < 3:
+                if not isinstance(recs, list) or len(recs) < 1:
                     ids_to_purge.append(r.id)
             except: ids_to_purge.append(r.id)
             
