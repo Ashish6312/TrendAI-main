@@ -896,7 +896,8 @@ def get_synced_subscription(db: Session, email: str):
         
     latest_payment = query.order_by(models.PaymentHistory.created_at.desc()).first()
     if latest_payment:
-        logger.info(f"✅ Found latest payment: {latest_payment.dodo_payment_id} (Plan: {latest_payment.plan_name})")
+        pay_id = latest_payment.dodo_payment_id or f"DB-{latest_payment.id}"
+        logger.info(f"✅ Found latest payment: {pay_id} (Plan: {latest_payment.plan_name})")
     else:
         logger.info(f"ℹ️ No payment history found for {email_normalized}")
     
@@ -1603,11 +1604,10 @@ def get_saved_businesses(email: str, db: Session = Depends(get_db)):
     sub = get_cached_subscription(email_normalized, db)
 
     # Allow access if they have ANY active paid plan
+    # Allow access but return empty list if they are on free plan
+    # This prevents 403 errors on the frontend for new users
     if not sub or sub.get("plan_name") == "free" or sub.get("status") != "active":
-        raise HTTPException(
-            status_code=403, 
-            detail="The Business Vault is only accessible with an active Professional subscription."
-        )
+        return []
 
     saved = db.query(models.SavedBusiness).filter(
         models.SavedBusiness.user_email == email_normalized

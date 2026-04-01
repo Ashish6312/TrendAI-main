@@ -5,9 +5,13 @@ import os
 import asyncio
 import time
 import hashlib
+import logging
 from datetime import datetime
 from typing import Dict, List, Any, Optional
 from dotenv import load_dotenv
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 
@@ -243,32 +247,39 @@ class IntegratedBusinessIntelligence:
         """
 
         try:
-            print(f"⚡ [AI CLUSTER] Hitting Gemini 2.0 Flash (Singularity Layer)...")
-            # Upgrade to V1 (Stable) or latest production endpoint for 2026
-            gemini_url = f"https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash:generateContent?key={self.gemini_key}"
+            print(f"💎 [CLUSTER] Synthesizing via Gemini 2.5 Flash (2026 Standard)...")
+            gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={self.gemini_key}"
             
             # HIGH-FIDELITY: 180s timeout for Gemini 2.0 Flash Deep Reasoning
             async with httpx.AsyncClient(timeout=180.0) as client:
-                resp = await client.post(gemini_url, json={
+                payload = {
                     "contents": [{"parts": [{"text": prompt}]}],
-                    "generationConfig": {"temperature": 0.4, "maxOutputTokens": 4096, "response_mime_type": "application/json"}
-                })
-                
-                if resp.status_code == 200:
-                    json_data = resp.json()['candidates'][0]['content']['parts'][0]['text']
-                    data = json.loads(json_data)
-                    
-                    # PRIORITY 1: Claude Critic Layer Integration
-                    if self.claude_key and data.get("recommendations"):
-                        print("🛡️ [CRITIC] Engaging Claude for quality consensus...")
-                        data = await self._call_claude_critic(data, context)
-                        
-                    return {
-                        "success": True,
-                        "recommendations": data["recommendations"],
-                        "ai_source": "Gemini 2.0 Flash + Claude Critic",
-                        "analysis": data.get("analysis", {"summary": "Execution complete."})
+                    "generationConfig": {
+                        "temperature": 0.45, 
+                        "maxOutputTokens": 4096, 
+                        "response_mime_type": "application/json"
                     }
+                }
+                resp = await client.post(gemini_url, json=payload)
+                
+                if resp.status_code != 200:
+                    logger.error(f"❌ Gemini Layer Error: {resp.status_code} - {resp.text[:500]}")
+                    return None
+
+                json_data = resp.json()['candidates'][0]['content']['parts'][0]['text']
+                data = json.loads(json_data)
+                
+                # PRIORITY 1: Claude Critic Layer Integration
+                if self.claude_key and data.get("recommendations"):
+                    print("🛡️ [CRITIC] Engaging Claude for quality consensus...")
+                    data = await self._call_claude_critic(data, context)
+                    
+                return {
+                    "success": True,
+                    "recommendations": data["recommendations"],
+                    "ai_source": "Gemini 2.0 Flash + Claude Critic",
+                    "analysis": data.get("analysis", {"summary": "Execution complete."})
+                }
         except Exception as e:
             print(f"⚠️ Gemini 2.0 Flash Layer Exception: {e}")
         return None
@@ -468,24 +479,32 @@ class IntegratedBusinessIntelligence:
 
         # --- FINAL DESTINATION: PURE NEURAL CATCHALL (No Hardcoded Fallbacks) ---
         try:
-            print("🧠 [RECOVERY] Initiating Final Neural Sync (Gemini 1.5 Flash Catchall)...")
-            # If everything else failed, use a simpler prompt on the most stable model
+            print("🧠 [RECOVERY] Initiating Final Neural Sync (Gemini 2.5 Flash Catchall)...")
             async with httpx.AsyncClient(timeout=60.0) as client:
-                catchall_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={self.gemini_key}"
+                catchall_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={self.gemini_key}"
                 resp = await client.post(catchall_url, json={
-                    "contents": [{"parts": [{"text": f"Analyze business opportunities in {area} for 2026. Return valid JSON only with 'recommendations' and 'analysis' keys. Focus on data-driven gaps. Lang: {lang}"}]}],
+                    "contents": [{"parts": [{"text": f"Analyze business opportunities in {area} for 2026. Return valid JSON only with 'recommendations' and 'analysis' keys. Focus on data-driven gaps. Context: {rag_context[:3000]} Lang: {lang}"}]}],
                     "generationConfig": {"temperature": 0.5, "response_mime_type": "application/json"}
                 })
                 if resp.status_code == 200:
                     data = resp.json()['candidates'][0]['content']['parts'][0]['text']
                     result = json.loads(data)
-                    result["ai_source"] = "Gemini 1.5 Flash (Neural Catchall)"
+                    result["ai_source"] = "Gemini 2.5 Flash (Catchall)"
                     result["success"] = True
                     return result
+                    
+            # --- ULTIMATE FALLBACK: Pollinations (Keyless/Free) ---
+            print("🛡️ [ULTIMATE FALLBACK] Attempting Free Neural Layer (Pollinations)...")
+            p_result = await self.call_ai_cluster_json(prompt)
+            if p_result:
+                p_result["ai_source"] = "Pollinations (OpenAI-OSS Proxy)"
+                p_result["success"] = True
+                return p_result
+
         except Exception as e:
-            print(f"❌ [CRITICAL] All neural layers and recovery catchall failed: {e}")
+            print(f"❌ [CRITICAL] All neural layers failed: {e}")
             
-        return {"success": False, "message": "Neural synchronization failed. Please retry to establish a fresh connection."}
+        return {"success": False, "message": "Neural synchronization failed. Please check your system quotas or connectivity."}
 
     async def _call_groq(self, prompt: str, area: str, lang: str) -> Optional[Dict]:
         """Lightning-Fast Reasoning Inference via Groq (DeepSeek-R1 Distill)"""
@@ -493,10 +512,10 @@ class IntegratedBusinessIntelligence:
             return None
             
         try:
-            # Upgrade: Use DeepSeek R1 Distill for better reasoning on Groq
-            model = "deepseek-r1-distill-llama-70b" 
-            print(f"🚀 [AI CLUSTER] Hitting Groq Reasoning (DeepSeek-R1 Distill)...")
-            # HIGH-FIDELITY: 120s for Groq r1-distill reasoning
+            # Upgrade: Use Llama 3.3 70B Versatile for high-performance stable inference in 2026
+            model = "llama-3.3-70b-versatile" 
+            print(f"🚀 [AI CLUSTER] Hitting Groq 2026 Standard (Llama-3.3-70B)...")
+            # HIGH-FIDELITY: 120s for Groq reasoning
             async with httpx.AsyncClient(timeout=120.0) as client:
                 resp = await client.post("https://api.groq.com/openai/v1/chat/completions", 
                     headers={"Authorization": f"Bearer {self.groq_key}", "Content-Type": "application/json"},
@@ -765,7 +784,8 @@ class IntegratedBusinessIntelligence:
                     data = resp.json().get('data', {})
                     return f"FIRECRAWL_EXTRACT: {json.dumps(data)}"
                 elif resp.status_code == 402:
-                    print(f"⚠️ [FIRECRAWL] Credit threshold reached (402). Attempting high-fidelity fallback...")
+                    logger.warning(f"⚠️ [FIRECRAWL] Credit threshold reached (402) for {area}. Attempting high-fidelity fallback...")
+                    await push_ws_status("Firecrawl Credits exhausted. Re-routing to Search-GPT cluster...")
                     # Fallback to a broader search drone since Firecrawl is exhausted
                     return "FIRECRAWL: (Credit Exhausted) Re-routing telemetry to SearchAPI/Tavily cluster."
                 return f"FIRECRAWL_ERROR: Status {resp.status_code}"
