@@ -24,8 +24,10 @@ def scrape_google_maps_contacts(search_queries: List[str], location: Optional[st
     
     run_input = {
         "queries": queries,
+        "searchStrings": queries, # Support multiple actor versions
         "maxResults": max_results,
-        "locationDisplayName": location or "India", # Ensure the actor geolocates correctly
+        "locationDisplayName": location or "India", 
+        "location": location or "India", # Alternative key used by some versions
         "exportPlaceUrls": True,
         "includeReviews": scrape_reviews,
         "includeImages": False,

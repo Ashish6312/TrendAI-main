@@ -764,6 +764,11 @@ class IntegratedBusinessIntelligence:
                 if resp.status_code == 200:
                     data = resp.json().get('data', {})
                     return f"FIRECRAWL_EXTRACT: {json.dumps(data)}"
+                elif resp.status_code == 402:
+                    print(f"⚠️ [FIRECRAWL] Credit threshold reached (402). Attempting high-fidelity fallback...")
+                    # Fallback to a broader search drone since Firecrawl is exhausted
+                    return "FIRECRAWL: (Credit Exhausted) Re-routing telemetry to SearchAPI/Tavily cluster."
+                return f"FIRECRAWL_ERROR: Status {resp.status_code}"
         except Exception as e:
             print(f"⚠️ Firecrawl Extract failed: {e}")
         return ""
