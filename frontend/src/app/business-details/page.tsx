@@ -6,7 +6,7 @@ import {
   MapPin, Star, CheckCircle, AlertTriangle, Lightbulb, 
   Zap, Phone, Mail, ExternalLink, Navigation, Loader2, Map, 
   Eye, Maximize2, RefreshCw, X, Building, Store, Factory, 
-  Globe2, DollarSign, BarChart3, Target, Building2, Globe, Search, Plus, 
+  DollarSign, BarChart3, Target, Building2, Globe, Search, Plus, 
   Trash2, ShieldCheck, Calendar, Clock, Award, Info, Sparkles, TrendingUp,
   Cpu, Archive, ChevronRight, Bookmark, Instagram, Facebook, Twitter, Rocket
 } from 'lucide-react';
@@ -841,7 +841,7 @@ export default function BusinessDetailsPage() {
                   </div>
                 ) : (
                   <div className="flex items-center gap-3 px-6 py-3 bg-blue-500/10 border border-blue-500/20 rounded-2xl text-blue-600 dark:text-blue-400 text-[10px] font-black uppercase tracking-[0.15em] shadow-lg italic">
-                    <Globe2 className="w-4 h-4" />
+                    <Globe className="w-4 h-4" />
                     {existingBusinesses.length > 0 ? `${existingBusinesses.length} DISCOVERED` : 'CLOUD CONNECTED'}
                   </div>
                 )}
@@ -1193,7 +1193,7 @@ export default function BusinessDetailsPage() {
             {/* Source attribution */}
             {existingBusinesses.length > 0 && (
               <div className="flex items-center gap-2 text-xs text-slate-400 dark:text-gray-600 justify-end">
-                <Globe2 className="w-3 h-3" />
+                <Globe className="w-3 h-3" />
                 Data sourced from OpenStreetMap &amp; AI analysis · {new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
               </div>
             )}

@@ -6,7 +6,7 @@ import { useState, useEffect, useRef } from "react";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import {
   Loader2, TrendingUp, MapPin,
-  Target, BarChart3, Globe2, Lightbulb,
+  Target, BarChart3, Lightbulb,
   ArrowRight, FileText, Clock, ChevronRight,
   Cpu, Download, Share2, Play, CheckCircle2, AlertCircle, Sparkles, Bookmark,
   ShieldCheck, Activity, Globe
@@ -979,7 +979,7 @@ function DashboardContent() {
               <div className="space-y-2">
                 <div className="flex items-center gap-3 p-2.5 bg-slate-50 dark:bg-white/5 rounded-lg border border-slate-200 dark:border-white/10">
                   <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center text-blue-500 flex-shrink-0">
-                    <Globe2 size={16} />
+                    <Globe size={16} />
                   </div>
                   <div>
                     <div className="text-xs font-bold text-slate-700 dark:text-gray-300">Live Market Data</div>
