@@ -6,23 +6,17 @@ export default function sitemap(): MetadataRoute.Sitemap {
   const routes = [
     '',
     '/blueprint',
-    '/dashboard',
     '/acquisition-tiers',
-    '/profile',
     '/contact',
-    '/resources',
     '/privacy',
     '/terms',
     '/compliance',
-    '/roadmap',
-    '/business-plan',
-    '/business-details',
   ]
 
   return routes.map((route) => ({
     url: `${baseUrl}${route}`,
     lastModified: new Date(),
-    changeFrequency: route === '' || route === '/dashboard' ? 'daily' : 'monthly',
-    priority: route === '' ? 1 : route === '/dashboard' ? 0.9 : 0.7,
+    changeFrequency: route === '' ? 'daily' : 'monthly',
+    priority: route === '' ? 1 : 0.8,
   }))
 }
