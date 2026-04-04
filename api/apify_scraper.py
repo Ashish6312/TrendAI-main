@@ -20,15 +20,15 @@ def scrape_google_maps_contacts(search_queries: List[str], location: Optional[st
         return []
         
     # Pre-process search strings to ensure geographical context is explicitly embedded
-    processed_queries = []
+    final_queries = []
     for q in search_queries:
         if location and location.lower() not in q.lower():
-            processed_queries.append(f"{q} in {location}")
+            final_queries.append(f"{q} in {location}")
         else:
-            processed_queries.append(q)
+            final_queries.append(q)
 
     run_input = {
-        "searchStrings": processed_queries,
+        "searchStrings": final_queries,
         "locationDisplayName": location or "India",
         "locationQuery": location or "India",
         "maxResults": max_results,
@@ -48,8 +48,8 @@ def scrape_google_maps_contacts(search_queries: List[str], location: Optional[st
         run_input["longitude"] = lng
 
     try:
-        print(f"📡 [RECONNAISSANCE] Spawning Apify actor for {len(processed_queries)} target vectors...")
-        # dpWePxnzRER4fPvM0 is the ID for google-maps-contact-extractor
+        print(f"📡 [RECONNAISSANCE] Spawning Apify actor for {len(final_queries)} target vectors...")
+        # dpWePxnzER4fPvM0 is the ID for google-maps-contact-extractor
         run = client.actor("dpWePxnzRER4fPvM0").call(run_input=run_input)
         
         results = []

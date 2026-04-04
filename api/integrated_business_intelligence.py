@@ -298,12 +298,13 @@ class IntegratedBusinessIntelligence:
             Task: Review and refine business recommendations for the following context.
             
             Market Context: {market_context[:4000]}
-            Initial Proposals: {json.dumps(original_data['recommendations'][:5])}
+            Initial Proposals: {json.dumps(original_data['recommendations'])}
             
             Refine the data for:
             1. Real-world feasibility in 2026.
             2. Calculation precision (ROI, Breakeven).
             3. Consensus Scoring (Eliminate generic ideas).
+            4. VOLUME: Maintain 10-12 high-fidelity items. DO NOT FILTER TO LESS THAN 10.
             
             Return the full JSON structure (including analysis and refined recommendations).
             """
@@ -315,14 +316,18 @@ class IntegratedBusinessIntelligence:
                 temperature=0.2,
                 system="Respond in valid JSON only.",
                 messages=[{"role": "user", "content": prompt}],
-                timeout=150.0 # High-fidelity consensus validation
+                timeout=120.0
             )
             
             content = message.content[0].text
-            refined_data = json.loads(re.search(r'\{.*\}', content, re.DOTALL).group())
-            return refined_data
+            match = re.search(r'\{.*\}', content, re.DOTALL)
+            if match:
+                refined_data = json.loads(match.group())
+                return refined_data
+            return original_data
         except Exception as e:
-            print(f"🛡️ [CRITIC-FAILED] Clause layer failure: {e}")
+            # Silent Fallback for Auth Errors (401) or other transient failures
+            print(f"🛡️ [CRITIC-FAILED] Layer failure (using raw telemetry): {e}")
             return original_data
 
     async def _call_gemini(self, area: str, context: str, lang: str) -> Optional[Dict]:
