@@ -375,6 +375,114 @@ async def contact_form_submission(contact: ContactRequest, background_tasks: Bac
         logging.error(f"❌ Contact processing failed: {str(e)}")
         return {"status": "error", "message": "Transmission protocol failed"}
 
+def send_invoice_email(host, port, user, password, recipient, user_name, plan_name, amount, currency, billing_cycle, payment_id):
+    """Sends a professional billing invoice email to the user after successful payment."""
+    try:
+        msg = MIMEMultipart()
+        msg["From"] = f"StarterScope Billing <{user}>"
+        msg["To"] = str(recipient)
+        msg["Subject"] = f"Invoice: Your StarterScope {plan_name} Subscription is Active!"
+
+        current_date = datetime.now().strftime('%B %d, %Y')
+        next_billing = (datetime.now() + (timedelta(days=365) if billing_cycle.lower() == "yearly" else timedelta(days=30))).strftime('%B %d, %Y')
+        
+        # Format currency symbol
+        currency_symbol = "₹" if currency == "INR" else "$"
+        
+        html_content = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+            <style>
+                body {{ font-family: 'Inter', system-ui, -apple-system, sans-serif; background-color: #f8fafc; margin: 0; padding: 0; }}
+                .wrapper {{ padding: 40px 20px; }}
+                .container {{ max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); border: 1px solid #e2e8f0; }}
+                .header {{ background-color: #0f172a; padding: 40px; text-align: left; }}
+                .logo {{ font-size: 24px; font-weight: 900; color: #ffffff; letter-spacing: -0.02em; }}
+                .logo span {{ color: #10b981; }}
+                .header-meta {{ margin-top: 24px; color: #94a3b8; font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 700; }}
+                .content {{ padding: 40px; }}
+                .greeting {{ font-size: 20px; font-weight: 800; color: #0f172a; margin-bottom: 8px; }}
+                .intro {{ color: #475569; font-size: 15px; line-height: 1.6; margin-bottom: 32px; }}
+                .invoice-card {{ background-color: #f1f5f9; border-radius: 20px; padding: 32px; margin-bottom: 32px; }}
+                .invoice-row {{ display: flex; justify-content: space-between; margin-bottom: 16px; border-bottom: 1px solid #e2e8f0; padding-bottom: 12px; }}
+                .invoice-row:last-child {{ border-bottom: none; margin-bottom: 0; padding-bottom: 0; }}
+                .label {{ color: #64748b; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }}
+                .value {{ color: #0f172a; font-size: 14px; font-weight: 700; }}
+                .total-box {{ background-color: #0f172a; border-radius: 16px; padding: 24px; margin-top: 24px; display: flex; justify-content: space-between; align-items: center; }}
+                .total-label {{ color: #94a3b8; font-size: 13px; font-weight: 700; text-transform: uppercase; }}
+                .total-amount {{ color: #ffffff; font-size: 24px; font-weight: 900; }}
+                .footer {{ padding: 40px; background-color: #fafafa; border-top: 1px solid #f1f5f9; text-align: center; }}
+                .footer-text {{ font-size: 12px; color: #94a3b8; line-height: 1.6; }}
+            </style>
+        </head>
+        <body>
+            <div class="wrapper">
+                <div class="container">
+                    <div class="header">
+                        <div class="logo">Starter<span>Scope</span></div>
+                        <div class="header-meta">Billing Statement • {current_date}</div>
+                    </div>
+                    <div class="content">
+                        <div class="greeting">System Access Authorized</div>
+                        <p class="intro">Hello {user_name}, your subscription to the <strong>{plan_name}</strong> plan has been successfully activated. You now have full access to our neural intelligence network.</p>
+                        
+                        <div class="invoice-card">
+                            <div class="invoice-row" style="display: table; width: 100%;">
+                                <div style="display: table-cell; text-align: left;"><span class="label">Invoice Number</span></div>
+                                <div style="display: table-cell; text-align: right;"><span class="value">#INV-{payment_id[:8].upper()}</span></div>
+                            </div>
+                            <div class="invoice-row" style="display: table; width: 100%; margin-top: 15px;">
+                                <div style="display: table-cell; text-align: left;"><span class="label">Date</span></div>
+                                <div style="display: table-cell; text-align: right;"><span class="value">{current_date}</span></div>
+                            </div>
+                            <div class="invoice-row" style="display: table; width: 100%; margin-top: 15px;">
+                                <div style="display: table-cell; text-align: left;"><span class="label">Plan</span></div>
+                                <div style="display: table-cell; text-align: right;"><span class="value">{plan_name} ({billing_cycle})</span></div>
+                            </div>
+                            <div class="invoice-row" style="display: table; width: 100%; margin-top: 15px;">
+                                <div style="display: table-cell; text-align: left;"><span class="label">Status</span></div>
+                                <div style="display: table-cell; text-align: right;"><span class="value" style="color: #10b981;">PAID</span></div>
+                            </div>
+                            
+                            <div class="total-box">
+                                <span class="total-label">Total Amount</span>
+                                <span class="total-amount">{currency_symbol}{amount:,.2f}</span>
+                            </div>
+                        </div>
+
+                        <p class="intro" style="font-size: 13px;">Your next billing date is <strong>{next_billing}</strong>. You can manage your subscription and download full receipts anytime from your dashboard.</p>
+                    </div>
+                    <div class="footer">
+                        <p class="footer-text">Questions about your bill? Contact our support team at StarterScope7@gmail.com<br>© 2026 StarterScope Intelligence. All rights reserved.</p>
+                    </div>
+                </div>
+            </div>
+        </body>
+        </html>
+        """
+        
+        msg.attach(MIMEText(html_content, "html"))
+
+        if "gmail.com" in str(host).lower() and int(port) == 465:
+            with smtplib.SMTP_SSL(str(host), int(port)) as server:
+                server.login(str(user), str(password))
+                server.send_message(msg)
+        else:
+            with smtplib.SMTP(str(host), int(port)) as server:
+                try:
+                    server.starttls()
+                except: pass
+                server.login(str(user), str(password))
+                server.send_message(msg)
+        
+        logging.info(f"🧾 Invoice sent to {recipient} for payment {payment_id}")
+    except Exception as e:
+        logging.error(f"❌ Failed to send invoice email: {str(e)}")
+
 @app.get("/api/info")
 async def api_info():
     payments = "dodo" if dodo_available else "fallback"
@@ -2211,7 +2319,7 @@ def get_payment_history(user_email: str, limit: int = 50, db: Session = Depends(
     ]
 
 @app.post("/api/process-payment")
-def process_frontend_payment(payload: ProcessPaymentRequest, db: Session = Depends(get_db)):
+def process_frontend_payment(payload: ProcessPaymentRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     """Frontend endpoint to securely process and fulfill a successful payment from the confirmation modal."""
     try:
         from dodopayments import DodoPayments
@@ -2272,6 +2380,31 @@ def process_frontend_payment(payload: ProcessPaymentRequest, db: Session = Depen
         create_subscription(subscription_data, db)
         db.commit()
         invalidate_user_cache(email_normalized)
+
+        # 🧾 AUTOMATED INVOICING: Send professional invoice to user's email
+        try:
+            EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.gmail.com")
+            EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))
+            EMAIL_USER = os.getenv("EMAIL_USER")
+            EMAIL_PASS = os.getenv("EMAIL_PASS")
+
+            if EMAIL_USER and EMAIL_PASS:
+                # Resolve user's name for personalization
+                user_rec = db.query(models.User).filter(func.lower(models.User.email) == email_normalized).first()
+                user_name = user_rec.name if user_rec and user_rec.name else email_normalized.split('@')[0]
+                
+                logging.info(f"📧 Queueing automated invoice for {email_normalized}")
+                background_tasks.add_task(
+                    send_invoice_email,
+                    EMAIL_HOST, EMAIL_PORT, EMAIL_USER, EMAIL_PASS,
+                    email_normalized, user_name, plan_name, 
+                    payload.amount, payload.currency or "INR", 
+                    payload.billing_cycle, payload.dodo_payment_id
+                )
+            else:
+                logging.warning("⚠️ SMTP Credentials missing, skipping automated invoice.")
+        except Exception as email_err:
+            logging.error(f"⚠️ Failed to queue invoice email: {email_err}")
         
         return {
             "status": "success",
@@ -2637,7 +2770,7 @@ async def create_dodo_checkout_session(request: DodoCheckoutRequest):
 @app.post("/api/dodo/webhook")
 @app.post("/dodo/webhook")
 @app.post("/webhook/dodo")
-async def dodo_webhook(request: Request):
+async def dodo_webhook(request: Request, background_tasks: BackgroundTasks):
     """Standard Webhooks integration for Dodo Payments following Standard Webhooks spec"""
     webhook_secret = os.getenv("DODO_WEBHOOK_KEY")
     
@@ -2645,7 +2778,7 @@ async def dodo_webhook(request: Request):
         logger.warning("⚠️ DODO_WEBHOOK_KEY not set, skipping verification (DEV ONLY)")
         try:
             body = await request.json()
-            return await process_dodo_payload(body)
+            return await process_dodo_payload(body, background_tasks)
         except Exception as e:
             logger.error(f"❌ Webhook processing failed: {e}")
             return {"status": "error", "message": str(e)}
@@ -2683,7 +2816,7 @@ async def dodo_webhook(request: Request):
             wh.verify(raw_body.decode(), headers)
             payload = json.loads(raw_body)
             logger.info(f"✅ Webhook verified successfully: {payload.get('type')}")
-            return await process_dodo_payload(payload)
+            return await process_dodo_payload(payload, background_tasks)
         except Exception as verify_err:
             logger.error(f"❌ Webhook verification failed logic: {verify_err}")
             # Log first few chars of secret for sanity check
@@ -2700,7 +2833,7 @@ async def dodo_webhook_heartbeat():
     """Heartbeat for Dodo Webhook to prevent 404 on browser visits"""
     return {"status": "active", "message": "StarterScope Dodo Webhook is Up (POST Only)"}
 
-async def process_dodo_payload(payload: Dict[str, Any]):
+async def process_dodo_payload(payload: Dict[str, Any], background_tasks: BackgroundTasks = None):
     """Internal logic to process verified Dodo webhook payload and activate subscriptions"""
     event_type = payload.get("type")
     data = payload.get("data", payload)
@@ -2823,6 +2956,31 @@ async def process_dodo_payload(payload: Dict[str, Any]):
             db.commit()
             invalidate_user_cache(email)
             logger.info(f"✅ Dodo Fullfillment Complete: {email} | Plan: {plan_name} ({billing_cycle})")
+            
+            # 🧾 AUTOMATED INVOICING: Send professional invoice to user's email via webhook trigger
+            if is_success and background_tasks:
+                try:
+                    EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.gmail.com")
+                    EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))
+                    EMAIL_USER = os.getenv("EMAIL_USER")
+                    EMAIL_PASS = os.getenv("EMAIL_PASS")
+
+                    if EMAIL_USER and EMAIL_PASS:
+                        # Resolve user's name for personalization
+                        user_rec = db.query(models.User).filter(func.lower(models.User.email) == email).first()
+                        user_name = user_rec.name if user_rec and user_rec.name else email.split('@')[0]
+                        
+                        logger.info(f"📧 Queueing automated webhook invoice for {email}")
+                        background_tasks.add_task(
+                            send_invoice_email,
+                            EMAIL_HOST, EMAIL_PORT, EMAIL_USER, EMAIL_PASS,
+                            email, user_name, plan_name, 
+                            amount, data.get("currency") or "INR", 
+                            billing_cycle, payment_id_str
+                        )
+                except Exception as email_err:
+                    logger.error(f"⚠️ Webhook invoice queue failed: {email_err}")
+
             return {"status": "success"}
         except Exception as e:
             logger.error(f"❌ Error during fulfillment logic: {e}")

@@ -170,7 +170,7 @@ export default function AISourceIndicator({
           )}
           
           {analysisTime && (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2" suppressHydrationWarning>
               <Clock size={12} className="text-slate-400" />
               <span className="text-xs text-slate-500 dark:text-gray-400">
                 {analysisTime}

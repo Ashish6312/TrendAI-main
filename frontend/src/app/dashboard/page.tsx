@@ -923,12 +923,12 @@ function DashboardContent() {
                         <div className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 truncate mb-1">
                           {item.area}
                         </div>
-                        <div className="text-xs text-slate-500 dark:text-gray-500">
-                          {new Date(item.created_at).toLocaleDateString('en-US', {
+                        <div className="text-xs text-slate-500 dark:text-gray-500" suppressHydrationWarning>
+                          {item.created_at ? new Date(item.created_at).toLocaleDateString('en-US', {
                             month: 'short',
                             day: 'numeric',
                             year: 'numeric'
-                          })}
+                          }) : 'Recent'}
                         </div>
                       </button>
                     ))}
@@ -1492,7 +1492,7 @@ function DashboardContent() {
                     <AISourceIndicator
                       aiSource={result.ai_source}
                       dataSources={result.analysis?.data_sources}
-                      analysisTime={new Date().toLocaleTimeString()}
+                      analysisTime="Just Now"
                       area={area}
                       className="mb-6"
                     />

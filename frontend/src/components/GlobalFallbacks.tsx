@@ -20,7 +20,7 @@ interface State {
   errorInfo: ErrorInfo | null;
 }
 
-export class GlobalErrorBoundary extends Component<Props, State> {
+export class FallbacksErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
     super(props);
     this.state = { hasError: false, error: null, errorInfo: null };
@@ -117,7 +117,7 @@ export class GlobalErrorBoundary extends Component<Props, State> {
                   <div className="w-1.5 h-1.5 bg-red-500 rounded-full animate-ping" />
                   Protection: ACTIVE
                </div>
-               <div className="text-[10px] font-mono text-slate-500">
+               <div className="text-[10px] font-mono text-slate-500" suppressHydrationWarning>
                   REF_ID: {Math.random().toString(36).substring(7).toUpperCase()}
                </div>
             </div>

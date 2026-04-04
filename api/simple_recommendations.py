@@ -89,13 +89,23 @@ def parse_real_location_data(area: str) -> Dict[str, Any]:
                     content = response.text
                 
             if content:
-                if "```json" in content: content = content.split("```json")[1].split("```")[0].strip()
-                elif "```" in content: content = content.split("```")[1].split("```")[0].strip()
-                iso_data = json.loads(content)
+                import re
+                # Robust Extraction: Support markdown, single quotes, and preamble noise
+                json_match = re.search(r'(\{.*\})', content.replace('\n', ' '), re.DOTALL)
+                if json_match:
+                    json_str = json_match.group(1)
+                    # Support AI using single quotes by mistake
+                    if "'" in json_str and '"' not in json_str:
+                         json_str = json_str.replace("'", '"')
+                    iso_data = json.loads(json_str)
+                else:
+                    # Final attempt: manual cleanup
+                    content = content.replace("```json", "").replace("```", "").strip()
+                    iso_data = json.loads(content)
             else:
                 raise Exception("Location resolution empty")
             
-            country_iso = iso_data.get('country_iso', 'XX').upper()
+            country_iso = str(iso_data.get('country_iso', 'XX')).upper()
             city_name = iso_data.get('city', query.split(',')[0].strip())
             
             return {
@@ -107,7 +117,7 @@ def parse_real_location_data(area: str) -> Dict[str, Any]:
                 'coordinates': {'lat': float(iso_data.get('latitude', 0)), 'lng': float(iso_data.get('longitude', 0))}
             }
         except Exception as e:
-            print(f"⚠️ Neural Layer location fetch failed: {e}")
+            print(f"⚠️ Neural Layer location resolution failed for {query}: {e}")
             return None
 
     # Resolve

@@ -2,8 +2,6 @@ import type { Metadata } from "next";
 import { Outfit } from "next/font/google";
 import "./globals.css";
 import ClientProviders from "@/components/ClientProviders";
-import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
 import { ConditionalLayout } from "@/components/ConditionalLayout";
 import ScrollToTop from "@/components/ScrollToTop";
 
@@ -20,7 +18,7 @@ export const metadata: Metadata = {
   }
 };
 
-import GlobalErrorBoundary from "@/components/GlobalErrorBoundary";
+
 
 export default function RootLayout({
   children,
@@ -33,12 +31,10 @@ export default function RootLayout({
         <div className="bg-glow" />
         <div className="bg-noise fixed inset-0 z-[-1] pointer-events-none" />
         <ClientProviders>
-          <GlobalErrorBoundary>
-            <ConditionalLayout>
-              {children}
-            </ConditionalLayout>
-            <ScrollToTop />
-          </GlobalErrorBoundary>
+          <ConditionalLayout>
+            {children}
+          </ConditionalLayout>
+          <ScrollToTop />
         </ClientProviders>
       </body>
     </html>

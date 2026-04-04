@@ -7,12 +7,12 @@ import { SubscriptionProvider } from "@/context/SubscriptionContext";
 import { SearchProvider } from "@/context/SearchContext";
 import { ThemeProvider } from "next-themes";
 
-import { GlobalErrorBoundary, GlobalOfflineDetection } from "./GlobalFallbacks";
+import { FallbacksErrorBoundary, GlobalOfflineDetection } from "./GlobalFallbacks";
 
 export default function ClientProviders({ children }: { children: React.ReactNode }) {
   return (
-    <ThemeProvider attribute="class" defaultTheme="dark" disableTransitionOnChange>
-      <GlobalErrorBoundary>
+    <ThemeProvider attribute="class" defaultTheme="system" enableSystem={true} disableTransitionOnChange>
+      <FallbacksErrorBoundary>
         <AuthProvider>
           <LanguageProvider>
             <SubscriptionProvider>
@@ -25,7 +25,7 @@ export default function ClientProviders({ children }: { children: React.ReactNod
             </SubscriptionProvider>
           </LanguageProvider>
         </AuthProvider>
-      </GlobalErrorBoundary>
+      </FallbacksErrorBoundary>
     </ThemeProvider>
   );
 }

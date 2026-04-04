@@ -169,6 +169,7 @@ class IntegratedBusinessIntelligence:
             3. BEP-VAL: Specific 'be_period' (e.g. '4.5 Months', '1.2 Years').
             4. TRAFFIC: 'm1_traffic' (e.g. '1.5k MAU', '125 local leads').
             5. RETENTION: 'retention_rate' (e.g. '82%', 'High Repeat LTV').
+            6. VOLUME: Provide EXACTLY 15 high-fidelity recommendations. Do not truncate.
             
             Return ONLY valid JSON:
             {{
@@ -184,8 +185,7 @@ class IntegratedBusinessIntelligence:
                         "category": "Sector",
                         "market_gap": "Underserved micro-niche in {area}",
                         "target_audience": "Specific demographics",
-                        "investment_range": "Estimated startup capital (e.g. ₹12.5L)",
-                        "funding_required": "Same as investment range",
+                        "investment_range": "e.g. ₹15.5L",
                         "roi_percentage": number,
                         "roi_potential": "Projected annual returns (e.g. 55%)",
                         "be_period": "Break-even target (e.g. 6 Months)",
@@ -193,7 +193,7 @@ class IntegratedBusinessIntelligence:
                         "retention_rate": "Target retention (e.g. 78%)",
                         "implementation_difficulty": "Low/Medium/High",
                         "competition_level": "Low/Medium/High with a reason.",
-                        "demand_index": "Numerical index (e.g. 92%)",
+                        "demand_index": "Numerical index (e.g. 88%)",
                         "market_size": "City/State scope",
                         "six_month_plan": [{{ "month": "1-2", "goal": "..." }}, {{ "month": "3-4", "goal": "..." }}, {{ "month": "5-6", "goal": "..." }}]
                     }}
@@ -210,9 +210,20 @@ class IntegratedBusinessIntelligence:
             await push_ws_status("Finalizing recommendations...")
             polished_recs = self._polish_identities(final_insights.get("recommendations", []), area)
             
+            # NEW: Use geolocated official name if available for professional display
+            display_area = area
+            try:
+                from simple_recommendations import parse_real_location_data
+                loc_info = parse_real_location_data(area)
+                if loc_info and loc_info.get('city'):
+                    display_area = f"{loc_info['city']}, {loc_info.get('country', '')}".strip(', ')
+                elif loc_info and loc_info.get('country'):
+                    display_area = f"{area}, {loc_info['country']}"
+            except: pass
+
             final_result = {
                 "success": True,
-                "area": area,
+                "area": display_area,
                 "recommendations": polished_recs,
                 "analysis": final_insights.get("analysis", {}),
                 "timestamp": datetime.now().isoformat(),
@@ -226,6 +237,35 @@ class IntegratedBusinessIntelligence:
         except Exception as e:
             print(f"❌ [CLUSTER-FAIL] Core Pipeline Exception: {e}")
             return {"success": False, "message": "Strategic pipeline synchronization failure."}
+
+    async def _call_pollinations_fallback(self, area: str, prompt: str, lang: str) -> Optional[Dict]:
+        """Final neural layer to ensure zero downtime production"""
+        try:
+            api_url = "https://text.pollinations.ai/"
+            payload = {
+                "messages": [
+                    {"role": "system", "content": "Professional Business Analyst. Respond in valid JSON only matching the schema."},
+                    {"role": "user", "content": prompt}
+                ],
+                "model": "openai",
+                "json": True
+            }
+            async with httpx.AsyncClient(timeout=90.0) as client:
+                resp = await client.post(api_url, json=payload)
+                if resp.status_code == 200:
+                    text = resp.text
+                    match = re.search(r'\{.*\}', text, re.DOTALL)
+                    if match:
+                        data = json.loads(match.group())
+                        return {
+                            "success": True,
+                            "recommendations": data.get("recommendations", []),
+                            "ai_source": "Pollinations AI (Strategic Hub)",
+                            "analysis": data.get("analysis", {"summary": "Synthesis successful."})
+                        }
+        except Exception as e:
+            print(f"❌ Pollinations Layer Failure: {e}")
+        return None
 
 
     async def _call_gemini_flash(self, area: str, cluster_prompt: str, lang: str) -> Optional[Dict]:
@@ -264,12 +304,28 @@ class IntegratedBusinessIntelligence:
 
                 json_raw = resp.json()['candidates'][0]['content']['parts'][0]['text']
                 
-                # Robust extraction
-                match = re.search(r'\{.*\}', json_raw, re.DOTALL)
-                if match:
-                    data = json.loads(match.group())
-                else:
-                    logger.error("❌ Gemini Layer: No valid JSON found in response.")
+                # Robust extraction with syntax normalization
+                data = None
+                try:
+                    # Stage 1: Standard Extraction
+                    match = re.search(r'(\{.*\})', json_raw, re.DOTALL)
+                    if match:
+                        clean_json = match.group(1).replace('\n', ' ').strip()
+                        data = json.loads(clean_json)
+                except Exception:
+                    # Stage 2: Neural JSON Repair (Fixing missing commas or trailing commas in AI arrays)
+                    try:
+                        repaired = re.sub(r',\s*\}', '}', json_raw)
+                        repaired = re.sub(r',\s*\]', ']', repaired)
+                        # Fix common missing comma between objects in array: } { -> }, {
+                        repaired = re.sub(r'\}\s*\{', '}, {', repaired)
+                        match = re.search(r'(\{.*\})', repaired.replace('\n', ' '), re.DOTALL)
+                        if match:
+                             data = json.loads(match.group(1))
+                    except: pass
+
+                if not data:
+                    logger.error("❌ Gemini Layer: No valid/repairable JSON found in response.")
                     return None
                 
                 # PRIORITY 1: Claude Critic Layer Integration
@@ -485,32 +541,16 @@ class IntegratedBusinessIntelligence:
         except Exception as e:
             print(f"🚨 [DEEPSEEK_FAILED]: {e}")
 
-        # --- FINAL DESTINATION: PURE NEURAL CATCHALL (No Hardcoded Fallbacks) ---
+        # --- LAYER 4: POLLINATIONS CLUSTER (Absolute Strategic Hub) ---
         try:
-            print("🧠 [RECOVERY] Initiating Final Neural Sync (Gemini 2.5 Flash Catchall)...")
-            async with httpx.AsyncClient(timeout=60.0) as client:
-                catchall_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={self.gemini_key}"
-                resp = await client.post(catchall_url, json={
-                    "contents": [{"parts": [{"text": f"Analyze business opportunities in {area} for 2026. Return valid JSON only with 'recommendations' and 'analysis' keys. Focus on data-driven gaps. Context: {rag_context[:3000]} Lang: {lang}"}]}],
-                    "generationConfig": {"temperature": 0.5, "response_mime_type": "application/json"}
-                })
-                if resp.status_code == 200:
-                    data = resp.json()['candidates'][0]['content']['parts'][0]['text']
-                    result = json.loads(data)
-                    result["ai_source"] = "Gemini 2.5 Flash (Catchall)"
-                    result["success"] = True
-                    return result
-                    
-            # --- ULTIMATE FALLBACK: Pollinations (Keyless/Free) ---
-            print("🛡️ [ULTIMATE FALLBACK] Attempting Free Neural Layer (Pollinations)...")
-            p_result = await self.call_ai_cluster_json(prompt)
-            if p_result:
-                p_result["ai_source"] = "Pollinations (OpenAI-OSS Proxy)"
-                p_result["success"] = True
-                return p_result
-
+            print("🔱 [CLUSTER] Initiating Layer 4: Pollinations AI (Strategic Hub)...")
+            await push_ws_status("Exhausting primary layers. Deploying Pollinations Fallback...")
+            # Use the specialized search-gpt logic which handles prompt synthesis & Pollinations connectivity
+            res = await self._call_search_gpt(area, rag_context, lang)
+            if res and res.get("success"):
+                return res
         except Exception as e:
-            print(f"❌ [CRITICAL] All neural layers failed: {e}")
+            print(f"🚨 [POLLINATIONS_FAILED]: {e}")
             
         return {"success": False, "message": "Neural synchronization failed. Please check your system quotas or connectivity."}
 

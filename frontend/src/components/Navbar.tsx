@@ -27,7 +27,7 @@ export default function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
   const { plan, theme: subscriptionTheme, planFeatures, actualPlanName } = useSubscription();
-  const { theme, setTheme } = useTheme();
+  const { theme, setTheme, resolvedTheme } = useTheme();
   const { clearSearch } = useSearch();
   const [showLangs, setShowLangs] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
@@ -46,7 +46,9 @@ export default function Navbar() {
   const mobileMenuRef = useClickOutside<HTMLDivElement>(useCallback(() => setShowMobileMenu(false), []));
 
   const toggleTheme = () => {
-    setTheme(theme === 'dark' ? 'light' : 'dark');
+    // Correctly toggle based on visual state, not just stored state
+    const current = resolvedTheme === 'dark' ? 'light' : 'dark';
+    setTheme(current);
   };
 
   const isActivePage = (path: string) => {
@@ -61,8 +63,6 @@ export default function Navbar() {
   ];
 
   // Need to import Bookmark from lucide-react
-
-
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 backdrop-blur-xl border-b border-slate-300 dark:border-white/5 bg-white/70 dark:bg-[#020617]/70 transition-all duration-300">
@@ -188,13 +188,12 @@ export default function Navbar() {
             whileTap={{ scale: 0.95 }}
             onClick={toggleTheme}
             className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-white dark:bg-white/5 hover:bg-slate-50 dark:hover:bg-white/10 text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white transition-all border border-slate-200 dark:border-white/10 shadow-sm relative group overflow-hidden"
-            title={mounted && theme === 'dark' ? t('nav_theme_light') : t('nav_theme_dark')}
+            title={mounted && resolvedTheme === 'dark' ? t('nav_theme_light') : t('nav_theme_dark')}
           >
             <div className="absolute inset-0 bg-gradient-to-tr from-blue-500/0 via-blue-500/0 to-blue-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
-            {mounted && theme === 'dark' ? (
+            {mounted && resolvedTheme === 'dark' ? (
               <Sun size={16} className="relative z-10 text-sky-400 drop-shadow-[0_0_8px_rgba(56,189,248,0.5)]" />
             ) : (
-
               <Moon size={16} className="relative z-10 text-slate-400" />
             )}
           </motion.button>
