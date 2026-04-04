@@ -7,7 +7,7 @@ import {
   User, Phone, FileText, Loader2, Save, CheckCircle2, ArrowLeft, ArrowRight,
   ShieldCheck, Crown, Zap, Star, Settings, Calendar, 
   MapPin, Globe, Award, BarChart3, Activity, Clock, Building2, 
-  Target, Sparkles, ChevronRight, ChevronDown, Edit3, Camera,
+  Target, Sparkles, ChevronRight, ChevronDown, Edit3, Camera, TrendingUp,
   CreditCard, X, RefreshCw, ChevronUp, Bookmark, Trash2, Key, Archive, Cpu
 } from "lucide-react";
 import { useLanguage } from "@/context/LanguageContext";
@@ -379,10 +379,12 @@ function ProfilePageContent() {
   const planIcons: Record<string, any> = {
     free: Star,
     starter: Zap,
-    professional: Zap
+    professional: Zap,
+    growth: TrendingUp,
+    enterprise: Crown
   };
 
-  const PlanIcon = planIcons[plan];
+  const PlanIcon = planIcons[plan] || Star;
   // Removed: 1s clock interval was causing constant re-renders on entire profile page
 
   // Real-time connectivity monitoring
