@@ -9,7 +9,7 @@ import {
   Target, BarChart3, Lightbulb,
   ArrowRight, FileText, Clock, ChevronRight,
   Cpu, Download, Share2, Play, CheckCircle2, AlertCircle, Sparkles, Bookmark,
-  ShieldCheck, Activity, Globe
+  Shield, Activity, Globe
 } from "lucide-react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
@@ -98,10 +98,11 @@ function DashboardContent() {
   const searchParams = useSearchParams();
   const apiUrl = getApiUrl();
 
-  const [currentTime, setCurrentTime] = useState(new Date());
+  const [currentTime, setCurrentTime] = useState<Date | null>(null);
 
-  // Update time every second
+  // Update time every second with hydration safety
   useEffect(() => {
+    setCurrentTime(new Date());
     const timer = setInterval(() => {
       setCurrentTime(new Date());
     }, 1000);
@@ -654,10 +655,10 @@ function DashboardContent() {
             <div className="flex flex-col items-start md:items-end gap-2 text-left md:text-right mt-4 md:mt-0">
               <div className="text-[10px] font-black text-slate-400 dark:text-white/40 uppercase tracking-[0.3em]">System Timestamp</div>
               <div className="text-xl font-mono font-bold text-slate-800 dark:text-white/80">
-                {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                {currentTime ? currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : "--:--:--"}
               </div>
               <div className="text-xs text-emerald-600 dark:text-emerald-500 font-bold uppercase tracking-widest">
-                {currentTime.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                {currentTime ? currentTime.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) : "Local Time Syncing..."}
               </div>
             </div>
           </div>

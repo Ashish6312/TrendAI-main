@@ -188,13 +188,13 @@ export default function Navbar() {
             whileTap={{ scale: 0.95 }}
             onClick={toggleTheme}
             className="flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-white dark:bg-white/5 hover:bg-slate-50 dark:hover:bg-white/10 text-slate-600 dark:text-gray-400 hover:text-slate-900 dark:hover:text-white transition-all border border-slate-200 dark:border-white/10 shadow-sm relative group overflow-hidden"
-            title={mounted && resolvedTheme === 'dark' ? t('nav_theme_light') : t('nav_theme_dark')}
+            title={mounted ? (resolvedTheme === 'dark' ? t('nav_theme_dark') : t('nav_theme_light')) : 'Theme Toggle'}
           >
             <div className="absolute inset-0 bg-gradient-to-tr from-blue-500/0 via-blue-500/0 to-blue-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
             {mounted && resolvedTheme === 'dark' ? (
-              <Sun size={16} className="relative z-10 text-sky-400 drop-shadow-[0_0_8px_rgba(56,189,248,0.5)]" />
+              <Moon size={16} className="relative z-10 text-blue-400 drop-shadow-[0_0_8px_rgba(56,189,248,0.5)]" />
             ) : (
-              <Moon size={16} className="relative z-10 text-slate-400" />
+              <Sun size={16} className="relative z-10 text-amber-500" />
             )}
           </motion.button>
 
