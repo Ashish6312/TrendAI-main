@@ -803,6 +803,19 @@ class IntegratedBusinessIntelligence:
             # Optimization: Search for top businesses to identify competitors/gaps
             query = f"emerging business opportunities and market gaps in {area}"
             
+            # NEW: Resolve precise coordinates to prevent the actor from defaulting to 'New York'
+            # Manual/Explicit fix following the v6.4 stability standard
+            lat, lng = None, None
+            try:
+                from simple_recommendations import parse_real_location_data
+                location_info = parse_real_location_data(area)
+                if location_info and 'coordinates' in location_info:
+                    lat = location_info['coordinates'].get('lat')
+                    lng = location_info['coordinates'].get('lng')
+                    print(f"📍 [GEOLOCATION] Explicitly locked scouting to: {lat}, {lng} for {area}")
+            except Exception as geode_err:
+                print(f"⚠️ Geo-lock failed: {geode_err}")
+
             # Wrap blocking call in thread - Optimization: Disable reviews/contacts for speed/memory efficiency
             def _scrape():
                 return scrape_google_maps_contacts(
@@ -810,7 +823,9 @@ class IntegratedBusinessIntelligence:
                     location=area, 
                     max_results=5,
                     scrape_reviews=False, # Save massive memory
-                    scrape_contacts=False # Save massive memory
+                    scrape_contacts=False, # Save massive memory
+                    lat=lat,
+                    lng=lng
                 )
                 
             businesses = await asyncio.to_thread(_scrape)

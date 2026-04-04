@@ -11,7 +11,7 @@ def get_apify_client():
         print("⚠️ APIFY_API_KEY not found in environment")
         return None
     return ApifyClient(api_key)
-def scrape_google_maps_contacts(search_queries: List[str], location: Optional[str] = None, max_results: int = 20, scrape_reviews: bool = False, scrape_contacts: bool = True) -> List[Dict[str, Any]]:
+def scrape_google_maps_contacts(search_queries: List[str], location: Optional[str] = None, max_results: int = 20, scrape_reviews: bool = False, scrape_contacts: bool = True, lat: Optional[float] = None, lng: Optional[float] = None) -> List[Dict[str, Any]]:
     """
     Triggers the Apify google-maps-contact-extractor actor and returns high-fidelity results.
     """
@@ -20,7 +20,6 @@ def scrape_google_maps_contacts(search_queries: List[str], location: Optional[st
         return []
         
     # Pre-process search strings to ensure geographical context is explicitly embedded
-    # Redundant nesting check: if query already contains 'in [location]', don't append it again
     processed_queries = []
     for q in search_queries:
         if location and location.lower() not in q.lower():
@@ -31,20 +30,25 @@ def scrape_google_maps_contacts(search_queries: List[str], location: Optional[st
     run_input = {
         "searchStrings": processed_queries,
         "locationDisplayName": location or "India",
-        "locationQuery": location or "India", # Key used by many Google Maps actors to resolve city/country
+        "locationQuery": location or "India",
         "maxResults": max_results,
-        "maxCrawledPlaces": max_results, # Optimization for speed
+        "maxCrawledPlaces": max_results,
         "exportPlaceUrls": True,
         "includeReviews": scrape_reviews,
         "includeImages": False,
         "includeOpeningHours": True,
         "scrapeWebsite": scrape_contacts,
         "language": "en",
-        "zoom": 12 # Higher specificity for city searches
+        "zoom": 12 
     }
+    
+    # Explicit Geolocation: Manual fix for start coordinates if available
+    if lat and lng:
+        run_input["latitude"] = lat
+        run_input["longitude"] = lng
 
     try:
-        print(f"📡 [RECONNAISSANCE] Spawning Apify actor for {len(queries)} target vectors...")
+        print(f"📡 [RECONNAISSANCE] Spawning Apify actor for {len(processed_queries)} target vectors...")
         # dpWePxnzRER4fPvM0 is the ID for google-maps-contact-extractor
         run = client.actor("dpWePxnzRER4fPvM0").call(run_input=run_input)
         
