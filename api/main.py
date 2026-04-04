@@ -33,6 +33,8 @@ logger = logging.getLogger(__name__)
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.header import Header
+from email.utils import formataddr
 import httpx
 from dodopayments import DodoPayments
 
@@ -195,11 +197,13 @@ def system_health_check():
 def send_support_email(host, port, user, password, recipient, subject, html_content, sender_name):
     """Sends support email in background thread with advanced resilience."""
     try:
-        msg = MIMEMultipart()
-        msg["From"] = str(user)
-        msg["To"] = str(recipient)
-        msg["Subject"] = f"StarterScope: {subject} (from {sender_name})"
-        msg.attach(MIMEText(html_content, "html"))
+        msg = MIMEMultipart("alternative")
+        msg["From"] = formataddr((str(sender_name), str(user)))
+        msg["To"] = formataddr(("StarterScope Support", str(recipient)))
+        msg["Subject"] = Header(f"StarterScope: {subject} (from {sender_name})", 'utf-8').encode()
+        
+        # Attach HTML part (and you could attach plain text too for better deliverability)
+        msg.attach(MIMEText(html_content, "html", "utf-8"))
 
         # 💡 PRO TIP: For Gmail, port 465 with SSL is often more reliable than 587.
         # Ensure you are using an 'APP PASSWORD' if 2FA is enabled.
@@ -378,10 +382,11 @@ async def contact_form_submission(contact: ContactRequest, background_tasks: Bac
 def send_invoice_email(host, port, user, password, recipient, user_name, plan_name, amount, currency, billing_cycle, payment_id):
     """Sends a professional billing invoice email to the user after successful payment."""
     try:
-        msg = MIMEMultipart()
-        msg["From"] = f"StarterScope Billing <{user}>"
-        msg["To"] = str(recipient)
-        msg["Subject"] = f"Invoice: Your StarterScope {plan_name} Subscription is Active!"
+        msg = MIMEMultipart("alternative")
+        msg["From"] = formataddr(("StarterScope Billing", str(user)))
+        msg["To"] = formataddr((str(user_name), str(recipient)))
+        subject = f"Invoice: Your StarterScope {plan_name} Subscription is Active!"
+        msg["Subject"] = Header(subject, 'utf-8').encode()
 
         current_date = datetime.now().strftime('%B %d, %Y')
         next_billing = (datetime.now() + (timedelta(days=365) if billing_cycle.lower() == "yearly" else timedelta(days=30))).strftime('%B %d, %Y')
@@ -465,7 +470,7 @@ def send_invoice_email(host, port, user, password, recipient, user_name, plan_na
         </html>
         """
         
-        msg.attach(MIMEText(html_content, "html"))
+        msg.attach(MIMEText(html_content, "html", "utf-8"))
 
         if "gmail.com" in str(host).lower() and int(port) == 465:
             with smtplib.SMTP_SSL(str(host), int(port)) as server:
