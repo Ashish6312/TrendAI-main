@@ -1458,12 +1458,14 @@ async def get_recommendations(request: RecommendationRequest, db: Session = Depe
         recs = result.get("recommendations", [])
         ana = result.get("analysis", result.get("analysis_report", result.get("summary", "Analysis Pending")))
         
-        # Save to database
+        # Robust serialization: ensure analysis (String column) is stringified if it's a dict
+        analysis_to_save = ana if isinstance(ana, str) else json.dumps(ana)
+            
         db_record = models.SearchHistory(
             user_email=request.user_email,
             area=analysis_area,
-            analysis=ana,
-            recommendations=recs
+            analysis=analysis_to_save,
+            recommendations=recs # JSON column handles dict/list natively
         )
         db.add(db_record)
         db.commit()

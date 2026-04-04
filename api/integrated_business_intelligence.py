@@ -72,7 +72,7 @@ class IntegratedBusinessIntelligence:
         self.reddit_password = os.getenv("REDDIT_PASSWORD")
         
         # System State
-        self._logic_version = "v6.3_persistence_hardened"
+        self._logic_version = "v6.4_high_fidelity_synthesis"
         self._final_recommendations_cache = {}
         self._cache_expiry = 3600
         
@@ -228,23 +228,19 @@ class IntegratedBusinessIntelligence:
             return {"success": False, "message": "Strategic pipeline synchronization failure."}
 
 
-    async def _call_gemini_flash(self, area: str, context: str, lang: str) -> Optional[Dict]:
+    async def _call_gemini_flash(self, area: str, cluster_prompt: str, lang: str) -> Optional[Dict]:
         """Professional Analysis via Google Gemini 2.5 Flash (2026 Production Standard)"""
         if not self.gemini_key:
             return None
             
-        # Priority 1: Gemini 2.0 Flash Upgrade
-        prompt = f"""
-        Generate 15 high-fidelity, non-template business opportunities for {area} in 2026.
-        Market context: {context[:8000]}
+        # Optimization: If cluster_prompt is already a full prompt (it is), 
+        # we don't need to wrap it in a redundant template that confuses the model's output schema.
+        # We just need to ensure the system instructions are clear.
         
-        FIDELITY RULES:
-        - Use actual localized numbers calculated from context.
-        - Ensure JSON is flawless.
-        
-        Return JSON schema with 'analysis' and 'recommendations' keys.
-        Language: {lang}.
-        """
+        # Adjust 15 -> 12 for better token headroom and stability in high-fidelity mode
+        prompt = cluster_prompt.replace("15 high-fidelity", "12 high-fidelity")
+        if "Return ONLY valid JSON" not in prompt:
+             prompt += "\n\nReturn the response in valid JSON format matching the schema provided."
 
         try:
             print(f"💎 [CLUSTER] Synthesizing via Gemini 2.5 Flash (2026 Standard)...")
@@ -255,7 +251,7 @@ class IntegratedBusinessIntelligence:
                 payload = {
                     "contents": [{"parts": [{"text": prompt}]}],
                     "generationConfig": {
-                        "temperature": 0.45, 
+                        "temperature": 0.35, # Slightly lower for better JSON fidelity
                         "maxOutputTokens": 4096, 
                         "response_mime_type": "application/json"
                     }
@@ -266,10 +262,10 @@ class IntegratedBusinessIntelligence:
                     logger.error(f"❌ Gemini Layer Error: {resp.status_code} - {resp.text[:500]}")
                     return None
 
-                json_data = resp.json()['candidates'][0]['content']['parts'][0]['text']
+                json_raw = resp.json()['candidates'][0]['content']['parts'][0]['text']
                 
-                # Robust extraction to handle potential malformed strings or extra text
-                match = re.search(r'\{.*\}', json_data, re.DOTALL)
+                # Robust extraction
+                match = re.search(r'\{.*\}', json_raw, re.DOTALL)
                 if match:
                     data = json.loads(match.group())
                 else:
@@ -279,12 +275,12 @@ class IntegratedBusinessIntelligence:
                 # PRIORITY 1: Claude Critic Layer Integration
                 if self.claude_key and data.get("recommendations"):
                     print("🛡️ [CRITIC] Engaging Claude for quality consensus...")
-                    data = await self._call_claude_critic(data, context)
+                    data = await self._call_claude_critic(data, cluster_prompt)
                     
                 return {
                     "success": True,
-                    "recommendations": data["recommendations"],
-                    "ai_source": "Gemini 2.5 Flash + Claude Critic",
+                    "recommendations": data.get("recommendations", []),
+                    "ai_source": "Gemini 2.5 Flash + Claude Critic" if self.claude_key else "Gemini 2.5 Flash (Singularity Cluster)",
                     "analysis": data.get("analysis", {"summary": "Execution complete."})
                 }
         except Exception as e:
@@ -708,7 +704,7 @@ class IntegratedBusinessIntelligence:
         for task in pending:
             task.cancel()
             
-        print(f"📊 [SCOUTING COMPLETE] Gathered data from {len(results)} prompt sources within the 10s window")
+        print(f"📊 [SCOUTING COMPLETE] Gathered data from {len(results)} prompt sources within the 120s window")
         return "\n\n".join(results)
 
     async def _scout_tavily(self, area: str) -> str:

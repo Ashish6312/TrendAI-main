@@ -19,21 +19,28 @@ def scrape_google_maps_contacts(search_queries: List[str], location: Optional[st
     if not client:
         return []
         
-    # Standardize location search if provided
-    queries = [f"{q} in {location}" if location else q for q in search_queries]
-    
+    # Pre-process search strings to ensure geographical context is explicitly embedded
+    # Redundant nesting check: if query already contains 'in [location]', don't append it again
+    processed_queries = []
+    for q in search_queries:
+        if location and location.lower() not in q.lower():
+            processed_queries.append(f"{q} in {location}")
+        else:
+            processed_queries.append(q)
+
     run_input = {
-        "queries": queries,
-        "searchStrings": queries, # Support multiple actor versions
+        "searchStrings": processed_queries,
+        "locationDisplayName": location or "India",
+        "locationQuery": location or "India", # Key used by many Google Maps actors to resolve city/country
         "maxResults": max_results,
-        "locationDisplayName": location or "India", 
-        "location": location or "India", # Alternative key used by some versions
+        "maxCrawledPlaces": max_results, # Optimization for speed
         "exportPlaceUrls": True,
         "includeReviews": scrape_reviews,
         "includeImages": False,
         "includeOpeningHours": True,
         "scrapeWebsite": scrape_contacts,
-        "language": "en"
+        "language": "en",
+        "zoom": 12 # Higher specificity for city searches
     }
 
     try:
