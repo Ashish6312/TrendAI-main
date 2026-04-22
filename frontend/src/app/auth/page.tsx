@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "next-themes";
 import React from "react";
 import { useLanguage } from "@/context/LanguageContext";
+import { getApiUrl } from "@/config/api";
 
 export default function AuthPage() {
   const { t } = useLanguage();
@@ -43,7 +44,7 @@ export default function AuthPage() {
     
     // Check backend health
     const checkBackend = async () => {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://trendai-api.onrender.com';
+      const apiUrl = getApiUrl();
       try {
         const res = await fetch(`${apiUrl}/api/health`, { signal: AbortSignal.timeout(60000) });
         if (res.ok) {

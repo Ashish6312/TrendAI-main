@@ -1,6 +1,7 @@
 import NextAuth from "next-auth"
 import GoogleProvider from "next-auth/providers/google"
 import CredentialsProvider from "next-auth/providers/credentials"
+import { getApiUrl } from "@/config/api"
 
 const handler = NextAuth({
   debug: process.env.NODE_ENV === 'development', // Only enable debug in development
@@ -26,7 +27,7 @@ const handler = NextAuth({
           throw new Error("Email and password are required");
         }
 
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://trendai-api.onrender.com';
+        const apiUrl = getApiUrl();
         
         try {
           if (credentials.isSignUp === "true") {
@@ -49,18 +50,25 @@ const handler = NextAuth({
               signal: AbortSignal.timeout(60000) // 60 second timeout for cold starts
             });
             
-            if (!signUpResponse.ok) {
-              const errorText = await signUpResponse.text();
-              let errorMessage = "Sign up failed";
-              try {
-                const errorObj = JSON.parse(errorText);
-                errorMessage = errorObj.detail || errorMessage;
-              } catch (e) {
-                errorMessage = errorText || errorMessage;
+              if (!signUpResponse.ok) {
+                const errorText = await signUpResponse.text();
+                let errorMessage = "Sign up failed";
+                
+                // Detect Vercel Authentication / Protection page
+                if (errorText.includes("Authentication Required") || errorText.includes("vercel-user-meta")) {
+                  errorMessage = "Backend is protected by Vercel Authentication. Please disable 'Deployment Protection' in your Vercel project settings.";
+                } else {
+                  try {
+                    const errorObj = JSON.parse(errorText);
+                    errorMessage = errorObj.detail || errorMessage;
+                  } catch (e) {
+                    errorMessage = errorText.length > 100 ? "Sign up failed (Invalid response)" : errorText || errorMessage;
+                  }
+                }
+                
+                console.error(`❌ SIGNUP FAILED (${signUpResponse.status}):`, errorMessage);
+                throw new Error(errorMessage);
               }
-              console.error(`❌ SIGNUP FAILED (${signUpResponse.status}):`, errorMessage);
-              throw new Error(errorMessage);
-            }
 
             const user = await signUpResponse.json();
             console.log('✅ SIGNUP SUCCESS:', { email: user.email, id: user.id });
@@ -84,18 +92,25 @@ const handler = NextAuth({
               signal: AbortSignal.timeout(60000) // 60 second timeout for cold starts
             });
 
-            if (!signInResponse.ok) {
-              const errorText = await signInResponse.text();
-              let errorMessage = "Invalid email or password";
-              try {
-                const errorObj = JSON.parse(errorText);
-                errorMessage = errorObj.detail || errorMessage;
-              } catch (e) {
-                errorMessage = errorText || errorMessage;
+              if (!signInResponse.ok) {
+                const errorText = await signInResponse.text();
+                let errorMessage = "Invalid email or password";
+                
+                // Detect Vercel Authentication / Protection page
+                if (errorText.includes("Authentication Required") || errorText.includes("vercel-user-meta")) {
+                  errorMessage = "Backend is protected by Vercel Authentication. Please disable 'Deployment Protection' in your Vercel project settings.";
+                } else {
+                  try {
+                    const errorObj = JSON.parse(errorText);
+                    errorMessage = errorObj.detail || errorMessage;
+                  } catch (e) {
+                    errorMessage = errorText.length > 100 ? "Sign in failed (Invalid response)" : errorText || errorMessage;
+                  }
+                }
+                
+                console.error(`❌ SIGNIN FAILED (${signInResponse.status}):`, errorMessage);
+                throw new Error(errorMessage);
               }
-              console.error(`❌ SIGNIN FAILED (${signInResponse.status}):`, errorMessage);
-              throw new Error(errorMessage);
-            }
 
             const user = await signInResponse.json();
             console.log('✅ SIGNIN SUCCESS:', { email: user.email, id: user.id });
