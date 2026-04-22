@@ -9,7 +9,7 @@ pyjwt==2.8.0
 passlib[bcrypt]==1.7.4
 pg8000==1.30.3
 textblob==0.17.1
-ddgs==6.2.0
+ddgs>=6.2.0
 praw==7.8.1
 standardwebhooks==1.0.1
 dodopayments==1.92.1
