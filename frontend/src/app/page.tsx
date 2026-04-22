@@ -107,14 +107,14 @@ export default function Home() {
   };
 
   return (
-    <div className="flex flex-col items-center bg-gradient-to-br from-indigo-50/20 via-white to-emerald-50/20 dark:from-[#020617] dark:via-[#0f172a] dark:to-[#1e1b4b] selection:bg-blue-500/30 overflow-x-hidden min-h-screen transition-colors duration-500">
+    <div className="flex flex-col items-center bg-white dark:bg-[#020617] selection:bg-emerald-500/30 overflow-x-hidden min-h-screen transition-colors duration-500">
 
       {/* 1. WELCOME SECTION - Immersive Split Layout */}
       <section id="hero" className="w-full relative min-h-screen flex items-center justify-center overflow-hidden">
         {/* AI Neural Network Background - Full Screen */}
         <div className="absolute inset-0 z-0">
           <AINetworkBackground />
-          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-slate-50/50 to-white dark:via-[#020617]/50 dark:to-[#020617] pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-white/40 to-white dark:via-[#020617]/40 dark:to-[#020617] pointer-events-none" />
         </div>
 
         <div className="relative z-10 w-full px-4 sm:px-6 lg:px-8">
@@ -385,7 +385,7 @@ export default function Home() {
       </section>
 
       {/* 3. YOUR STEP-BY-STEP PLAN */}
-      <section id="business-plan" className="w-full bg-slate-100/80 dark:bg-slate-900/50 ultra-compact-section border-y border-slate-200/80 dark:border-slate-700/50 transition-colors duration-500 scroll-mt-20 backdrop-blur-sm">
+      <section id="business-plan" className="w-full bg-slate-50 dark:bg-[#020617] ultra-compact-section border-y border-slate-200/50 dark:border-white/5 transition-colors duration-500 scroll-mt-20 backdrop-blur-sm">
         <div className="responsive-container grid md:grid-cols-2 compact-gap-6 items-center">
           <motion.div
             variants={fadeInUp}
@@ -582,7 +582,7 @@ export default function Home() {
       </section>
 
       {/* 5. TESTIMONIALS SECTION - Ultra Compact */}
-      <section id="testimonials" className="w-full bg-slate-100/80 dark:bg-slate-900/50 ultra-compact-section border-y border-slate-200/80 dark:border-slate-700/50 transition-colors duration-500 scroll-mt-20 backdrop-blur-sm">
+      <section id="testimonials" className="w-full bg-slate-50 dark:bg-[#020617] ultra-compact-section border-y border-slate-200/50 dark:border-white/5 transition-colors duration-500 scroll-mt-20 backdrop-blur-sm">
         <div className="responsive-container">
           <motion.div
             variants={fadeInUp}

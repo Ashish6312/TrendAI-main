@@ -11,7 +11,7 @@ export default function Footer() {
   const { theme, plan } = useSubscription();
 
   return (
-    <footer className="bg-slate-50 dark:bg-gray-950/80 border-t border-slate-200 dark:border-white/5 backdrop-blur-md transition-colors duration-300">
+    <footer className="bg-slate-50 dark:bg-[#020617] border-t border-slate-200 dark:border-white/5 backdrop-blur-md transition-colors duration-300">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 lg:pt-20 pb-24 lg:pb-20">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-12 lg:gap-16">
           
