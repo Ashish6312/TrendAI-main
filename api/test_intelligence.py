@@ -6,12 +6,12 @@ from integrated_business_intelligence import IntegratedBusinessIntelligence, reg
 
 # Mock WebSocket pusher for testing
 async def mock_ws_pusher(data):
-    print(f"📡 [WS-PUSH] {data.get('message')}")
+    print(f"[WS-PUSH] {data.get('message')}")
 
 async def run_test_analysis(area: str):
     load_dotenv()
     
-    print(f"🚀 [TEST] Initializing Singularity Engine V6.4 for: {area}")
+    print(f"[TEST] Initializing Singularity Engine V6.4 for: {area}")
     register_ws_pusher(mock_ws_pusher)
     
     intel = IntegratedBusinessIntelligence()
@@ -26,23 +26,23 @@ async def run_test_analysis(area: str):
     
     if result.get("success"):
         print("\n" + "="*50)
-        print(f"✅ ANALYSIS SUCCESSFUL FOR {area}")
-        print(f"📊 SOURCE: {result.get('ai_source')}")
-        print(f"🧠 FIDELITY: {result.get('intelligence_fidelity')}")
+        print(f"[SUCCESS] ANALYSIS SUCCESSFUL FOR {area}")
+        print(f"SOURCE: {result.get('ai_source')}")
+        print(f"FIDELITY: {result.get('intelligence_fidelity')}")
         print("="*50)
         
         analysis = result.get("analysis", {})
-        print(f"\n📝 EXECUTIVE SUMMARY:\n{analysis.get('executive_summary', 'No summary available.')[:500]}...")
+        print(f"\nEXECUTIVE SUMMARY:\n{analysis.get('executive_summary', 'No summary available.')[:500]}...")
         
         recs = result.get("recommendations", [])
-        print(f"\n💡 TOP 3 OPPORTUNITIES:")
+        print(f"\nTOP 3 OPPORTUNITIES:")
         for i, rec in enumerate(recs[:3], 1):
             print(f"{i}. {rec.get('title')} ({rec.get('category')})")
             print(f"   Gap: {rec.get('market_gap')}")
             print(f"   ROI: {rec.get('roi_potential')} | BE: {rec.get('be_period')}")
             print("-" * 20)
     else:
-        print(f"❌ ANALYSIS FAILED: {result.get('message')}")
+        print(f"[FAIL] ANALYSIS FAILED: {result.get('message')}")
 
 if __name__ == "__main__":
     test_area = "Berasia, Madhya Pradesh, India"

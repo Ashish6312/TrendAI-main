@@ -48,20 +48,20 @@ def scrape_google_maps_contacts(search_queries: List[str], location: Optional[st
         run_input["longitude"] = lng
 
     try:
-        print(f"📡 [RECONNAISSANCE] Spawning Apify actor for {len(final_queries)} target vectors...")
-        # dpWePxnzER4fPvM0 is the ID for google-maps-contact-extractor
+        print(f"[RECONNAISSANCE] Spawning Apify actor for {len(final_queries)} target vectors...")
+        # dpWePxnzRER4fPvM0 is the ID for google-maps-contact-extractor
         run = client.actor("dpWePxnzRER4fPvM0").call(run_input=run_input)
         
         results = []
         # Fetch results from the default dataset
-        print(f"🔄 Fetching results from Apify dataset: {run['defaultDatasetId']}")
+        print(f"Fetching results from Apify dataset: {run['defaultDatasetId']}")
         for item in client.dataset(run["defaultDatasetId"]).iterate_items():
             results.append(item)
             
-        print(f"✅ Successfully scraped {len(results)} high-fidelity business results.")
+        print(f"Successfully scraped {len(results)} high-fidelity business results.")
         return results
     except Exception as e:
-        print(f"❌ Apify Actor execution failed: {e}")
+        print(f"Apify Actor execution failed: {e}")
         return []
 
 

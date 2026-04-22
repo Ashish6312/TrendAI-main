@@ -5,7 +5,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
   const routes = [
     '',
-    '/blueprint',
+    '/site-map',
     '/acquisition-tiers',
     '/contact',
     '/privacy',

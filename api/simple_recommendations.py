@@ -65,7 +65,7 @@ def parse_real_location_data(area: str) -> Dict[str, Any]:
         
         try:
             # 1. Ask AI to resolve the location string to standard JSON (Primary mechanism)
-            prompt = f"Resolve this location string to strict JSON: '{query}'. Fields: country (Full Name), country_iso (2 chars), state (Full Name or empty), state_iso (2nd level ISO or empty), city (official name), latitude (float), longitude (float)."
+            prompt = f"Resolve this location string to strict JSON: '{query}'. Fields: country, country_iso, state, state_iso, city, latitude (float), longitude (float). MUST use strictly double quotes and NO trailing commas."
             
             content = None
             gemini_key = os.getenv("GEMINI_API_KEY")
@@ -90,14 +90,18 @@ def parse_real_location_data(area: str) -> Dict[str, Any]:
                 
             if content:
                 import re
-                # Robust Extraction: Support markdown, single quotes, and preamble noise
-                json_match = re.search(r'(\{.*\})', content.replace('\n', ' '), re.DOTALL)
+                json_match = re.search(r'(\{.*\})', content, re.DOTALL)
                 if json_match:
                     json_str = json_match.group(1)
-                    # Support AI using single quotes by mistake
-                    if "'" in json_str and '"' not in json_str:
-                         json_str = json_str.replace("'", '"')
-                    iso_data = json.loads(json_str)
+                    try:
+                        iso_data = json.loads(json_str)
+                    except json.JSONDecodeError:
+                        # Support AI using single quotes by mistake, but only if safe
+                        if "'" in json_str and '"' not in json_str:
+                             json_str = json_str.replace("'", '"')
+                             iso_data = json.loads(json_str)
+                        else:
+                             raise
                 else:
                     # Final attempt: manual cleanup
                     content = content.replace("```json", "").replace("```", "").strip()
@@ -149,7 +153,7 @@ def format_amount(amt_lakhs, is_ind, curr):
 def get_real_time_market_data(area: str) -> str:
     """Fetch real-time market data and news using DuckDuckGo Search"""
     try:
-        from duckduckgo_search import DDGS
+        from ddgs import DDGS
         with DDGS() as ddgs:
             # Current trends and opportunities
             search_query = f"business opportunities and market trends in {area} 2025-2026 news"

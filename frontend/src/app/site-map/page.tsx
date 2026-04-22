@@ -213,7 +213,7 @@ export default function AnimatedSitemap() {
       </main>
 
       {/* Institutional Metadata Decorator */}
-      <div className="fixed bottom-0 left-0 right-0 p-8 flex justify-between items-end pointer-events-none opacity-40">
+      <div className="fixed bottom-0 left-0 right-0 px-8 pb-8 pr-24 flex justify-between items-end pointer-events-none opacity-40">
         <div className="space-y-1">
           <div className="text-[10px] font-mono tracking-tighter">NODE_INDEX: 0x448B92</div>
           <div className="text-[10px] font-mono tracking-tighter">LATENCY_SYNC: STABLE</div>

@@ -81,14 +81,14 @@ class IntegratedBusinessIntelligence:
         self._scouting_cache = {}
         self._load_scouting_cache()
         
-        print(f"🔱 [SYSTEM] Singularity Engine {self._logic_version} Activated.")
+        print(f"[SYSTEM] Singularity Engine {self._logic_version} Activated.")
 
     def _load_scouting_cache(self):
         if os.path.exists(self._scouting_cache_file):
             try:
                 with open(self._scouting_cache_file, "r") as f:
                     self._scouting_cache = json.load(f)
-                    print(f"📡 [SCOUTING CACHE] Loaded {len(self._scouting_cache)} regional intelligence blocks.")
+                    print(f"[SCOUTING CACHE] Loaded {len(self._scouting_cache)} regional intelligence blocks.")
             except: pass
 
     def _save_scouting_cache(self):
@@ -107,7 +107,7 @@ class IntegratedBusinessIntelligence:
         if cache_key in self._final_recommendations_cache:
             data, expiry = self._final_recommendations_cache[cache_key]
             if now < expiry:
-                print(f"♻️ [CACHE] Tiered Hit for {area}.")
+                print(f"[CACHE] Tiered Hit for {area}.")
                 return data
 
         await push_ws_status("Initializing AI Analysis Engine...")
@@ -119,7 +119,7 @@ class IntegratedBusinessIntelligence:
             # 🧠 CHECK PERSISTENT SCOUTING CACHE
             if area_key in self._scouting_cache:
                 await push_ws_status("Cache hit: Regional intelligence found.")
-                print(f"✨ [SCOUTING CACHE] Instant retrieval of market intelligence for {area}.")
+                print(f"[SCOUTING CACHE] Instant retrieval of market intelligence for {area}.")
                 rag_context = self._scouting_cache[area_key]
             else:
                 await push_ws_status("Engaging Deep Extraction Layer (Apify + Firecrawl)...")
@@ -134,7 +134,7 @@ class IntegratedBusinessIntelligence:
                     ), timeout=300.0)
                 except asyncio.TimeoutError:
                     await push_ws_status("Scouting partially complete after 5 mins (Proceeding with deep available telemetry)...")
-                    print(f"⌛ [SCOUTING-DEEP-TIMEOUT] Moving to high-fidelity synthesis for {area} after 300s sweep.")
+                    print(f"[SCOUTING-DEEP-TIMEOUT] Moving to high-fidelity synthesis for {area} after 300s sweep.")
                     scouting = [None, None, None, None]
                 
                 await push_ws_status("Vectorizing market intelligence...")
@@ -235,7 +235,7 @@ class IntegratedBusinessIntelligence:
             return final_result
 
         except Exception as e:
-            print(f"❌ [CLUSTER-FAIL] Core Pipeline Exception: {e}")
+            print(f"[CLUSTER-FAIL] Core Pipeline Exception: {e}")
             return {"success": False, "message": "Strategic pipeline synchronization failure."}
 
     async def _call_pollinations_fallback(self, area: str, prompt: str, lang: str) -> Optional[Dict]:
@@ -264,7 +264,7 @@ class IntegratedBusinessIntelligence:
                             "analysis": data.get("analysis", {"summary": "Synthesis successful."})
                         }
         except Exception as e:
-            print(f"❌ Pollinations Layer Failure: {e}")
+            print(f"[FAIL] Pollinations Layer Failure: {e}")
         return None
 
 
@@ -283,7 +283,7 @@ class IntegratedBusinessIntelligence:
              prompt += "\n\nReturn the response in valid JSON format matching the schema provided."
 
         try:
-            print(f"💎 [CLUSTER] Synthesizing via Gemini 2.5 Flash (2026 Standard)...")
+            print(f"[CLUSTER] Synthesizing via Gemini 2.5 Flash (2026 Standard)...")
             gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={self.gemini_key}"
             
             # HIGH-FIDELITY: 180s timeout for Gemini 2.0 Flash Deep Reasoning
@@ -299,7 +299,7 @@ class IntegratedBusinessIntelligence:
                 resp = await client.post(gemini_url, json=payload)
                 
                 if resp.status_code != 200:
-                    logger.error(f"❌ Gemini Layer Error: {resp.status_code} - {resp.text[:500]}")
+                    logger.error(f"[FAIL] Gemini Layer Error: {resp.status_code} - {resp.text[:500]}")
                     return None
 
                 json_raw = resp.json()['candidates'][0]['content']['parts'][0]['text']
@@ -310,7 +310,7 @@ class IntegratedBusinessIntelligence:
                     # Stage 1: Standard Extraction
                     match = re.search(r'(\{.*\})', json_raw, re.DOTALL)
                     if match:
-                        clean_json = match.group(1).replace('\n', ' ').strip()
+                        clean_json = match.group(1).strip()
                         data = json.loads(clean_json)
                 except Exception:
                     # Stage 2: Neural JSON Repair (Fixing missing commas or trailing commas in AI arrays)
@@ -319,18 +319,18 @@ class IntegratedBusinessIntelligence:
                         repaired = re.sub(r',\s*\]', ']', repaired)
                         # Fix common missing comma between objects in array: } { -> }, {
                         repaired = re.sub(r'\}\s*\{', '}, {', repaired)
-                        match = re.search(r'(\{.*\})', repaired.replace('\n', ' '), re.DOTALL)
+                        match = re.search(r'(\{.*\})', repaired, re.DOTALL)
                         if match:
                              data = json.loads(match.group(1))
                     except: pass
 
                 if not data:
-                    logger.error("❌ Gemini Layer: No valid/repairable JSON found in response.")
+                    logger.error("[FAIL] Gemini Layer: No valid/repairable JSON found in response.")
                     return None
                 
                 # PRIORITY 1: Claude Critic Layer Integration
                 if self.claude_key and data.get("recommendations"):
-                    print("🛡️ [CRITIC] Engaging Claude for quality consensus...")
+                    print("[CRITIC] Engaging Claude for quality consensus...")
                     data = await self._call_claude_critic(data, cluster_prompt)
                     
                 return {
@@ -340,7 +340,7 @@ class IntegratedBusinessIntelligence:
                     "analysis": data.get("analysis", {"summary": "Execution complete."})
                 }
         except Exception as e:
-            print(f"⚠️ Gemini 2.5 Flash Layer Exception: {e}")
+            print(f"[WARN] Gemini 2.5 Flash Layer Exception: {e}")
         return None
 
     async def _call_claude_critic(self, original_data: Dict, market_context: str) -> Dict:
@@ -383,7 +383,7 @@ class IntegratedBusinessIntelligence:
             return original_data
         except Exception as e:
             # Silent Fallback for Auth Errors (401) or other transient failures
-            print(f"🛡️ [CRITIC-FAILED] Layer failure (using raw telemetry): {e}")
+            print(f"[CRITIC-FAILED] Layer failure (using raw telemetry): {e}")
             return original_data
 
     async def _call_gemini(self, area: str, context: str, lang: str) -> Optional[Dict]:
@@ -489,7 +489,7 @@ class IntegratedBusinessIntelligence:
         retry_count = 2 # Restored retries for high-fidelity accuracy
         for attempt in range(retry_count):
             try:
-                print(f"💎 [CLUSTER] Initiating Layer 1 (Attempt {attempt+1}): Gemini 2.5 Flash...")
+                print(f"[CLUSTER] Initiating Layer 1 (Attempt {attempt+1}): Gemini 2.5 Flash...")
                 if attempt > 0:
                     await push_ws_status(f"Re-synchronizing Neural Core (Refined Attempt {attempt+1})...")
                 
@@ -497,22 +497,22 @@ class IntegratedBusinessIntelligence:
                 if gemini_result and gemini_result.get("success"):
                     return gemini_result
             except Exception as e:
-                print(f"⚠️ Layer 1 Attempt {attempt+1} Failure: {e}")
+                print(f"[WARN] Layer 1 Attempt {attempt+1} Failure: {e}")
                 if attempt < retry_count - 1:
                     await asyncio.sleep(2) # Brief neural cooldown
 
         # --- LAYER 2: GROQ SUPER-INFERENCE (DeepSeek-R1 Distill Reasoning) ---
         try:
-            print("🚀 [CLUSTER] Initiating Layer 2: Groq / DeepSeek-R1 Distill...")
+            print("[CLUSTER] Initiating Layer 2: Groq / DeepSeek-R1 Distill...")
             groq_result = await self._call_groq(cluster_prompt, area, lang)
             if groq_result and groq_result.get("success"):
                 return groq_result
         except Exception as e:
-            print(f"⚠️ Layer 2 Failure: {e}")
+            print(f"[WARN] Layer 2 Failure: {e}")
 
         # --- LAYER 3: DEEPSEEK SWARM FALLBACK (AIC.CC) ---
         try:
-            print("🛡️ [CLUSTER] Initiating Layer 3: AIC.CC DeepSeek-V3 (Deep Neural Sweep)...")
+            print("[CLUSTER] Initiating Layer 3: AIC.CC DeepSeek-V3 (Deep Neural Sweep)...")
             async with httpx.AsyncClient(timeout=120.0) as client:
                 resp = await client.post(f"{self.aic_base}/chat/completions", 
                     headers={"Authorization": f"Bearer {self.aic_key}", "Content-Type": "application/json"}, 
@@ -539,18 +539,18 @@ class IntegratedBusinessIntelligence:
                             "analysis": json_data.get("analysis", "Deep market synthesis complete.")
                         }
         except Exception as e:
-            print(f"🚨 [DEEPSEEK_FAILED]: {e}")
+            print(f"[FAIL] [DEEPSEEK_FAILED]: {e}")
 
         # --- LAYER 4: POLLINATIONS CLUSTER (Absolute Strategic Hub) ---
         try:
-            print("🔱 [CLUSTER] Initiating Layer 4: Pollinations AI (Strategic Hub)...")
+            print("[CLUSTER] Initiating Layer 4: Pollinations AI (Strategic Hub)...")
             await push_ws_status("Exhausting primary layers. Deploying Pollinations Fallback...")
             # Use the specialized search-gpt logic which handles prompt synthesis & Pollinations connectivity
             res = await self._call_search_gpt(area, rag_context, lang)
             if res and res.get("success"):
                 return res
         except Exception as e:
-            print(f"🚨 [POLLINATIONS_FAILED]: {e}")
+            print(f"[FAIL] [POLLINATIONS_FAILED]: {e}")
             
         return {"success": False, "message": "Neural synchronization failed. Please check your system quotas or connectivity."}
 
@@ -562,7 +562,7 @@ class IntegratedBusinessIntelligence:
         try:
             # Upgrade: Use Llama 3.3 70B Versatile for high-performance stable inference in 2026
             model = "llama-3.3-70b-versatile" 
-            print(f"🚀 [AI CLUSTER] Hitting Groq 2026 Standard (Llama-3.3-70B)...")
+            print(f"[AI CLUSTER] Hitting Groq 2026 Standard (Llama-3.3-70B)...")
             # HIGH-FIDELITY: 120s for Groq reasoning
             async with httpx.AsyncClient(timeout=120.0) as client:
                 resp = await client.post("https://api.groq.com/openai/v1/chat/completions", 
@@ -593,7 +593,7 @@ class IntegratedBusinessIntelligence:
                             "analysis": json_data.get("analysis", "Deep market synthesis complete.")
                         }
         except Exception as e:
-            print(f"🔄 Groq Hop failure: {e}")
+            print(f"[REF] Groq Hop failure: {e}")
         return None
 
     async def _call_aiml(self, prompt: str, area: str, lang: str) -> Optional[Dict]:
@@ -602,7 +602,7 @@ class IntegratedBusinessIntelligence:
             return None
             
         try:
-            print(f"🚀 [AI CLUSTER] Hitting AIML Strategic Gateway (GPT-4o/Claude-3.5 Class)...")
+            print(f"[AI CLUSTER] Hitting AIML Strategic Gateway (GPT-4o/Claude-3.5 Class)...")
             async with httpx.AsyncClient(timeout=40.0) as client:
                 resp = await client.post("https://api.aimlapi.com/v1/chat/completions", 
                     headers={"Authorization": f"Bearer {self.aiml_key}", "Content-Type": "application/json"},
@@ -631,9 +631,9 @@ class IntegratedBusinessIntelligence:
                                 "analysis": json_data.get("analysis", "Comprehensive market synthesis complete.")
                             }
                 elif resp.status_code == 429:
-                    print("⚠️ AIML Rate limited. Passing through cluster...")
+                    print("[WARN] AIML Rate limited. Passing through cluster...")
         except Exception as e:
-            print(f"🔄 AIML Gateway failure: {e}")
+            print(f"[REF] AIML Gateway failure: {e}")
         return None
 
 
@@ -673,7 +673,7 @@ class IntegratedBusinessIntelligence:
         # Max 2 retries for robustness
         for attempt in range(2):
             try:
-                print(f"🚀 [AI CLUSTER] Hitting Secondary Neural Synthesis Layer (Attempt {attempt + 1})...")
+                print(f"[AI CLUSTER] Hitting Secondary Neural Synthesis Layer (Attempt {attempt + 1})...")
                 async with httpx.AsyncClient(timeout=40.0, follow_redirects=True) as client:
                     headers = {}
                     if self.pollinations_key:
@@ -700,7 +700,7 @@ class IntegratedBusinessIntelligence:
                             try:
                                 data = json.loads(match.group())
                                 if "recommendations" in data and len(data["recommendations"]) > 0:
-                                    print(f"✅ AI analysis successful on attempt {attempt + 1}")
+                                    print(f"[OK] AI analysis successful on attempt {attempt + 1}")
                                     return {
                                         "success": True, 
                                         "recommendations": data["recommendations"][:15], 
@@ -708,10 +708,10 @@ class IntegratedBusinessIntelligence:
                                         "analysis": data.get("analysis", "Market synthesis complete.")
                                     }
                             except json.JSONDecodeError:
-                                print(f"⚠️ JSON Decode failure on attempt {attempt + 1}")
+                                print(f"[WARN] JSON Decode failure on attempt {attempt + 1}")
                                 continue
             except Exception as e:
-                print(f"🔄 Pollinations Exception (Attempt {attempt + 1}): {str(e)}")
+                print(f"[REF] Pollinations Exception (Attempt {attempt + 1}): {str(e)}")
                 if attempt < 1: await asyncio.sleep(1) # Small delay before retry
                 
         return {"success": False}
@@ -731,7 +731,7 @@ class IntegratedBusinessIntelligence:
         
         if not tasks: return ""
         
-        print(f"🔍 [SCOUTING] Deploying {len(tasks)} parallel drones for {area}...")
+        print(f"[SCOUTING] Deploying {len(tasks)} parallel drones for {area}...")
         
         # Best-Effort Swarm: Increased wait to 120s to support deep Google Maps/Apify extractions
         done, pending = await asyncio.wait(tasks, timeout=120.0)
@@ -743,13 +743,13 @@ class IntegratedBusinessIntelligence:
                 if isinstance(res, str) and res.strip():
                     results.append(res)
             except Exception as e:
-                print(f"⚠️ Drone failure: {e}")
+                print(f"[WARN] Drone failure: {e}")
         
         # Cancel pending tasks to prevent them from eating memory later
         for task in pending:
             task.cancel()
             
-        print(f"📊 [SCOUTING COMPLETE] Gathered data from {len(results)} prompt sources within the 120s window")
+        print(f"[SCOUTING COMPLETE] Gathered data from {len(results)} prompt sources within the 120s window")
         return "\n\n".join(results)
 
     async def _scout_tavily(self, area: str) -> str:
@@ -811,7 +811,7 @@ class IntegratedBusinessIntelligence:
         """Priority 5: Upgrade Firecrawl to /v1/extract (Structured Semantic Scrape)"""
         if not self.firecrawl_key: return ""
         try:
-            print(f"🕷️ [FIRECRAWL] Performing structured extraction for {area}...")
+            print(f"[FIRECRAWL] Performing structured extraction for {area}...")
             async with httpx.AsyncClient(timeout=25.0) as client:
                 resp = await client.post("https://api.firecrawl.dev/v1/extract", 
                     headers={"Authorization": f"Bearer {self.firecrawl_key}", "Content-Type": "application/json"}, 
@@ -832,13 +832,13 @@ class IntegratedBusinessIntelligence:
                     data = resp.json().get('data', {})
                     return f"FIRECRAWL_EXTRACT: {json.dumps(data)}"
                 elif resp.status_code == 402:
-                    logger.warning(f"⚠️ [FIRECRAWL] Credit threshold reached (402) for {area}. Attempting high-fidelity fallback...")
+                    logger.warning(f"[FIRECRAWL] Credit threshold reached (402) for {area}. Attempting high-fidelity fallback...")
                     await push_ws_status("Firecrawl Credits exhausted. Re-routing to Search-GPT cluster...")
                     # Fallback to a broader search drone since Firecrawl is exhausted
                     return "FIRECRAWL: (Credit Exhausted) Re-routing telemetry to SearchAPI/Tavily cluster."
                 return f"FIRECRAWL_ERROR: Status {resp.status_code}"
         except Exception as e:
-            print(f"⚠️ Firecrawl Extract failed: {e}")
+            print(f"[FAIL] Firecrawl Extract failed: {e}")
         return ""
 
     async def _scout_apify_businesses(self, area: str) -> str:
@@ -929,7 +929,7 @@ class IntegratedBusinessIntelligence:
     async def _scout_web_trends(self, area: str) -> str:
         """Analyze broad economic and industry trends via DuckDuckGo"""
         try:
-            from duckduckgo_search import DDGS
+            from ddgs import DDGS
             def _get_ddgs():
                 with DDGS() as ddgs:
                     return list(ddgs.text(f"economic scene and industry gaps {area} 2026", max_results=3))
@@ -1019,7 +1019,7 @@ class IntegratedBusinessIntelligence:
 
     async def enrich_business_financials(self, title: str, area: str, category: str = "Business") -> Dict:
         """Deep Drill-Down for specific business intelligence enrichment"""
-        print(f"📊 [ENRICHMENT] Starting high-fidelity drill-down for {title} in {area}...")
+        print(f"[ENRICHMENT] Starting high-fidelity drill-down for {title} in {area}...")
         
         # 1. Quick Tactical Scouting (5s window)
         search_query = f"{category} business volume competitors costs profit margins {area} 2026"
@@ -1073,10 +1073,10 @@ class IntegratedBusinessIntelligence:
         # Try Flash first for speed
         result = await self.call_ai_cluster_json(prompt)
         if result:
-            print(f"✅ [ENRICHMENT SUCCESS] Neural telemetry synthesized for {title}")
+            print(f"[ENRICHMENT SUCCESS] Neural telemetry synthesized for {title}")
             return {"success": True, "data": result}
             
-        print(f"⚠️ [ENRICHMENT FAIL] AI synthesis cluster failed for {title}")
+        print(f"[ENRICHMENT FAIL] AI synthesis cluster failed for {title}")
         return {"success": False, "message": "Neural financial enrichment failed."}
 
     # Consistently use the robust implementation of call_ai_cluster_json defined at line 885

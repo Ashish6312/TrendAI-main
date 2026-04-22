@@ -112,6 +112,7 @@ export default function InvoiceModal({ isOpen, onClose, payment, userData }: Inv
 
             htmlEl.style.boxShadow = 'none'; 
             htmlEl.style.textShadow = 'none';
+            htmlEl.style.outline = 'none'; // CRITICAL: outlines often use color-mix with oklab
 
             // SVG specific styles (Lucide icons)
             if (el.tagName.toLowerCase() === 'svg' || el.parentElement?.tagName.toLowerCase() === 'svg') {
@@ -155,19 +156,19 @@ export default function InvoiceModal({ isOpen, onClose, payment, userData }: Inv
   const amount = typeof payment.amount === 'string' ? parseFloat(payment.amount) : payment.amount;
   const currencySymbol = payment.currency === 'INR' ? '₹' : '$';
 
-  // Dynamic theme based on plan
+  // Dynamic theme based on plan (Using Literal Hex Colors for PDF compatibility)
   const getPlanTheme = (planName: string) => {
     const name = planName.toLowerCase();
     if (name.includes('enterprise') || name.includes('dominance') || name.includes('territorial')) 
-      return { primary: '#8b5cf6', secondary: '#a78bfa', text: 'text-purple-500', bg: 'bg-purple-600', shadow: 'shadow-purple-600/20' };
+      return { primary: '#8b5cf6', secondary: '#a78bfa', text: 'text-[#8b5cf6]', bg: 'bg-[#8b5cf6]', shadow: 'shadow-[#8b5cf6]/20' };
     if (name.includes('growth') || name.includes('accelerator')) 
-      return { primary: '#6366f1', secondary: '#818cf8', text: 'text-indigo-500', bg: 'bg-indigo-600', shadow: 'shadow-indigo-600/20' };
+      return { primary: '#6366f1', secondary: '#818cf8', text: 'text-[#6366f1]', bg: 'bg-[#6366f1]', shadow: 'shadow-[#6366f1]/20' };
 
     if (name.includes('professional') || name.includes('architect')) 
-      return { primary: '#10b981', secondary: '#34d399', text: 'text-emerald-500', bg: 'bg-emerald-600', shadow: 'shadow-emerald-600/20' };
+      return { primary: '#10b981', secondary: '#34d399', text: 'text-[#10b981]', bg: 'bg-[#10b981]', shadow: 'shadow-[#10b981]/20' };
     if (name.includes('starter') || name.includes('venture') || name.includes('strategist')) 
-      return { primary: '#3b82f6', secondary: '#60a5fa', text: 'text-blue-500', bg: 'bg-blue-600', shadow: 'shadow-blue-600/20' };
-    return { primary: '#6b7280', secondary: '#9ca3af', text: 'text-slate-500', bg: 'bg-slate-600', shadow: 'shadow-slate-600/20' };
+      return { primary: '#3b82f6', secondary: '#60a5fa', text: 'text-[#3b82f6]', bg: 'bg-[#3b82f6]', shadow: 'shadow-[#3b82f6]/20' };
+    return { primary: '#6b7280', secondary: '#9ca3af', text: 'text-[#6b7280]', bg: 'bg-[#6b7280]', shadow: 'shadow-[#6b7280]/20' };
   };
 
   const planTheme = getPlanTheme(payment.plan_name);

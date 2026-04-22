@@ -29,6 +29,7 @@ load_dotenv()
 # ═══════════════════════════════════════════════════
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+logging.getLogger("passlib").setLevel(logging.ERROR)
 
 import smtplib
 from email.mime.text import MIMEText
@@ -623,8 +624,10 @@ except Exception as e:
         return False
 
 # Database initialization moved to startup event for non-blocking boot
-@app.on_event("startup")
-async def startup_db_init():
+from contextlib import asynccontextmanager
+
+@asynccontextmanager
+async def app_lifespan(app: FastAPI):
     if db_available:
         try:
             logger.info("🚀 Starting Database Initialization (Neural Link)...")
@@ -642,6 +645,9 @@ async def startup_db_init():
             logger.error(f"⚠️ Critical database startup error: {e}")
             import traceback
             logger.error(traceback.format_exc())
+    yield
+
+app.router.lifespan_context = app_lifespan
 
 # Try to import models
 try:

@@ -192,9 +192,9 @@ export default function Navbar() {
           >
             <div className="absolute inset-0 bg-gradient-to-tr from-blue-500/0 via-blue-500/0 to-blue-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
             {mounted && resolvedTheme === 'dark' ? (
-              <Moon size={16} className="relative z-10 text-blue-400 drop-shadow-[0_0_8px_rgba(56,189,248,0.5)]" />
-            ) : (
               <Sun size={16} className="relative z-10 text-amber-500" />
+            ) : (
+              <Moon size={16} className="relative z-10 text-slate-800" />
             )}
           </motion.button>
 

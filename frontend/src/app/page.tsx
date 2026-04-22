@@ -5,6 +5,8 @@ import { useState, useEffect } from "react";
 import { locationAPI } from "@/utils/locationAPI";
 import { getApiUrl } from "@/config/api";
 
+import Image from "next/image";
+
 import {
   ArrowRight, Zap, Rocket,
   Globe2, Cpu, MapPin,
@@ -133,8 +135,14 @@ export default function Home() {
               >
                 <div className="flex -space-x-1">
                   {[1, 2, 3].map(i => (
-                    <div key={i} className="w-6 h-6 rounded-full border-2 border-white dark:border-slate-800 shadow-lg overflow-hidden">
-                      <img src={`https://i.pravatar.cc/100?img=${i + 45}`} alt="User" />
+                    <div key={i} className="w-6 h-6 rounded-full border-2 border-white dark:border-slate-800 shadow-lg overflow-hidden relative">
+                      <Image 
+                        src={`https://i.pravatar.cc/100?img=${i + 45}`} 
+                        alt="User" 
+                        width={24} 
+                        height={24} 
+                        className="object-cover"
+                      />
                     </div>
                   ))}
                 </div>
@@ -235,10 +243,12 @@ export default function Home() {
                     </div>
 
                     <div className="h-64 relative bg-slate-50/50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700 overflow-hidden group">
-                      <img 
-                        src="https://images.pexels.com/photos/3183150/pexels-photo-3183150.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2" 
+                      <Image 
+                        src="https://images.pexels.com/photos/3183150/pexels-photo-3183150.jpeg?auto=compress&cs=tinysrgb&w=800&q=75" 
                         alt="AI Strategic Analysis" 
-                        className="w-full h-full object-cover opacity-90 group-hover:scale-105 transition-transform duration-1000" 
+                        fill
+                        priority
+                        className="object-cover opacity-90 group-hover:scale-105 transition-transform duration-1000" 
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-slate-900/40 via-transparent to-transparent" />
                       <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between">
@@ -362,9 +372,11 @@ export default function Home() {
             className="relative"
           >
             <div className="absolute -inset-4 bg-emerald-600/10 dark:bg-emerald-600/5 rounded-full blur-[50px] animate-pulse" />
-            <img
-              src="https://images.pexels.com/photos/3182812/pexels-photo-3182812.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2"
+            <Image
+              src="https://images.pexels.com/photos/3182812/pexels-photo-3182812.jpeg?auto=compress&cs=tinysrgb&w=800&q=75"
               alt="Predictive Market Intelligence"
+              width={800}
+              height={500}
               className="compact-img relative border border-slate-200/50 dark:border-slate-700/50 shadow-2xl transform -rotate-1 hover:rotate-0 transition-transform duration-500 w-full backdrop-blur-sm max-h-[350px] md:max-h-none object-cover rounded-2xl"
             />
             {/* Overlay Stat Card Removed (V7.4) */}
@@ -382,9 +394,11 @@ export default function Home() {
             className="order-2 md:order-1 relative group"
           >
             <div className="absolute inset-0 bg-indigo-500/10 rounded-3xl blur-2xl group-hover:blur-3xl transition-all" />
-            <img
-              src="https://images.pexels.com/photos/3184291/pexels-photo-3184291.jpeg?auto=compress&cs=tinysrgb&w=1260&h=750&dpr=2"
+            <Image
+              src="https://images.pexels.com/photos/3184291/pexels-photo-3184291.jpeg?auto=compress&cs=tinysrgb&w=800&q=75"
               alt="Co-Pilot Strategic Execution"
+              width={800}
+              height={500}
               className="compact-img relative border border-slate-200/50 dark:border-slate-700/50 shadow-2xl w-full backdrop-blur-sm max-h-[350px] md:max-h-none object-cover rounded-3xl grayscale-[20%] group-hover:grayscale-0 transition-all duration-700"
             />
           </motion.div>
@@ -659,12 +673,12 @@ export default function Home() {
                       transition={{ duration: 0.3 }}
                       className="flex items-center compact-gap-3 mb-4"
                     >
-                      <motion.img
-                        whileHover={{ rotate: 360 }}
-                        transition={{ duration: 0.6 }}
+                  <Image
                         src={testimonial.avatar}
                         alt={testimonial.name}
-                        className="w-10 h-10 rounded-full border-2 border-purple-500/30 dark:border-purple-500/20 group-hover:border-purple-500/50 dark:group-hover:border-purple-500/40 transition-colors duration-300 shadow-lg"
+                        width={40}
+                        height={40}
+                        className="w-10 h-10 rounded-full border-2 border-purple-500/30 dark:border-purple-500/20 group-hover:border-purple-500/50 dark:group-hover:border-purple-500/40 transition-colors duration-300 shadow-lg object-cover"
                       />
                       <div>
                         <motion.h4

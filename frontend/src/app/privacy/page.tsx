@@ -27,7 +27,8 @@ export default function PrivacyPage() {
           animate={{ opacity: 1, y: 0 }}
           className="prose dark:prose-invert max-w-none"
         >
-          <h1 className="text-4xl font-black text-slate-900 dark:text-white mb-8 italic tracking-tighter">{t('priv_title')}</h1>
+          <h1 className="text-4xl font-black text-slate-900 dark:text-white mb-2 italic tracking-tighter">{t('priv_title')}</h1>
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-500 mb-8">Effective Date: April 15, 2026</p>
           
           <div className="space-y-8 text-slate-600 dark:text-gray-300 leading-relaxed font-medium">
             <section>

@@ -1,5 +1,11 @@
 @import "tailwindcss";
 
+/* Fix for html2canvas oklab/oklch parsing issue in Tailwind v4 */
+* {
+  --tw-outline-color: #3b82f6 !important;
+  --tw-ring-color: #3b82f6 !important;
+}
+
 @theme {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

@@ -85,6 +85,7 @@ export default function Footer() {
                 { label: t('foot_privacy'), path: "/privacy" },
                 { label: t('foot_terms'), path: "/terms" },
                 { label: t('foot_compliance'), path: "/compliance" },
+                { label: t('foot_sitemap'), path: "/site-map" },
                 { label: t('foot_contact'), path: "/contact" }
               ].map((link) => (
                 <li key={link.label}>
