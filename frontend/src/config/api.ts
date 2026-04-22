@@ -1,8 +1,7 @@
 // API Configuration - Centralized API URL management
-// Version: 1.2 - Fixed API URL to point to correct Render deployment
 export const API_CONFIG = {
-  // Always use Render backend in production
-  baseURL: 'https://trendai-api.onrender.com',
+  // Priority: 1. ENV Var, 2. Render Fallback
+  baseURL: process.env.NEXT_PUBLIC_API_URL || 'https://trendai-api.onrender.com',
   timeout: 30000,
 };
 
