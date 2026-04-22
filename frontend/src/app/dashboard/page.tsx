@@ -583,7 +583,7 @@ function DashboardContent() {
 
   return (
     <div className="bg-white dark:bg-[#020617] min-h-screen text-slate-900 dark:text-white transition-all duration-500 relative">
-      <div className="absolute inset-0 bg-gradient-to-br from-indigo-50/20 via-white to-emerald-50/20 dark:from-[#020617] dark:via-[#0f172a] dark:to-[#1e1b4b] pointer-events-none" />
+      <div className="absolute inset-0 bg-slate-50 dark:bg-[#020617] pointer-events-none" />
       <div className="absolute top-0 left-0 w-full h-[500px] bg-emerald-500/[0.03] dark:bg-emerald-500/5 blur-[120px] pointer-events-none" />
 
       {/* Main Content Container */}
