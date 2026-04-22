@@ -54,20 +54,20 @@ const Scene = () => {
 
   return (
     <>
-      <ambientLight intensity={1.5} />
-      <pointLight position={[10, 10, 10]} intensity={2.5} />
+      <ambientLight intensity={1} />
+      <pointLight position={[5, 5, 5]} intensity={2} />
       
       <Float speed={2} rotationIntensity={1} floatIntensity={1}>
-        <Sphere ref={sphereRef} args={[1.6, 32, 32]}>
+        <Sphere ref={sphereRef} args={[1.5, 16, 16]}>
           <MeshDistortMaterial
             color={colors.primary}
             speed={3}
             distort={0.4}
             radius={1}
             roughness={0.2}
-            metalness={0.8}
+            metalness={0.5}
             emissive={colors.primary}
-            emissiveIntensity={0.6}
+            emissiveIntensity={1.2}
           />
         </Sphere>
       </Float>
@@ -129,8 +129,8 @@ const AIAnalysisWidget: React.FC<{
 
       <Canvas 
         camera={{ position: [0, 0, 5], fov: 45 }} 
-        dpr={[1, 2]}
-        gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
+        dpr={[1, 1]}
+        gl={{ antialias: false, alpha: true, powerPreference: "low-power" }}
         style={{ background: 'transparent' }}
       >
         <Suspense fallback={null}>

@@ -55,21 +55,20 @@ const Scene = () => {
 
   return (
     <>
-      <ambientLight intensity={1.5} />
-      <pointLight position={[10, 10, 10]} intensity={2.5} />
-      <pointLight position={[-10, -10, -10]} intensity={1.5} color={colors.secondary} />
+      <ambientLight intensity={1} />
+      <pointLight position={[10, 10, 10]} intensity={2} />
       
-      <Float speed={4} rotationIntensity={0.5} floatIntensity={1}>
-        <Icosahedron ref={meshRef} args={[2.5, 4]} scale={1}>
+      <Float speed={3} rotationIntensity={0.5} floatIntensity={1}>
+        <Icosahedron ref={meshRef} args={[2.5, 3]} scale={1}>
           <MeshDistortMaterial
             color={colors.primary}
             speed={2}
-            distort={0.4}
+            distort={0.3}
             radius={1}
-            roughness={0.1}
-            metalness={0.9}
+            roughness={0.2}
+            metalness={0.5}
             emissive={colors.primary}
-            emissiveIntensity={0.5}
+            emissiveIntensity={1}
             wireframe
           />
         </Icosahedron>
@@ -79,10 +78,11 @@ const Scene = () => {
         <PointMaterial
           transparent
           color={colors.secondary}
-          size={0.12}
+          size={0.15}
           sizeAttenuation={true}
           depthWrite={false}
           blending={THREE.AdditiveBlending}
+          opacity={0.8}
         />
       </Points>
     </>
@@ -128,7 +128,7 @@ const AIAnalysisCanvas: React.FC<{ className?: string }> = ({ className = "" }) 
 
       <Canvas 
         camera={{ position: [0, 0, 8], fov: 50 }} 
-        dpr={[1, 2]}
+        dpr={[1, 1.5]}
         gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
         style={{ background: 'transparent' }}
       >
