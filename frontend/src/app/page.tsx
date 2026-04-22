@@ -746,7 +746,7 @@ export default function Home() {
       </section>
 
       {/* 6. FINAL CTA - Compact */}
-      <section id="get-started" className="w-full min-h-[60vh] sm:min-h-[70vh] flex items-center justify-center relative overflow-hidden bg-gradient-to-br from-slate-100 via-slate-50 to-white dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 border-t border-slate-200 dark:border-white/5 pt-24 sm:pt-32 pb-20">
+      <section id="get-started" className="w-full min-h-[60vh] sm:min-h-[70vh] flex items-center justify-center relative overflow-hidden bg-slate-50 dark:bg-[#020617] border-t border-slate-200 dark:border-white/5 pt-24 sm:pt-32 pb-20 transition-colors duration-500">
         {/* Background Effects */}
         <div className="absolute inset-0">
           <div className="absolute top-1/4 left-1/4 w-64 h-64 bg-emerald-500/20 dark:bg-emerald-500/10 rounded-full blur-3xl animate-pulse-slow" />
