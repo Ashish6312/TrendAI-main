@@ -1,18 +1,26 @@
 "use client";
 
-import React, { useRef, useMemo, useState, useEffect } from 'react';
+import React, { useRef, useMemo, useState, useEffect, Suspense } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { Float, Icosahedron, MeshDistortMaterial, Points, PointMaterial } from '@react-three/drei';
 import * as THREE from 'three';
 import { motion } from 'framer-motion';
 import { useTheme } from 'next-themes';
 
-const Scene = ({ isDark }: { isDark: boolean }) => {
+const Scene = () => {
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
   const pointsRef = useRef<THREE.Points>(null);
   const meshRef = useRef<THREE.Mesh>(null);
 
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const isDark = mounted ? resolvedTheme === 'dark' : true;
+
   // Create random points for the background
-  const particlesCount = 800;
+  const particlesCount = 1000;
   const positions = useMemo(() => {
     const pos = new Float32Array(particlesCount * 3);
     for (let i = 0; i < particlesCount; i++) {
@@ -47,12 +55,12 @@ const Scene = ({ isDark }: { isDark: boolean }) => {
 
   return (
     <>
-      <ambientLight intensity={0.5} />
-      <pointLight position={[10, 10, 10]} intensity={1.5} />
-      <pointLight position={[-10, -10, -10]} intensity={0.5} color={colors.secondary} />
+      <ambientLight intensity={1.5} />
+      <pointLight position={[10, 10, 10]} intensity={2.5} />
+      <pointLight position={[-10, -10, -10]} intensity={1.5} color={colors.secondary} />
       
       <Float speed={4} rotationIntensity={0.5} floatIntensity={1}>
-        <Icosahedron ref={meshRef} args={[2, 4]} scale={1}>
+        <Icosahedron ref={meshRef} args={[2.5, 4]} scale={1}>
           <MeshDistortMaterial
             color={colors.primary}
             speed={2}
@@ -60,6 +68,8 @@ const Scene = ({ isDark }: { isDark: boolean }) => {
             radius={1}
             roughness={0.1}
             metalness={0.9}
+            emissive={colors.primary}
+            emissiveIntensity={0.5}
             wireframe
           />
         </Icosahedron>
@@ -69,7 +79,7 @@ const Scene = ({ isDark }: { isDark: boolean }) => {
         <PointMaterial
           transparent
           color={colors.secondary}
-          size={0.08}
+          size={0.12}
           sizeAttenuation={true}
           depthWrite={false}
           blending={THREE.AdditiveBlending}
@@ -80,8 +90,6 @@ const Scene = ({ isDark }: { isDark: boolean }) => {
 };
 
 const AIAnalysisCanvas: React.FC<{ className?: string }> = ({ className = "" }) => {
-  const { resolvedTheme } = useTheme();
-  const isDark = resolvedTheme === 'dark';
   const [metrics, setMetrics] = useState({
     efficiency: 98.7,
     dataPoints: 2.4,
@@ -105,7 +113,7 @@ const AIAnalysisCanvas: React.FC<{ className?: string }> = ({ className = "" }) 
       <motion.div 
         initial={{ opacity: 0, x: 20 }}
         animate={{ opacity: 1, x: 0 }}
-        className="absolute top-4 right-4 z-10 text-right space-y-1 hidden sm:block"
+        className="absolute top-4 right-4 z-20 text-right space-y-1 hidden sm:block"
       >
         <div className="text-[10px] font-black uppercase tracking-widest text-emerald-500">
           Neural Efficiency: {metrics.efficiency.toFixed(1)}%
@@ -118,13 +126,18 @@ const AIAnalysisCanvas: React.FC<{ className?: string }> = ({ className = "" }) 
         </div>
       </motion.div>
 
-      <Canvas camera={{ position: [0, 0, 8], fov: 50 }} style={{ background: 'transparent' }}>
-        <Scene isDark={isDark} />
+      <Canvas 
+        camera={{ position: [0, 0, 8], fov: 50 }} 
+        dpr={[1, 2]}
+        gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
+        style={{ background: 'transparent' }}
+      >
+        <Suspense fallback={null}>
+          <Scene />
+        </Suspense>
       </Canvas>
 
-      <div className={`absolute inset-0 bg-gradient-radial from-transparent pointer-events-none ${
-        isDark ? 'via-[#020617]/40 to-[#020617]/80' : 'via-white/40 to-white/80'
-      }`} />
+      <div className="absolute inset-0 bg-gradient-radial from-transparent pointer-events-none via-transparent to-[#020617]/10" />
     </div>
   );
 };

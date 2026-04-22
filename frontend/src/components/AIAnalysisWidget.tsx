@@ -1,18 +1,26 @@
 "use client";
 
-import React, { useRef, useMemo } from 'react';
+import React, { useRef, useMemo, useState, useEffect, Suspense } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
 import { Float, Sphere, MeshDistortMaterial, Points, PointMaterial } from '@react-three/drei';
 import * as THREE from 'three';
 import { motion } from 'framer-motion';
 import { useTheme } from 'next-themes';
 
-const Scene = ({ isDark }: { isDark: boolean }) => {
+const Scene = () => {
+  const { resolvedTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
   const pointsRef = useRef<THREE.Points>(null);
   const sphereRef = useRef<THREE.Mesh>(null);
 
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const isDark = mounted ? resolvedTheme === 'dark' : true;
+
   // Create random points for the background
-  const particlesCount = 200;
+  const particlesCount = 300;
   const positions = useMemo(() => {
     const pos = new Float32Array(particlesCount * 3);
     for (let i = 0; i < particlesCount; i++) {
@@ -46,11 +54,11 @@ const Scene = ({ isDark }: { isDark: boolean }) => {
 
   return (
     <>
-      <ambientLight intensity={0.5} />
-      <pointLight position={[10, 10, 10]} intensity={1} />
+      <ambientLight intensity={1.5} />
+      <pointLight position={[10, 10, 10]} intensity={2.5} />
       
       <Float speed={2} rotationIntensity={1} floatIntensity={1}>
-        <Sphere ref={sphereRef} args={[1.5, 32, 32]}>
+        <Sphere ref={sphereRef} args={[1.6, 32, 32]}>
           <MeshDistortMaterial
             color={colors.primary}
             speed={3}
@@ -58,6 +66,8 @@ const Scene = ({ isDark }: { isDark: boolean }) => {
             radius={1}
             roughness={0.2}
             metalness={0.8}
+            emissive={colors.primary}
+            emissiveIntensity={0.6}
           />
         </Sphere>
       </Float>
@@ -66,7 +76,7 @@ const Scene = ({ isDark }: { isDark: boolean }) => {
         <PointMaterial
           transparent
           color={colors.secondary}
-          size={0.05}
+          size={0.12}
           sizeAttenuation={true}
           depthWrite={false}
           blending={THREE.AdditiveBlending}
@@ -104,7 +114,7 @@ const AIAnalysisWidget: React.FC<{
         <motion.div 
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="absolute top-2 left-2 z-10 space-y-1"
+          className="absolute top-2 left-2 z-20 space-y-1"
         >
           <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-emerald-500">
             <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -117,8 +127,15 @@ const AIAnalysisWidget: React.FC<{
         </motion.div>
       )}
 
-      <Canvas camera={{ position: [0, 0, 5], fov: 45 }} style={{ background: 'transparent' }}>
-        <Scene isDark={isDark} />
+      <Canvas 
+        camera={{ position: [0, 0, 5], fov: 45 }} 
+        dpr={[1, 2]}
+        gl={{ antialias: true, alpha: true, powerPreference: "high-performance" }}
+        style={{ background: 'transparent' }}
+      >
+        <Suspense fallback={null}>
+          <Scene />
+        </Suspense>
       </Canvas>
 
       <div className={`absolute inset-0 bg-gradient-radial from-transparent pointer-events-none rounded-lg ${
