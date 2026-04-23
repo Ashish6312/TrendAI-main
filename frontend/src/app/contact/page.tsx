@@ -26,7 +26,7 @@ export default function ContactPage() {
       // Fetch full profile for context
       const fetchProfile = async () => {
         try {
-          const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://trendai-api.onrender.com';
+          const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://starterscopebackend-git-master-ashish-sharmas-projects-7e8014b8.vercel.app';
           const res = await fetch(`${apiUrl}/api/users/${session.user?.email}/profile`);
           if (res.ok) {
             const data = await res.json();
@@ -45,7 +45,7 @@ export default function ContactPage() {
     setIsSubmitting(true);
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://trendai-api.onrender.com';
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://starterscopebackend-git-master-ashish-sharmas-projects-7e8014b8.vercel.app';
       const response = await fetch(`${apiUrl}/api/contact`, {
         method: 'POST',
         headers: {

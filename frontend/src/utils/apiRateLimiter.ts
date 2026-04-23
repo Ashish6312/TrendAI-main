@@ -148,7 +148,7 @@ class APIRateLimiter {
     }, {} as Record<string, any[]>);
 
     // Send batched notifications to backend
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://trendai-api.onrender.com';
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://starterscopebackend-git-master-ashish-sharmas-projects-7e8014b8.vercel.app';
     
     for (const [userId, notifications] of Object.entries(userNotifications)) {
       try {
@@ -197,7 +197,7 @@ class APIRateLimiter {
     if (requests.length === 0) return;
 
     // Batch profile updates
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://trendai-api.onrender.com';
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://starterscopebackend-git-master-ashish-sharmas-projects-7e8014b8.vercel.app';
     
     for (const request of requests) {
       try {
