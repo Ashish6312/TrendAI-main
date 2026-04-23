@@ -123,7 +123,7 @@ async function getLocationInfo(): Promise<any> {
   }
 
   // Fallback to IP-based location
-  const apiUrl = 'https://trendai-api.onrender.com';
+  const apiUrl = getApiUrl();
   const services = [
     `${apiUrl}/api/utils/location`,
     'https://ipapi.co/json/',
