@@ -92,6 +92,7 @@ ALLOWED_ORIGINS = [
     "http://localhost:3004", "http://127.0.0.1:3004",
     "http://localhost:8000", "http://127.0.0.1:8000",
     "https://starterscope.entrext.com",
+    "http://starterscope.entrext.com",
     "https://trend-ai-main.vercel.app",
     "https://trend-ai-sand.vercel.app"
 ]
@@ -105,7 +106,7 @@ if os.getenv("VERCEL_URL"):
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
-    allow_origin_regex=r"^(https?://(localhost|127\.0\.0\.1|192\.168\.\d+\.\d+)(:\d+)?|https://.*\.(vercel\.app|entrext\.com))$",
+    allow_origin_regex=r"^(https?://.*\.vercel\.app|https?://.*\.entrext\.com|https?://localhost(:\d+)?)$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
