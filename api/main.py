@@ -85,7 +85,6 @@ app = FastAPI(title="StarterScope Business Intelligence API", version="2.2")
 
 # Combined CORS Configuration for Local & Production
 ALLOWED_ORIGINS = [
-    "*",
     "http://localhost:3000", "http://127.0.0.1:3000",
     "http://localhost:3001", "http://127.0.0.1:3001",
     "http://localhost:3002", "http://127.0.0.1:3002",
