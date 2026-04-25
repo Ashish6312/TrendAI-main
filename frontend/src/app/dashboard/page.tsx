@@ -716,7 +716,7 @@ function DashboardContent() {
                       onBlur={() => {
                         setTimeout(() => setShowSuggestions(false), 200);
                       }}
-                      className="w-full bg-slate-50 dark:bg-[#030612] border-2 border-slate-200 dark:border-slate-800 rounded-[0.75rem] py-2 sm:py-3 pl-10 sm:pl-12 pr-16 text-base font-black tracking-tight text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-600 transition-all focus:border-emerald-500/50 focus:ring-[12px] focus:ring-emerald-500/10 focus:outline-none hover:border-slate-300 dark:hover:border-slate-700 shadow-xl"
+                      className="w-full bg-slate-50 dark:bg-[#030612] border-2 border-slate-200 dark:border-slate-800 rounded-[0.75rem] py-2 sm:py-3 pl-10 sm:pl-12 pr-16 text-base font-black tracking-tight text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-600 transition-all focus:border-emerald-500/50 focus:ring-4 focus:ring-emerald-500/10 focus:outline-none hover:border-slate-300 dark:hover:border-slate-700 shadow-lg"
                       placeholder="Search city or region in India..."
                       autoComplete="off"
                       id="location-input"
@@ -780,7 +780,7 @@ function DashboardContent() {
                         initial={{ opacity: 0, scale: 0.98, y: 10 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.98, y: 10 }}
-                        className="absolute z-[100] w-full mt-3 bg-white/95 dark:bg-[#0a0f1d]/95 border-2 border-slate-200 dark:border-white/10 rounded-2xl shadow-[0_25px_60px_-15px_rgba(0,0,0,0.3)] dark:shadow-[0_25px_60px_-15px_rgba(0,0,0,0.6)] max-h-[400px] overflow-y-auto p-2 scrollbar-hide backdrop-blur-2xl"
+                        className="absolute z-[100] w-full mt-3 bg-white dark:bg-[#0a1128] border-2 border-slate-200 dark:border-emerald-500/30 rounded-2xl shadow-[0_30px_90px_-15px_rgba(0,0,0,0.5)] max-h-[400px] overflow-y-auto p-2 scrollbar-hide backdrop-blur-3xl"
                       >
                         <div className="flex items-center justify-between px-3 py-2 mb-2 border-b border-slate-100 dark:border-white/5">
                           <div className="text-[10px] font-black text-slate-400 dark:text-gray-500 uppercase tracking-[0.2em]">Verified Locations</div>
@@ -899,7 +899,7 @@ function DashboardContent() {
               icon={<Clock className="w-4 h-4 sm:w-5 sm:h-5" />}
               variant="default"
               size="md"
-              className="shadow-xl border-2 border-slate-200 dark:border-white/10 bg-white/70 dark:bg-white/5 backdrop-blur-md"
+              className="shadow-2xl border-2 border-slate-200/50 dark:border-white/5 bg-white/80 dark:bg-[#060b1e]/40 backdrop-blur-2xl relative z-20"
             >
               <div className="flex items-center justify-between mb-6">
                 <span className="text-[11px] font-medium text-slate-600 dark:text-gray-400">{t('dash_history_desc')}</span>
