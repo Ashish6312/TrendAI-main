@@ -776,7 +776,7 @@ function ProfilePageContent() {
     exit: { opacity: 0, y: -20 }
   };
   return (
-    <div className="min-h-screen bg-white dark:bg-[#020617] relative transition-colors duration-500 pt-6 sm:pt-8 lg:pt-10">
+    <div className="min-h-screen bg-white dark:bg-[#020617] relative transition-colors duration-500 pt-16 sm:pt-20 lg:pt-24">
       {/* Animated Background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute inset-0 bg-grid-white/[0.02]" />
@@ -1163,7 +1163,7 @@ function ProfilePageContent() {
                           <div className="pt-8 mt-4 border-t border-slate-200 dark:border-white/5 flex flex-col sm:flex-row items-center gap-8 group">
                              <div className="flex items-center gap-3">
                                 <div className="w-8 h-[1px] bg-slate-200 dark:bg-white/10 hidden lg:block" />
-                                <span className="text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.4em] italic leading-none">Next Tactical Steps:</span>
+                                <span className="text-[8px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.4em] italic leading-none">{t('prof_tactical_steps')}</span>
                              </div>
                              
                              <div className="flex flex-wrap items-center justify-center gap-6">
@@ -1181,7 +1181,7 @@ function ProfilePageContent() {
                                   onClick={() => router.push('/dashboard')}
                                   className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-500 hover:text-blue-400 flex items-center gap-3 transition-all hover:scale-105 active:scale-95 group/search"
                                 >
-                                   <span className="border-b border-transparent group-hover/search:border-current transition-all italic">Launch Reconnaissance</span>
+                                   <span className="border-b border-transparent group-hover/search:border-current transition-all italic">{t('prof_launch_recon')}</span>
                                    <div className="p-1 px-1.5 rounded-md bg-blue-500/10 border border-blue-500/20 group-hover/search:bg-blue-500 group-hover/search:text-white transition-all">
                                       <ArrowRight size={10} className="group-hover/search:translate-x-0.5 transition-transform" />
                                    </div>

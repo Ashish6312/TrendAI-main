@@ -574,11 +574,21 @@ Ensure the tone is elite, technical, and data-dense. Respond ONLY with valid JSO
                     {idx === currentStep && <div className="absolute -left-20 -top-20 w-40 h-40 bg-emerald-500/20 blur-[100px]" />}
 
                     <div className="relative z-10">
-                      <div className="flex items-center gap-3 mb-8">
-                        <div className={`w-1.5 h-10 rounded-full transition-all duration-500 ${idx === currentStep ? 'bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.5)]' : idx < currentStep ? 'bg-emerald-500' : 'bg-slate-700'}`} />
-                        <h3 className="text-3xl sm:text-5xl font-black text-white italic tracking-tighter uppercase leading-none">
-                          {title}
-                        </h3>
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-1.5 h-10 rounded-full transition-all duration-500 ${idx === currentStep ? 'bg-emerald-500 shadow-[0_0_15px_rgba(16,185,129,0.5)]' : idx < currentStep ? 'bg-emerald-500' : 'bg-slate-700'}`} />
+                          <h3 className="text-3xl sm:text-5xl font-black text-white italic tracking-tighter uppercase leading-none truncate max-w-[250px] sm:max-w-none">
+                            {title}
+                          </h3>
+                        </div>
+
+                        {idx === currentStep && (
+                          <div className="flex-shrink-0">
+                            <div className="px-5 py-2 rounded-full bg-emerald-500 text-slate-900 text-[10px] font-black uppercase tracking-widest flex items-center gap-2 shadow-[0_0_30px_rgba(16,185,129,0.5)]">
+                              <Zap size={12} className="animate-pulse" /> Current Strategize
+                            </div>
+                          </div>
+                        )}
                       </div>
 
                       <p className="text-slate-400 text-base sm:text-xl font-medium leading-relaxed mb-12 opacity-80 max-w-3xl">
@@ -604,16 +614,6 @@ Ensure the tone is elite, technical, and data-dense. Respond ONLY with valid JSO
                         </button>
                       </div>
                     </div>
-
-                    {/* Status Indicator Badge */}
-                    {idx === currentStep && (
-                      <div className="absolute top-8 right-10">
-                        <div className="px-5 py-2 rounded-full bg-emerald-500 text-slate-900 text-[10px] font-black uppercase tracking-widest flex items-center gap-2 shadow-[0_0_30px_rgba(16,185,129,0.5)]">
-                          <Zap size={12} className="animate-pulse" /> Current Strategize
-                        </div>
-                      </div>
-                    )}
-                  </div>
                 </motion.div>
               );
             })}
@@ -631,39 +631,43 @@ Ensure the tone is elite, technical, and data-dense. Respond ONLY with valid JSO
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setActiveGuideStep(null)}
-              className="absolute inset-0 bg-slate-950/80 backdrop-blur-2xl"
             />
 
             <motion.div
               initial={{ opacity: 0, scale: 0.9, y: 40 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 40 }}
-              className="relative w-full max-w-2xl bg-slate-900 rounded-[3rem] border border-white/10 shadow-2xl overflow-hidden"
+              className="relative w-full max-w-3xl bg-slate-900 rounded-[2rem] sm:rounded-[3rem] border border-white/10 shadow-2xl overflow-hidden flex flex-col max-h-[85vh]"
             >
-              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-emerald-500 to-indigo-500" />
-              <div className="p-8 sm:p-12">
-                  <div className="flex justify-between items-start mb-8">
-                     <div>
+              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-blue-500 via-emerald-500 to-indigo-500 z-30" />
+              
+              {/* Modal Header - Fixed */}
+              <div className="p-6 sm:p-10 pb-4 border-b border-white/5 relative z-20 bg-slate-900/50 backdrop-blur-xl">
+                  <div className="flex justify-between items-start">
+                     <div className="min-w-0 flex-1 pr-4">
                         <div className="flex items-center gap-2 mb-2">
-                           <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center">
+                           <div className="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center flex-shrink-0">
                               <ShieldCheck size={16} className="text-emerald-500" />
                            </div>
-                           <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">TACTICAL ANALYSIS - PHASE {activeGuideStep.idx + 1}</span>
-                           <div className="flex items-center gap-1.5 ml-auto bg-emerald-500/10 px-2 py-0.5 rounded-full">
+                           <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest truncate">TACTICAL ANALYSIS - PHASE {activeGuideStep.idx + 1}</span>
+                           <div className="flex items-center gap-1.5 ml-auto bg-emerald-500/10 px-2 py-0.5 rounded-full flex-shrink-0">
                               <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
                               <span className="text-[8px] font-black text-emerald-500 uppercase tracking-tighter">LIVE DATA</span>
                            </div>
                         </div>
-                        <h2 className="text-4xl font-black text-white italic uppercase tracking-tighter leading-none mb-2">
+                        <h2 className="text-2xl sm:text-4xl font-black text-white italic uppercase tracking-tighter leading-tight mb-1 truncate">
                            {activeGuideStep.title.replace(/Month \d+/i, '').trim() || activeGuideStep.title}
                         </h2>
-                        <p className="text-emerald-400/60 text-[10px] font-bold uppercase tracking-widest">{activeGuideStep.description}</p>
+                        <p className="text-emerald-400/60 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest truncate">{activeGuideStep.description}</p>
                      </div>
-                     <button onClick={() => setActiveGuideStep(null)} className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-slate-400 hover:text-white transition-colors">
+                     <button onClick={() => setActiveGuideStep(null)} className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-slate-400 hover:text-white transition-colors flex-shrink-0">
                         <X size={20} />
                      </button>
                   </div>
+              </div>
 
+              {/* Modal Body - Scrollable */}
+              <div className="flex-1 overflow-y-auto p-6 sm:p-10 pt-6 custom-scrollbar relative z-10">
                   {guideLoading ? (
                     <div className="py-20 flex flex-col items-center justify-center space-y-6">
                        <div className="relative">
@@ -682,13 +686,13 @@ Ensure the tone is elite, technical, and data-dense. Respond ONLY with valid JSO
                        </div>
                     </div>
                   ) : (
-                    <div className="space-y-8">
+                    <div className="space-y-8 pb-10">
                        <div className="p-6 rounded-3xl bg-blue-500/5 border border-blue-500/20">
                           <div className="flex items-center gap-2 mb-3">
                              <Lightbulb size={14} className="text-blue-400" />
                              <span className="text-[10px] font-black text-blue-400 uppercase tracking-widest">Professional Tactical Insight</span>
                           </div>
-                          <p className="text-base font-bold text-slate-300 italic leading-relaxed">
+                          <p className="text-sm sm:text-base font-bold text-slate-300 italic leading-relaxed">
                              {activeGuideStep.detailed_insight || "Synthesizing professional implementation path based on regional market dynamics..."}
                           </p>
                        </div>
@@ -706,21 +710,22 @@ Ensure the tone is elite, technical, and data-dense. Respond ONLY with valid JSO
                              ))}
                           </div>
                        </div>
-
-                       <div className="pt-6 border-t border-white/5">
-                          <button 
-                             onClick={() => setActiveGuideStep(null)}
-                             className="w-full py-4 rounded-2xl bg-emerald-500 text-slate-900 font-black text-xs uppercase tracking-[0.2em] flex items-center justify-center gap-2 hover:scale-[1.02] transition-all"
-                          >
-                             Close Tactical Hub <ArrowRight size={16} />
-                          </button>
-                       </div>
                     </div>
                   )}
                </div>
 
+               {/* Modal Footer - Fixed */}
+               <div className="p-6 sm:p-10 pt-4 border-t border-white/5 relative z-20 bg-slate-900/80 backdrop-blur-md">
+                  <button 
+                     onClick={() => setActiveGuideStep(null)}
+                     className="w-full py-4 rounded-2xl bg-emerald-500 text-slate-900 font-black text-xs uppercase tracking-[0.2em] flex items-center justify-center gap-2 hover:scale-[1.02] transition-all shadow-xl shadow-emerald-500/10"
+                  >
+                     Close Tactical Hub <ArrowRight size={16} />
+                  </button>
+               </div>
+
               {/* Design Aura */}
-              <div className="absolute -bottom-20 -right-20 w-60 h-60 bg-blue-500/10 blur-[100px] rounded-full" />
+              <div className="absolute -bottom-20 -right-20 w-60 h-60 bg-blue-500/10 blur-[100px] rounded-full pointer-events-none" />
             </motion.div>
           </div>
         )}

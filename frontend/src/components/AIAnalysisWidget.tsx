@@ -1,78 +1,96 @@
 "use client";
 
 import React, { useRef, useMemo, useState, useEffect, Suspense } from 'react';
-import { Canvas, useFrame } from '@react-three/fiber';
-import { Float, Sphere, MeshDistortMaterial, Points, PointMaterial } from '@react-three/drei';
+import { Canvas, useFrame, useThree } from '@react-three/fiber';
+import { Float, MeshDistortMaterial, Points, PointMaterial } from '@react-three/drei';
 import * as THREE from 'three';
 import { motion } from 'framer-motion';
 import { useTheme } from 'next-themes';
 
-const NeuralConnections = ({ positions }: { positions: Float32Array }) => {
-  const lineRef = useRef<THREE.LineSegments>(null);
+const ScanningRings = ({ color }: { color: string }) => {
+  const groupRef = useRef<THREE.Group>(null);
   
-  const connectionIndices = useMemo(() => {
-    const indices = [];
-    for (let i = 0; i < 40; i++) {
-      const a = Math.floor(Math.random() * (positions.length / 3));
-      const b = Math.floor(Math.random() * (positions.length / 3));
-      if (a !== b) indices.push(a, b);
-    }
-    return new Uint16Array(indices);
-  }, [positions]);
-
   useFrame((state) => {
-    if (lineRef.current) {
-      const t = state.clock.getElapsedTime();
-      const material = lineRef.current.material as THREE.LineBasicMaterial;
-      material.opacity = 0.05 + Math.sin(t * 1.5) * 0.05;
+    if (groupRef.current) {
+      const t = state.clock.elapsedTime;
+      groupRef.current.children.forEach((child, i) => {
+        child.rotation.x = t * (0.2 + i * 0.1);
+        child.rotation.y = t * (0.1 + i * 0.05);
+        const s = 1 + Math.sin(t * 2 + i) * 0.05;
+        child.scale.set(s, s, s);
+      });
     }
   });
 
   return (
-    <lineSegments ref={lineRef}>
-      <bufferGeometry>
-        <bufferAttribute
-          attach="attributes-position"
-          args={[positions, 3]}
-        />
-        <bufferAttribute
-          attach="index"
-          args={[connectionIndices, 1]}
-        />
-      </bufferGeometry>
-      <lineBasicMaterial
-        color="#3b82f6"
-        transparent
-        opacity={0.1}
+    <group ref={groupRef}>
+      {[1.8, 2.1, 2.4].map((radius, i) => (
+        <mesh key={i}>
+          <ringGeometry args={[radius, radius + 0.02, 64]} />
+          <meshBasicMaterial 
+            color={color} 
+            transparent 
+            opacity={0.1 - i * 0.02} 
+            side={THREE.DoubleSide} 
+            blending={THREE.AdditiveBlending}
+          />
+        </mesh>
+      ))}
+    </group>
+  );
+};
+
+const NeuralCore = ({ color }: { color: string }) => {
+  const meshRef = useRef<THREE.Mesh>(null);
+  
+  useFrame((state) => {
+    if (meshRef.current) {
+      const t = state.clock.elapsedTime;
+      const s = 1 + Math.sin(t * 3) * 0.1;
+      meshRef.current.scale.set(s, s, s);
+    }
+  });
+
+  return (
+    <mesh ref={meshRef}>
+      <sphereGeometry args={[0.5, 32, 32]} />
+      <meshBasicMaterial 
+        color={color} 
+        transparent 
+        opacity={0.9} 
         blending={THREE.AdditiveBlending}
       />
-    </lineSegments>
+    </mesh>
   );
 };
 
 const Scene = () => {
   const { resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
-  const pointsRef = useRef<THREE.Points>(null);
   const sphereRef = useRef<THREE.Mesh>(null);
-  const outerSphereRef = useRef<THREE.Mesh>(null);
-  const coreRef = useRef<THREE.Mesh>(null);
+  const shellRef = useRef<THREE.Mesh>(null);
+  const pointsRef = useRef<THREE.Points>(null);
+  const { gl } = useThree();
 
   useEffect(() => {
     setMounted(true);
-  }, []);
+    // Cleanup on unmount to prevent memory leaks and WebGL context loss
+    return () => {
+      gl.dispose();
+    };
+  }, [gl]);
 
   const isDark = mounted ? resolvedTheme === 'dark' : true;
+  const primaryColor = isDark ? '#10b981' : '#059669';
+  const secondaryColor = isDark ? '#3b82f6' : '#2563eb';
 
-  // Create organic flowing points for the background
-  const particlesCount = 400;
-  const positions = useMemo(() => {
-    const pos = new Float32Array(particlesCount * 3);
-    for (let i = 0; i < particlesCount; i++) {
-      const r = 2 + Math.random() * 4;
+  const particles = useMemo(() => {
+    const count = 300;
+    const pos = new Float32Array(count * 3);
+    for (let i = 0; i < count; i++) {
+      const r = 2.5 + Math.random() * 2;
       const theta = Math.random() * 2 * Math.PI;
       const phi = Math.acos(2 * Math.random() - 1);
-      
       pos[i * 3] = r * Math.sin(phi) * Math.cos(theta);
       pos[i * 3 + 1] = r * Math.sin(phi) * Math.sin(theta);
       pos[i * 3 + 2] = r * Math.cos(phi);
@@ -81,96 +99,64 @@ const Scene = () => {
   }, []);
 
   useFrame((state) => {
-    const t = state.clock.getElapsedTime();
-    
+    const t = state.clock.elapsedTime;
+    if (sphereRef.current) {
+      sphereRef.current.rotation.y = t * 0.4;
+      sphereRef.current.rotation.z = t * 0.1;
+    }
+    if (shellRef.current) {
+      shellRef.current.rotation.y = -t * 0.2;
+      shellRef.current.rotation.x = t * 0.1;
+    }
     if (pointsRef.current) {
       pointsRef.current.rotation.y = t * 0.05;
-      pointsRef.current.rotation.z = t * 0.02;
-      
-      const scale = 1 + Math.sin(t * 0.5) * 0.05;
-      pointsRef.current.scale.set(scale, scale, scale);
-    }
-    
-    if (sphereRef.current) {
-      sphereRef.current.rotation.y = t * 0.3;
-      sphereRef.current.rotation.x = t * 0.2;
-    }
-
-    if (outerSphereRef.current) {
-      outerSphereRef.current.rotation.y = -t * 0.2;
-      outerSphereRef.current.rotation.z = t * 0.15;
-    }
-
-    if (coreRef.current) {
-      const pulse = 1 + Math.sin(t * 2) * 0.15;
-      coreRef.current.scale.set(pulse, pulse, pulse);
     }
   });
 
-  const colors = isDark ? {
-    primary: '#10b981', 
-    secondary: '#3b82f6', 
-    accent: '#14b8a6', 
-    core: '#34d399',   
-  } : {
-    primary: '#059669', 
-    secondary: '#2563eb', 
-    accent: '#0d9488', 
-    core: '#10b981',
-  };
-
   return (
     <>
-      <ambientLight intensity={0.5} />
-      <pointLight position={[10, 10, 10]} intensity={1.5} color={colors.primary} />
-      <pointLight position={[-10, -10, -10]} intensity={1} color={colors.secondary} />
+      <ambientLight intensity={0.4} />
+      <pointLight position={[5, 5, 5]} intensity={2} color={primaryColor} />
+      <pointLight position={[-5, -5, -5]} intensity={1} color={secondaryColor} />
       
-      <NeuralConnections positions={positions} />
+      <NeuralCore color={primaryColor} />
       
-      <mesh ref={coreRef}>
-        <sphereGeometry args={[0.6, 32, 32]} />
-        <meshBasicMaterial 
-          color={colors.core} 
-          transparent 
-          opacity={0.8} 
-        />
-      </mesh>
-
-      <Float speed={3} rotationIntensity={1.5} floatIntensity={2}>
-        <Sphere ref={sphereRef} args={[1.2, 32, 32]}>
+      <Float speed={2} rotationIntensity={1} floatIntensity={1}>
+        <mesh ref={sphereRef}>
+          <sphereGeometry args={[1.2, 64, 64]} />
           <MeshDistortMaterial
-            color={colors.primary}
+            color={primaryColor}
             speed={4}
-            distort={0.5}
+            distort={0.4}
             radius={1}
+            emissive={primaryColor}
+            emissiveIntensity={0.5}
+            transparent
+            opacity={0.6}
+            metalness={0.9}
             roughness={0.1}
-            metalness={0.8}
-            emissive={colors.primary}
-            emissiveIntensity={0.8}
-            transparent
-            opacity={0.7}
-          />
-        </Sphere>
-      </Float>
-
-      <Float speed={1.5} rotationIntensity={2} floatIntensity={1}>
-        <mesh ref={outerSphereRef}>
-          <sphereGeometry args={[1.6, 32, 32]} />
-          <meshPhongMaterial
-            color={colors.accent}
-            wireframe
-            transparent
-            opacity={0.15}
-            blending={THREE.AdditiveBlending}
           />
         </mesh>
       </Float>
 
-      <Points ref={pointsRef} positions={positions}>
+      <mesh ref={shellRef}>
+        <sphereGeometry args={[1.5, 32, 32]} />
+        <meshBasicMaterial 
+          color={secondaryColor} 
+          wireframe 
+          transparent 
+          opacity={0.1} 
+          blending={THREE.AdditiveBlending}
+        />
+      </mesh>
+
+      <ScanningRings color={primaryColor} />
+
+      <Points ref={pointsRef} positions={particles}>
         <PointMaterial
           transparent
-          color={colors.secondary}
-          size={0.08}
+          color={secondaryColor}
+          size={0.05}
           sizeAttenuation={true}
           depthWrite={false}
           blending={THREE.AdditiveBlending}
@@ -189,67 +175,68 @@ const AIAnalysisWidget: React.FC<{
   size = 'md',
   showStatus = true 
 }) => {
-  const { resolvedTheme } = useTheme();
-  const isDark = resolvedTheme === 'dark';
-
   const dimensions = {
-    sm: { width: 200, height: 150 },
-    md: { width: 300, height: 200 },
-    lg: { width: 400, height: 300 }
+    sm: { width: 250, height: 250 },
+    md: { width: 350, height: 350 },
+    lg: { width: 450, height: 450 }
   }[size];
 
   return (
-    <div className={`relative ${className}`} style={{ 
+    <div className={`relative flex items-center justify-center ${className}`} style={{ 
       width: dimensions.width, 
       height: dimensions.height,
       maxWidth: '100%'
     }}>
       {showStatus && (
         <motion.div 
-          initial={{ opacity: 0, x: -20 }}
-          animate={{ opacity: 1, x: 0 }}
-          className="absolute top-4 left-4 z-20 space-y-2 p-3 rounded-2xl bg-white/5 backdrop-blur-md border border-white/10 shadow-2xl"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="absolute top-0 left-0 right-0 z-20 flex flex-col items-center gap-2"
         >
-          <div className="flex items-center gap-3">
-            <div className="relative flex h-2 w-2">
-              <div className="absolute inset-0 rounded-full bg-emerald-500 animate-ping opacity-75" />
-              <div className="relative rounded-full h-2 w-2 bg-emerald-500" />
+          <div className="px-4 py-2 rounded-full bg-slate-900/40 dark:bg-black/40 backdrop-blur-xl border border-white/10 flex items-center gap-4 shadow-2xl">
+            <div className="flex items-center gap-2">
+              <div className="relative flex h-2 w-2">
+                <div className="absolute inset-0 rounded-full bg-emerald-500 animate-ping opacity-75" />
+                <div className="relative rounded-full h-2 w-2 bg-emerald-500" />
+              </div>
+              <span className="text-[9px] font-black uppercase tracking-[0.3em] text-emerald-400">
+                Neural Hub
+              </span>
             </div>
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-500 drop-shadow-md">
-              Neural Core
-            </span>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="relative flex h-2 w-2">
-              <div className="absolute inset-0 rounded-full bg-blue-500 animate-ping opacity-75" style={{ animationDelay: '0.5s' }} />
-              <div className="relative rounded-full h-2 w-2 bg-blue-500" />
+            <div className="w-[1px] h-3 bg-white/10" />
+            <div className="flex items-center gap-2">
+              <div className="relative flex h-2 w-2">
+                <div className="absolute inset-0 rounded-full bg-blue-500 animate-ping opacity-75" style={{ animationDelay: '0.5s' }} />
+                <div className="relative rounded-full h-2 w-2 bg-blue-500" />
+              </div>
+              <span className="text-[9px] font-black uppercase tracking-[0.3em] text-blue-400">
+                Deep Scan
+              </span>
             </div>
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-400 drop-shadow-md">
-              Active Scan
-            </span>
           </div>
         </motion.div>
       )}
 
-      <Canvas 
-        camera={{ position: [0, 0, 5], fov: 45 }} 
-        dpr={[1, 2]} // Better quality on high DPI
-        gl={{ 
-          antialias: true, 
-          alpha: true, 
-          powerPreference: "high-performance",
-          toneMapping: THREE.ReinhardToneMapping
-        }}
-        style={{ background: 'transparent' }}
-      >
-        <Suspense fallback={null}>
-          <Scene />
-        </Suspense>
-      </Canvas>
+      <div className="absolute inset-0 z-10 flex items-center justify-center pointer-events-none">
+        <Canvas 
+          camera={{ position: [0, 0, 6], fov: 40 }} 
+          dpr={[1, 1.5]} // Capped at 1.5 for performance stability
+          gl={{ 
+            antialias: false, // Set to false for better mobile/low-end stability
+            alpha: true, 
+            powerPreference: "high-performance",
+            toneMapping: THREE.ReinhardToneMapping,
+            preserveDrawingBuffer: false // Free memory faster
+          }}
+        >
+          <Suspense fallback={null}>
+            <Scene />
+          </Suspense>
+        </Canvas>
+      </div>
 
-      <div className={`absolute inset-0 bg-gradient-radial from-transparent pointer-events-none rounded-lg ${
-        isDark ? 'via-emerald-500/[0.02] to-[#020617]/40' : 'via-emerald-500/[0.02] to-white/40'
-      }`} />
+      <div className="absolute inset-0 bg-gradient-radial from-emerald-500/[0.05] via-transparent to-transparent pointer-events-none opacity-50" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.03)_0%,transparent_70%)] pointer-events-none" />
     </div>
   );
 };

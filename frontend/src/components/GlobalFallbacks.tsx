@@ -228,8 +228,8 @@ export function SystemStatusPulse() {
        </div>
 
        <div className="flex flex-col">
-          <span className="text-[8px] font-black text-slate-500 group-hover:text-slate-400 transition-colors uppercase tracking-[0.2em] leading-none mb-0.5">Quantum Link</span>
-          <span className="text-[10px] font-mono text-slate-400 group-hover:text-white transition-colors leading-none">{latency}ms</span>
+          <span className="text-[8px] font-black text-slate-600 dark:text-slate-500 group-hover:text-slate-900 dark:group-hover:text-slate-400 transition-colors uppercase tracking-[0.2em] leading-none mb-0.5">Quantum Link</span>
+          <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400 group-hover:text-slate-900 dark:group-hover:text-white transition-colors leading-none">{latency}ms</span>
        </div>
     </div>
   );

@@ -582,12 +582,12 @@ function DashboardContent() {
   }
 
   return (
-    <div className="bg-white dark:bg-[#020617] min-h-screen text-slate-900 dark:text-white transition-all duration-500 relative">
+    <div className="min-h-screen bg-white dark:bg-[#020617] relative transition-colors duration-500 pt-20 sm:pt-28 lg:pt-32">
       <div className="absolute inset-0 bg-slate-50 dark:bg-[#020617] pointer-events-none" />
       <div className="absolute top-0 left-0 w-full h-[500px] bg-emerald-500/[0.03] dark:bg-emerald-500/5 blur-[120px] pointer-events-none" />
 
       {/* Main Content Container */}
-      <div className="responsive-container py-8 sm:py-12 lg:py-16 relative z-10">
+      <div className="responsive-container pb-8 sm:pb-12 lg:pb-16 relative z-10">
 
         {/* Professional Header */}
         <motion.div
@@ -780,7 +780,7 @@ function DashboardContent() {
                         initial={{ opacity: 0, scale: 0.98, y: 10 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.98, y: 10 }}
-                        className="absolute z-[100] w-full mt-3 bg-white dark:bg-[#0a0f1d] border-2 border-slate-200 dark:border-white/10 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.2)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.4)] max-h-[400px] overflow-y-auto p-2 scrollbar-hide backdrop-blur-xl"
+                        className="absolute z-[100] w-full mt-3 bg-white/95 dark:bg-[#0a0f1d]/95 border-2 border-slate-200 dark:border-white/10 rounded-2xl shadow-[0_25px_60px_-15px_rgba(0,0,0,0.3)] dark:shadow-[0_25px_60px_-15px_rgba(0,0,0,0.6)] max-h-[400px] overflow-y-auto p-2 scrollbar-hide backdrop-blur-2xl"
                       >
                         <div className="flex items-center justify-between px-3 py-2 mb-2 border-b border-slate-100 dark:border-white/5">
                           <div className="text-[10px] font-black text-slate-400 dark:text-gray-500 uppercase tracking-[0.2em]">Verified Locations</div>
@@ -899,7 +899,7 @@ function DashboardContent() {
               icon={<Clock className="w-4 h-4 sm:w-5 sm:h-5" />}
               variant="default"
               size="md"
-              className="shadow-lg border-2 border-slate-300 dark:border-white/10"
+              className="shadow-xl border-2 border-slate-200 dark:border-white/10 bg-white/70 dark:bg-white/5 backdrop-blur-md"
             >
               <div className="flex items-center justify-between mb-6">
                 <span className="text-[11px] font-medium text-slate-600 dark:text-gray-400">{t('dash_history_desc')}</span>

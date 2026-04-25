@@ -1430,6 +1430,9 @@ async def get_recommendations(request: RecommendationRequest, db: Session = Depe
     print(f"--- API CALLED - Starting recommendations for: {request.area}")
     print(f"--- User email: {request.user_email}")
     
+    if request.user_email:
+        request.user_email = request.user_email.lower().strip()
+    
     try:
         # Get user's saved location from profile as default
         user_location = None
