@@ -1524,6 +1524,8 @@ function DashboardContent() {
                                 implementation_difficulty: rec.implementation_difficulty || rec.difficulty || rec.complexity || 'Calculating...',
                                 market_size: rec.market_size || 'Local Market',
                                 ideal_neighborhood: rec.ideal_neighborhood || rec.neighborhood || '',
+                                potential_revenue: rec.potential_revenue || '--',
+                                cac: rec.cac || '--',
                                 competitive_advantage: rec.competitive_advantage || rec.advantage || 'Strategic positioning',
                                 revenue_model: rec.revenue_model || rec.business_model || 'Direct Revenue',
                                 key_success_factors: Array.isArray(rec.key_success_factors) ? rec.key_success_factors.join(", ") : (rec.success_factors || rec.critical_factors || 'Market penetration'),

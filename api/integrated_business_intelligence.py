@@ -164,11 +164,11 @@ class IntegratedBusinessIntelligence:
             {scouting_context if scouting_context else "Synthesize market gaps based on general geographic trends."}
             
             STRICT FIDELITY REQUIREMENTS:
-            1. NO GENERIC NAMES. Never return names like "Delhi Digital Marketing Agency" or "Mumbai Food Delivery". Use creative, branded identities (e.g. "PulseFlow Digital", "ZestyBite Logistics").
-            2. LOCALIZED ZONES: Every recommendation MUST specify a specific neighborhood or district in {area} where this business should open (e.g. "Hauz Khas Village", "Indiranagar 100ft Rd").
-            3. NO PLACEHOLDERS. Every field must have a specific, calculated value.
-            4. CALC-ROI: Every 'roi_percentage' must be unique (e.g. 52, 118).
-            5. BEP-VAL: Specific 'be_period' (e.g. '4.5 Months', '1.2 Years').
+            1. NO GENERIC NAMES. Never return names like "Delhi Digital Marketing Agency". Use creative, branded identities (e.g. "PulseFlow Digital", "ZestyBite Logistics").
+            2. LOCALIZED ZONES: Specify a specific neighborhood or district in {area} (e.g. "Hauz Khas Village", "Indiranagar 100ft Rd").
+            3. NO PLACEHOLDERS. Fields like 'competitive_advantage' and 'key_success_factors' MUST NOT contain generic text like "Strategic positioning" or "Market penetration". Use data-dense, technical strategies.
+            4. FINANCIAL METRICS: Provide specific, calculated values for 'investment', 'potential_revenue' (annual), and 'cac' (customer acquisition cost).
+            5. ROI & BEP: Every 'roi_percentage' and 'be_period' must be unique and based on realistic market data for {area}.
             6. VOLUME: Provide EXACTLY 12 high-fidelity, distinct recommendations.
             
             Return ONLY valid JSON:
@@ -187,6 +187,8 @@ class IntegratedBusinessIntelligence:
                         "ideal_neighborhood": "Specific area within {area} (e.g. Connaught Place)",
                         "target_audience": "Specific demographics (e.g. Gen-Z working professionals)",
                         "investment": "Specific amount (e.g. ₹12.5L)",
+                        "potential_revenue": "Specific annual revenue (e.g. ₹45L)",
+                        "cac": "Estimated Customer Acquisition Cost (e.g. ₹450/user)",
                         "roi_percentage": number,
                         "roi_potential": "Projected annual returns (e.g. 55%)",
                         "be_period": "Break-even target (e.g. 6 Months)",
@@ -194,6 +196,9 @@ class IntegratedBusinessIntelligence:
                         "retention_rate": "Target retention (e.g. 78%)",
                         "implementation_difficulty": "Low/Medium/High",
                         "competition_level": "Low/Medium/High with a reason.",
+                        "competitive_advantage": "Technical or operational edge (NO generic text)",
+                        "key_success_factors": "3 specific technical factors (NO generic text)",
+                        "revenue_model": "Specific monetization strategy",
                         "demand_index": "Numerical index (e.g. 88%)",
                         "six_month_plan": [{{ "month": "1-2", "goal": "..." }}, {{ "month": "3-4", "goal": "..." }}, {{ "month": "5-6", "goal": "..." }}]
                     }}

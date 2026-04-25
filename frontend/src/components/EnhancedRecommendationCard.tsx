@@ -35,6 +35,8 @@ interface RecommendationData {
   key_success_factors?: string;
   category?: string;
   ideal_neighborhood?: string;
+  potential_revenue?: string;
+  cac?: string;
   ai_source?: string;
   six_month_plan?: (string | { month: string; goal: string })[];
 }
@@ -233,18 +235,46 @@ export default function EnhancedRecommendationCard({
                 </div>
               )}
 
-              {/* Revenue Model */}
-              {recommendation.revenue_model && (
-                <div className="space-y-3">
-                  <div className="flex items-center gap-2">
-                    <DollarSign size={16} className="text-emerald-500" />
-                    <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">Revenue Model</h4>
+              {/* Revenue & CAC */}
+              <div className="grid lg:grid-cols-2 gap-6">
+                {recommendation.revenue_model && (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <DollarSign size={16} className="text-emerald-500" />
+                      <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">Monetization Strategy</h4>
+                    </div>
+                    <div className="p-4 rounded-2xl bg-white dark:bg-slate-800/30 border border-slate-200 dark:border-white/5">
+                      <p className="text-sm text-slate-600 dark:text-gray-300 leading-relaxed">
+                        {recommendation.revenue_model}
+                      </p>
+                      {recommendation.potential_revenue && (
+                        <div className="mt-3 pt-3 border-t border-slate-100 dark:border-white/5 flex justify-between items-center">
+                          <span className="text-[10px] font-bold text-slate-500 uppercase">Est. Annual Revenue</span>
+                          <span className="text-xs font-black text-emerald-500">{recommendation.potential_revenue}</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <p className="text-sm text-slate-600 dark:text-gray-300 leading-relaxed pl-6">
-                    {recommendation.revenue_model}
-                  </p>
-                </div>
-              )}
+                )}
+
+                {recommendation.cac && (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2">
+                      <TrendingUp size={16} className="text-blue-500" />
+                      <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">Unit Economics</h4>
+                    </div>
+                    <div className="p-4 rounded-2xl bg-white dark:bg-slate-800/30 border border-slate-200 dark:border-white/5">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-xs font-medium text-slate-500">Avg. Customer Acquisition</span>
+                        <span className="text-xs font-black text-blue-500">{recommendation.cac}</span>
+                      </div>
+                      <div className="text-[10px] text-slate-400 italic">
+                        *Estimated based on current regional digital advertising and physical marketing benchmarks.
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
 
               {/* Strategic Roadmap Preview */}
               {recommendation.six_month_plan && recommendation.six_month_plan.length > 0 && (
