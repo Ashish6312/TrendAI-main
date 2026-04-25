@@ -613,6 +613,7 @@ Ensure the tone is elite, technical, and data-dense. Respond ONLY with valid JSO
                           <BookOpen size={16} /> Implementation Guide
                         </button>
                       </div>
+                      </div>
                     </div>
                 </motion.div>
               );
