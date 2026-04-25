@@ -166,40 +166,40 @@ class IntegratedBusinessIntelligence:
             STRICT FIDELITY REQUIREMENTS:
             1. NO GENERIC NAMES. Never return names like "Delhi Digital Marketing Agency". Use creative, branded identities (e.g. "PulseFlow Digital", "ZestyBite Logistics").
             2. LOCALIZED ZONES: Specify a specific neighborhood or district in {area} (e.g. "Hauz Khas Village", "Indiranagar 100ft Rd").
-            3. NO PLACEHOLDERS. Fields like 'competitive_advantage' and 'key_success_factors' MUST NOT contain generic text like "Strategic positioning" or "Market penetration". Use data-dense, technical strategies.
-            4. FINANCIAL METRICS: Provide specific, calculated values for 'investment', 'potential_revenue' (annual), and 'cac' (customer acquisition cost).
-            5. ROI & BEP: Every 'roi_percentage' and 'be_period' must be unique and based on realistic market data for {area}.
+            3. EVIDENCE-BASED: The 'description' for at least 3 recommendations MUST mention a specific trend or existing competitor/landmark found in the SCOUTING CONTEXT above to prove authenticity.
+            4. NO PLACEHOLDERS. Fields like 'competitive_advantage' and 'key_success_factors' MUST NOT contain generic text like "Strategic positioning". Use technical, data-dense strategies.
+            5. FINANCIAL METRICS: Provide specific, calculated values for 'investment', 'potential_revenue', and 'cac'.
             6. VOLUME: Provide EXACTLY 12 high-fidelity, distinct recommendations.
             
             Return ONLY valid JSON:
             {{
                 "analysis": {{
-                    "executive_summary": "Hyper-local market outlook for {area} in 2026",
+                    "executive_summary": "Hyper-local market outlook for {area} in 2026 based on real-time scouting of establishments and economic telemetry.",
                     "confidence_score": "X%",
                     "market_gap_intensity": "Low/Medium/High"
                 }},
                 "recommendations": [
                     {{
                         "business_name": "Unique Branded Name",
-                        "description": "Tactical thesis with local nuance",
+                        "description": "Tactical thesis referencing local context (e.g. 'Closing the gap left by [Scouted Business] in [Neighborhood]')",
                         "category": "Sector",
                         "market_gap": "Underserved micro-niche in {area}",
-                        "ideal_neighborhood": "Specific area within {area} (e.g. Connaught Place)",
-                        "target_audience": "Specific demographics (e.g. Gen-Z working professionals)",
+                        "ideal_neighborhood": "Specific area within {area}",
+                        "target_audience": "Specific demographics",
                         "investment": "Specific amount (e.g. ₹12.5L)",
-                        "potential_revenue": "Specific annual revenue (e.g. ₹45L)",
-                        "cac": "Estimated Customer Acquisition Cost (e.g. ₹450/user)",
+                        "potential_revenue": "Specific annual revenue",
+                        "cac": "Estimated CAC",
                         "roi_percentage": number,
-                        "roi_potential": "Projected annual returns (e.g. 55%)",
-                        "be_period": "Break-even target (e.g. 6 Months)",
-                        "m1_traffic": "Projected M1 customer/lead volume",
-                        "retention_rate": "Target retention (e.g. 78%)",
+                        "roi_potential": "Projected annual returns",
+                        "be_period": "Break-even target",
+                        "m1_traffic": "Projected M1 volume",
+                        "retention_rate": "Target retention",
                         "implementation_difficulty": "Low/Medium/High",
-                        "competition_level": "Low/Medium/High with a reason.",
-                        "competitive_advantage": "Technical or operational edge (NO generic text)",
-                        "key_success_factors": "3 specific technical factors (NO generic text)",
-                        "revenue_model": "Specific monetization strategy",
-                        "demand_index": "Numerical index (e.g. 88%)",
+                        "competition_level": "Low/Medium/High",
+                        "competitive_advantage": "Technical or operational edge",
+                        "key_success_factors": "3 specific factors",
+                        "revenue_model": "Specific monetization",
+                        "demand_index": "Numerical index",
                         "six_month_plan": [{{ "month": "1-2", "goal": "..." }}, {{ "month": "3-4", "goal": "..." }}, {{ "month": "5-6", "goal": "..." }}]
                     }}
                 ]
@@ -891,7 +891,8 @@ class IntegratedBusinessIntelligence:
                 
             businesses = await asyncio.to_thread(_scrape)
             if businesses:
-                return f"APIFY: Deep analyzed {len(businesses)} local businesses to identify market saturation for {query}."
+                biz_summary = "\n".join([f"- {b.get('title')} ({b.get('address', 'Local Area')})" for b in businesses[:10]])
+                return f"APIFY LOCAL MARKET ANALYSIS ({area}):\nIdentified the following key establishments to calculate saturation and gaps:\n{biz_summary}"
         except Exception as e:
             print(f"⚠️ Apify swarm component failed: {e}")
         return ""
