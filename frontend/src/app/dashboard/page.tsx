@@ -582,7 +582,7 @@ function DashboardContent() {
   }
 
   return (
-    <div className="min-h-screen bg-white dark:bg-[#020617] relative transition-colors duration-500 pt-20 sm:pt-28 lg:pt-32">
+    <div className="min-h-screen bg-white dark:bg-[#020617] relative transition-colors duration-500 pt-4 sm:pt-6 lg:pt-10">
       <div className="absolute inset-0 bg-slate-50 dark:bg-[#020617] pointer-events-none" />
       <div className="absolute top-0 left-0 w-full h-[500px] bg-emerald-500/[0.03] dark:bg-emerald-500/5 blur-[120px] pointer-events-none" />
 
@@ -775,54 +775,130 @@ function DashboardContent() {
                   </div>
                   {/* Location Suggestions Dropdown - Ultra Professional Redesign */}
                   <AnimatePresence>
-                    {showSuggestions && suggestions.length > 0 && (
+                    {showSuggestions && (
                       <motion.div
                         initial={{ opacity: 0, scale: 0.98, y: 10 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
                         exit={{ opacity: 0, scale: 0.98, y: 10 }}
-                        className="absolute z-[100] w-full mt-3 bg-white dark:bg-[#0a1128] border-2 border-slate-200 dark:border-emerald-500/30 rounded-2xl shadow-[0_30px_90px_-15px_rgba(0,0,0,0.5)] max-h-[400px] overflow-y-auto p-2 scrollbar-hide backdrop-blur-3xl"
+                        className="absolute z-[100] w-full mt-3 bg-white/95 dark:bg-[#0a1128]/95 border-2 border-slate-200 dark:border-emerald-500/30 rounded-2xl shadow-[0_30px_90px_-15px_rgba(0,0,0,0.5)] max-h-[450px] overflow-hidden backdrop-blur-3xl flex flex-col"
                       >
-                        <div className="flex items-center justify-between px-3 py-2 mb-2 border-b border-slate-100 dark:border-white/5">
-                          <div className="text-[10px] font-black text-slate-400 dark:text-gray-500 uppercase tracking-[0.2em]">Verified Locations</div>
+                        {/* Header: Dynamic based on content */}
+                        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 dark:border-white/5 shrink-0 bg-slate-50/50 dark:bg-white/5">
+                          <div className="flex items-center gap-2">
+                            {suggestions.length > 0 ? (
+                              <>
+                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                                <div className="text-[10px] font-black text-slate-400 dark:text-gray-500 uppercase tracking-[0.2em]">Verified Locations</div>
+                              </>
+                            ) : (
+                              <>
+                                <Clock size={12} className="text-blue-500" />
+                                <div className="text-[10px] font-black text-slate-400 dark:text-gray-500 uppercase tracking-[0.2em]">Recent Searches</div>
+                              </>
+                            )}
+                          </div>
                           <div className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-[9px] font-black text-emerald-500 uppercase tracking-widest border border-emerald-500/20">India Only</div>
                         </div>
 
-                        <div className="space-y-1">
-                          {suggestions.map((s, i) => {
-                            const parts = s.display_name.split(',');
-                            const primary = parts[0];
-                            const secondary = parts.slice(1).join(',').trim();
+                        <div className="overflow-y-auto p-2 scrollbar-hide">
+                          {suggestions.length > 0 ? (
+                            <div className="space-y-1">
+                              {suggestions.map((s, i) => {
+                                const parts = s.display_name.split(',');
+                                const primary = parts[0];
+                                const secondary = parts.slice(1).join(',').trim();
 
-                            return (
-                              <button
-                                key={i}
-                                type="button"
+                                return (
+                                  <button
+                                    key={i}
+                                    type="button"
+                                    onMouseDown={(e) => {
+                                      e.preventDefault();
+                                      handleSelectSuggestion(s);
+                                    }}
+                                    className="w-full text-left p-4 rounded-xl hover:bg-slate-50 dark:hover:bg-white/5 transition-all group border border-transparent hover:border-slate-200 dark:hover:border-white/10 flex items-center gap-4"
+                                  >
+                                    <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-slate-100 dark:bg-white/5 flex items-center justify-center group-hover:bg-emerald-500/10 group-hover:text-emerald-500 transition-all border border-transparent group-hover:border-emerald-500/20">
+                                      <MapPin size={18} className="text-slate-400 group-hover:text-emerald-500 transition-colors" />
+                                    </div>
+
+                                    <div className="flex-grow min-w-0">
+                                      <div className="text-sm font-black text-slate-900 dark:text-white group-hover:text-emerald-500 transition-colors truncate">
+                                        {primary}
+                                      </div>
+                                      <div className="text-[11px] font-medium text-slate-500 dark:text-gray-400 truncate opacity-80 group-hover:opacity-100 transition-opacity">
+                                        {secondary}
+                                      </div>
+                                    </div>
+
+                                    <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-all -translate-x-2 group-hover:translate-x-0">
+                                      <ChevronRight size={16} className="text-emerald-500" />
+                                    </div>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          ) : area.length === 0 && history.length > 0 ? (
+                            <div className="space-y-1">
+                              {history.slice(0, 5).map((item, i) => (
+                                <button
+                                  key={i}
+                                  type="button"
+                                  onMouseDown={(e) => {
+                                    e.preventDefault();
+                                    loadFromHistory(item);
+                                  }}
+                                  className="w-full text-left p-4 rounded-xl hover:bg-slate-50 dark:hover:bg-white/5 transition-all group border border-transparent hover:border-slate-200 dark:hover:border-white/10 flex items-center gap-4"
+                                >
+                                  <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-blue-500/5 dark:bg-blue-500/10 flex items-center justify-center group-hover:bg-blue-500/20 group-hover:text-blue-500 transition-all">
+                                    <Clock size={18} className="text-blue-400/60 group-hover:text-blue-500 transition-colors" />
+                                  </div>
+
+                                  <div className="flex-grow min-w-0">
+                                    <div className="text-sm font-bold text-slate-700 dark:text-slate-200 group-hover:text-blue-500 transition-colors truncate">
+                                      {item.area}
+                                    </div>
+                                    <div className="text-[10px] font-medium text-slate-400 dark:text-gray-500 uppercase tracking-widest">
+                                      {new Date(item.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                                    </div>
+                                  </div>
+
+                                  <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-all -translate-x-2 group-hover:translate-x-0">
+                                    <ArrowRight size={14} className="text-blue-500" />
+                                  </div>
+                                </button>
+                              ))}
+                            </div>
+                          ) : area.length > 0 && area.length <= 2 ? (
+                            <div className="py-8 px-4 text-center">
+                              <div className="text-xs font-bold text-slate-400 dark:text-gray-500 uppercase tracking-[0.2em] animate-pulse">
+                                Keep typing to search...
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="py-12 px-4 text-center">
+                              <div className="w-12 h-12 rounded-2xl bg-slate-100 dark:bg-white/5 flex items-center justify-center mx-auto mb-4">
+                                <Globe size={24} className="text-slate-300 dark:text-slate-600" />
+                              </div>
+                              <div className="text-sm font-bold text-slate-500 dark:text-gray-400 mb-1">No matches found</div>
+                              <div className="text-[11px] font-medium text-slate-400 dark:text-gray-500 uppercase tracking-widest">Try a different region in India</div>
+                            </div>
+                          )}
+                        </div>
+                        
+                        {history.length > 0 && suggestions.length > 0 && (
+                           <div className="p-3 bg-slate-50/50 dark:bg-white/5 border-t border-slate-100 dark:border-white/5 flex justify-center">
+                              <button 
                                 onMouseDown={(e) => {
                                   e.preventDefault();
-                                  handleSelectSuggestion(s);
+                                  setArea("");
                                 }}
-                                className="w-full text-left p-4 rounded-xl hover:bg-slate-50 dark:hover:bg-white/5 transition-all group border border-transparent hover:border-slate-200 dark:hover:border-white/10 flex items-center gap-4"
+                                className="text-[10px] font-black text-blue-500 hover:text-blue-600 uppercase tracking-widest transition-colors"
                               >
-                                <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-slate-100 dark:bg-white/5 flex items-center justify-center group-hover:bg-emerald-500/10 group-hover:text-emerald-500 transition-all border border-transparent group-hover:border-emerald-500/20">
-                                  <MapPin size={18} className="text-slate-400 group-hover:text-emerald-500 transition-colors" />
-                                </div>
-
-                                <div className="flex-grow min-w-0">
-                                  <div className="text-sm font-black text-slate-900 dark:text-white group-hover:text-emerald-500 transition-colors truncate">
-                                    {primary}
-                                  </div>
-                                  <div className="text-[11px] font-medium text-slate-500 dark:text-gray-400 truncate opacity-80 group-hover:opacity-100 transition-opacity">
-                                    {secondary}
-                                  </div>
-                                </div>
-
-                                <div className="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-all -translate-x-2 group-hover:translate-x-0">
-                                  <ChevronRight size={16} className="text-emerald-500" />
-                                </div>
+                                Clear to see history
                               </button>
-                            );
-                          })}
-                        </div>
+                           </div>
+                        )}
                       </motion.div>
                     )}
                   </AnimatePresence>
@@ -893,13 +969,15 @@ function DashboardContent() {
                 )}
               </form>
             </UniformCard>
-            {/* Recent Searches Card */}
+            {/* Recent Searches Card - Intelligent conditional visibility */}
             <UniformCard
               title={t('dash_recent_searches')}
               icon={<Clock className="w-4 h-4 sm:w-5 sm:h-5" />}
               variant="default"
               size="md"
-              className="shadow-2xl border-2 border-slate-200/50 dark:border-white/5 bg-white/80 dark:bg-[#060b1e]/40 backdrop-blur-2xl relative z-20"
+              className={`shadow-2xl border-2 border-slate-200/50 dark:border-white/5 bg-white/80 dark:bg-[#060b1e]/40 backdrop-blur-2xl transition-all duration-500 ${
+                showSuggestions ? 'opacity-20 pointer-events-none scale-[0.98] blur-sm' : 'opacity-100 relative z-20'
+              }`}
             >
               <div className="flex items-center justify-between mb-6">
                 <span className="text-[11px] font-medium text-slate-600 dark:text-gray-400">{t('dash_history_desc')}</span>
