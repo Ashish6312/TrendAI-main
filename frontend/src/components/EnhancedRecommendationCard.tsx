@@ -34,6 +34,7 @@ interface RecommendationData {
   revenue_model?: string;
   key_success_factors?: string;
   category?: string;
+  ideal_neighborhood?: string;
   ai_source?: string;
   six_month_plan?: (string | { month: string; goal: string })[];
 }
@@ -172,14 +173,14 @@ export default function EnhancedRecommendationCard({
             </div>
           </div>
 
-          {/* Market Size */}
+          {/* Market Size / Neighborhood */}
           <div className="p-3 bg-blue-500/5 rounded-xl border border-slate-700/50">
             <div className="flex items-center gap-2 mb-1">
               <BarChart3 size={14} className="text-blue-500" />
-              <span className="text-xs font-bold text-blue-400 uppercase tracking-wider">Market</span>
+              <span className="text-xs font-bold text-blue-400 uppercase tracking-wider">Location</span>
             </div>
-            <div className="text-sm font-bold text-blue-300">
-              {recommendation.market_size || 'Regional'}
+            <div className="text-sm font-bold text-blue-300 truncate">
+              {recommendation.ideal_neighborhood || recommendation.market_size || 'Regional'}
             </div>
           </div>
         </div>

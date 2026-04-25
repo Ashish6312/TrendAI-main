@@ -164,28 +164,29 @@ class IntegratedBusinessIntelligence:
             {scouting_context if scouting_context else "Synthesize market gaps based on general geographic trends."}
             
             STRICT FIDELITY REQUIREMENTS:
-            1. NO PLACEHOLDERS. Every field must have a specific, calculated value.
-            2. CALC-ROI: Every 'roi_percentage' must be unique (e.g. 52, 118).
-            3. BEP-VAL: Specific 'be_period' (e.g. '4.5 Months', '1.2 Years').
-            4. TRAFFIC: 'm1_traffic' (e.g. '1.5k MAU', '125 local leads').
-            5. RETENTION: 'retention_rate' (e.g. '82%', 'High Repeat LTV').
-            6. VOLUME: Provide EXACTLY 15 high-fidelity recommendations. Do not truncate.
+            1. NO GENERIC NAMES. Never return names like "Delhi Digital Marketing Agency" or "Mumbai Food Delivery". Use creative, branded identities (e.g. "PulseFlow Digital", "ZestyBite Logistics").
+            2. LOCALIZED ZONES: Every recommendation MUST specify a specific neighborhood or district in {area} where this business should open (e.g. "Hauz Khas Village", "Indiranagar 100ft Rd").
+            3. NO PLACEHOLDERS. Every field must have a specific, calculated value.
+            4. CALC-ROI: Every 'roi_percentage' must be unique (e.g. 52, 118).
+            5. BEP-VAL: Specific 'be_period' (e.g. '4.5 Months', '1.2 Years').
+            6. VOLUME: Provide EXACTLY 12 high-fidelity, distinct recommendations.
             
             Return ONLY valid JSON:
             {{
                 "analysis": {{
-                    "executive_summary": "Deep market outlook specific to {area} in 2026",
+                    "executive_summary": "Hyper-local market outlook for {area} in 2026",
                     "confidence_score": "X%",
                     "market_gap_intensity": "Low/Medium/High"
                 }},
                 "recommendations": [
                     {{
-                        "business_name": "Unique Venture Name",
-                        "description": "Tactical thesis",
+                        "business_name": "Unique Branded Name",
+                        "description": "Tactical thesis with local nuance",
                         "category": "Sector",
                         "market_gap": "Underserved micro-niche in {area}",
-                        "target_audience": "Specific demographics",
-                        "investment_range": "e.g. ₹15.5L",
+                        "ideal_neighborhood": "Specific area within {area} (e.g. Connaught Place)",
+                        "target_audience": "Specific demographics (e.g. Gen-Z working professionals)",
+                        "investment": "Specific amount (e.g. ₹12.5L)",
                         "roi_percentage": number,
                         "roi_potential": "Projected annual returns (e.g. 55%)",
                         "be_period": "Break-even target (e.g. 6 Months)",
@@ -194,7 +195,6 @@ class IntegratedBusinessIntelligence:
                         "implementation_difficulty": "Low/Medium/High",
                         "competition_level": "Low/Medium/High with a reason.",
                         "demand_index": "Numerical index (e.g. 88%)",
-                        "market_size": "City/State scope",
                         "six_month_plan": [{{ "month": "1-2", "goal": "..." }}, {{ "month": "3-4", "goal": "..." }}, {{ "month": "5-6", "goal": "..." }}]
                     }}
                 ]
