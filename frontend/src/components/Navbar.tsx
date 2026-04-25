@@ -101,7 +101,7 @@ export default function Navbar() {
         </div>
 
         {/* CENTER: NAV LINKS (Desktop) */}
-        <div className="hidden lg:flex flex-1 justify-center items-center gap-6 xl:gap-10">
+        <div className="hidden lg:flex flex-1 justify-center items-center gap-4 xl:gap-8">
           {navLinks.map((link) => {
             const isActive = isActivePage(link.path);
             return (
@@ -109,7 +109,7 @@ export default function Navbar() {
                 key={link.path}
                 href={link.path}
                 onClick={link.path !== '/dashboard' ? clearSearch : undefined}
-                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-300 group relative ${isActive
+                className={`flex items-center gap-2.5 px-6 py-2.5 rounded-2xl text-[10px] font-black uppercase tracking-[0.25em] transition-all duration-300 group relative ${isActive
                     ? 'text-slate-900 dark:text-white'
                     : 'text-slate-500 dark:text-gray-500 hover:text-slate-900 dark:hover:text-white'
                   }`}
@@ -117,13 +117,28 @@ export default function Navbar() {
                 {isActive && (
                   <motion.div
                     layoutId="nav-active"
-                    className="absolute inset-0 bg-slate-900/5 dark:bg-white/5 border border-slate-900/10 dark:border-white/10 rounded-xl shadow-sm"
+                    className="absolute inset-0 bg-slate-900/5 dark:bg-white/[0.05] border border-slate-900/10 dark:border-white/10 rounded-2xl shadow-[0_4px_12px_rgba(0,0,0,0.1)] dark:shadow-[0_0_20px_rgba(255,255,255,0.02)]"
                     initial={false}
-                    transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+                    transition={{ type: "spring", bounce: 0.15, duration: 0.5 }}
                   />
                 )}
+                
+                {/* Hover Glow Effect */}
+                {!isActive && (
+                  <div className="absolute inset-0 opacity-0 group-hover:opacity-100 bg-slate-400/5 dark:bg-white/[0.02] rounded-2xl transition-all duration-300" />
+                )}
+
                 <span className="relative z-10">{link.label}</span>
-                {link.icon && <link.icon size={12} className={`relative z-10 ${isActive ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400 dark:text-gray-600 group-hover:text-blue-600 dark:group-hover:text-blue-400'}`} />}
+                {link.icon && (
+                  <link.icon 
+                    size={14} 
+                    className={`relative z-10 transition-all duration-300 ${
+                      isActive 
+                        ? 'text-teal-500 dark:text-[#2dd4bf] drop-shadow-[0_0_8px_rgba(45,212,191,0.5)]' 
+                        : 'text-slate-400 dark:text-gray-600 group-hover:text-teal-500 dark:group-hover:text-[#2dd4bf]'
+                    }`} 
+                  />
+                )}
               </Link>
             );
           })}

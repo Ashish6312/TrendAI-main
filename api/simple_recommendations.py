@@ -90,22 +90,27 @@ def parse_real_location_data(area: str) -> Dict[str, Any]:
                 
             if content:
                 import re
+                # Robust extraction and repair
+                content = re.sub(r'```json\s*|\s*```', '', content).strip()
                 json_match = re.search(r'(\{.*\})', content, re.DOTALL)
                 if json_match:
-                    json_str = json_match.group(1)
+                    json_str = json_match.group(1).strip()
+                    # Neural Repair
+                    json_str = re.sub(r'\}\s*\{', '}, {', json_str)
+                    json_str = re.sub(r',\s*\}', '}', json_str)
+                    json_str = re.sub(r',\s*\]', ']', json_str)
+                    
                     try:
                         iso_data = json.loads(json_str)
                     except json.JSONDecodeError:
-                        # Support AI using single quotes by mistake, but only if safe
+                        # Final attempt: manual quote fix
                         if "'" in json_str and '"' not in json_str:
                              json_str = json_str.replace("'", '"')
                              iso_data = json.loads(json_str)
                         else:
                              raise
                 else:
-                    # Final attempt: manual cleanup
-                    content = content.replace("```json", "").replace("```", "").strip()
-                    iso_data = json.loads(content)
+                    raise Exception("No JSON structure found in response")
             else:
                 raise Exception("Location resolution empty")
             

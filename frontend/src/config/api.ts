@@ -1,7 +1,7 @@
 // API Configuration - Centralized API URL management
 export const API_CONFIG = {
   // Priority: 1. ENV Var, 2. Vercel Backend (New Default), 3. Render Fallback (Legacy)
-  baseURL: process.env.NEXT_PUBLIC_API_URL || 'https://starterscopebackend-git-master-ashish-sharmas-projects-7e8014b8.vercel.app',
+  baseURL: process.env.NEXT_PUBLIC_API_URL || 'https://starterscope-api.onrender.com',
   timeout: 30000,
 };
 

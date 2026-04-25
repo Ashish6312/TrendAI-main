@@ -120,7 +120,7 @@ class IntegratedBusinessIntelligence:
             if area_key in self._scouting_cache:
                 await push_ws_status("Cache hit: Regional intelligence found.")
                 print(f"[SCOUTING CACHE] Instant retrieval of market intelligence for {area}.")
-                rag_context = self._scouting_cache[area_key]
+                scouting_context = self._scouting_cache[area_key]
             else:
                 await push_ws_status("Engaging Deep Extraction Layer (Apify + Firecrawl)...")
                 try:
@@ -145,11 +145,11 @@ class IntegratedBusinessIntelligence:
                 
                 # --- STAGE 2: RAG CONTEXT COMPILATION ---
                 await push_ws_status("Synthesizing Semantic RAG blocks...")
-                rag_context = self._compile_rag_block(g_data, r_data, w_data, f_data)
+                scouting_context = self._compile_rag_block(g_data, r_data, w_data, f_data)
                 
                 # 💾 SAVE TO PERSISTENT CACHE
-                if rag_context:
-                    self._scouting_cache[area_key] = rag_context
+                if scouting_context:
+                    self._scouting_cache[area_key] = scouting_context
                     self._save_scouting_cache()
             
             # --- STAGE 3: CONSTRUCT NEURAL PROMPT & RUN CLUSTER ---
@@ -161,7 +161,7 @@ class IntegratedBusinessIntelligence:
             Language: {language}
             
             Market Intelligence Context (RAG):
-            {rag_context if rag_context else "Synthesize market gaps based on general geographic trends."}
+            {scouting_context if scouting_context else "Synthesize market gaps based on general geographic trends."}
             
             STRICT FIDELITY REQUIREMENTS:
             1. NO PLACEHOLDERS. Every field must have a specific, calculated value.
@@ -201,7 +201,7 @@ class IntegratedBusinessIntelligence:
             }}
             """
             
-            final_insights = await self._run_analysis_cluster(cluster_prompt, area, language)
+            final_insights = await self._run_analysis_cluster(cluster_prompt, area, language, scouting_context)
             
             if not final_insights or not final_insights.get("success"):
                  return {"success": False, "message": "Analysis system temporarily unavailable."}
@@ -228,7 +228,7 @@ class IntegratedBusinessIntelligence:
                 "analysis": final_insights.get("analysis", {}),
                 "timestamp": datetime.now().isoformat(),
                 "ai_source": final_insights.get("ai_source", "Tiered-Cluster V4.2"),
-                "intelligence_fidelity": "High-Fidelity RAG" if rag_context else "Baseline Synthesis"
+                "intelligence_fidelity": "High-Fidelity RAG" if scouting_context else "Baseline Synthesis"
             }
             
             self._final_recommendations_cache[cache_key] = (final_result, now + self._cache_expiry)
@@ -305,25 +305,7 @@ class IntegratedBusinessIntelligence:
                 json_raw = resp.json()['candidates'][0]['content']['parts'][0]['text']
                 
                 # Robust extraction with syntax normalization
-                data = None
-                try:
-                    # Stage 1: Standard Extraction
-                    match = re.search(r'(\{.*\})', json_raw, re.DOTALL)
-                    if match:
-                        clean_json = match.group(1).strip()
-                        data = json.loads(clean_json)
-                except Exception:
-                    # Stage 2: Neural JSON Repair (Fixing missing commas or trailing commas in AI arrays)
-                    try:
-                        repaired = re.sub(r',\s*\}', '}', json_raw)
-                        repaired = re.sub(r',\s*\]', ']', repaired)
-                        # Fix common missing comma between objects in array: } { -> }, {
-                        repaired = re.sub(r'\}\s*\{', '}, {', repaired)
-                        match = re.search(r'(\{.*\})', repaired, re.DOTALL)
-                        if match:
-                             data = json.loads(match.group(1))
-                    except: pass
-
+                data = self._robust_json_extract(json_raw)
                 if not data:
                     logger.error("[FAIL] Gemini Layer: No valid/repairable JSON found in response.")
                     return None
@@ -483,7 +465,31 @@ class IntegratedBusinessIntelligence:
         - Language: {lang}
         """
 
-    async def _run_analysis_cluster(self, cluster_prompt: str, area: str, lang: str) -> Dict[str, Any]:
+    def _robust_json_extract(self, text: str) -> Optional[Dict]:
+        """Neural JSON Repair & Extraction Logic"""
+        if not text: return None
+        try:
+            # Stage 1: Standard Cleanup
+            text = re.sub(r'```json\s*|\s*```', '', text).strip()
+            
+            # Stage 2: Deep Extraction
+            match = re.search(r'(\{.*\})', text, re.DOTALL)
+            if not match: return None
+            json_str = match.group(1).strip()
+            
+            # Stage 3: Neural Repair (Fixing AI hallucinations in JSON)
+            # Fix missing commas between objects in array: } { -> }, {
+            json_str = re.sub(r'\}\s*\{', '}, {', json_str)
+            # Fix trailing commas in objects and arrays
+            json_str = re.sub(r',\s*\}', '}', json_str)
+            json_str = re.sub(r',\s*\]', ']', json_str)
+            
+            return json.loads(json_str)
+        except Exception as e:
+            print(f"[REPAIR-FAIL] JSON repair failed: {e}")
+            return None
+
+    async def _run_analysis_cluster(self, cluster_prompt: str, area: str, lang: str, scouting_context: str = None) -> Dict[str, Any]:
         """Multi-layer Singularity Cluster (Gemini 2.0 -> Groq R1-Distill -> Baseline)"""
         # --- LAYER 1: GOOGLE GEMINI 2.5 FLASH (Main Intelligence + Claude Critic) ---
         retry_count = 2 # Restored retries for high-fidelity accuracy
@@ -546,11 +552,17 @@ class IntegratedBusinessIntelligence:
             print("[CLUSTER] Initiating Layer 4: Pollinations AI (Strategic Hub)...")
             await push_ws_status("Exhausting primary layers. Deploying Pollinations Fallback...")
             # Use the specialized search-gpt logic which handles prompt synthesis & Pollinations connectivity
-            res = await self._call_search_gpt(area, rag_context, lang)
+            # Pass scouting_context explicitly to avoid any scope issues
+            res = await self._call_search_gpt(area, scouting_context, lang)
             if res and res.get("success"):
                 return res
         except Exception as e:
-            print(f"[FAIL] [POLLINATIONS_FAILED]: {e}")
+            # Enhanced error logging for debugging
+            import traceback
+            error_details = traceback.format_exc()
+            print(f"[FAIL] [POLLINATIONS_FAILED] Context available: {scouting_context is not None}")
+            print(f"[FAIL] [POLLINATIONS_FAILED] Error: {e}")
+            print(f"[DEBUG] Full Traceback: {error_details}")
             
         return {"success": False, "message": "Neural synchronization failed. Please check your system quotas or connectivity."}
 
@@ -582,10 +594,9 @@ class IntegratedBusinessIntelligence:
                     content = data['choices'][0]['message']['content']
                     # Clean up <think> blocks from R1 models
                     content = re.sub(r'<think>.*?</think>', '', content, flags=re.DOTALL).strip()
-                    content = re.sub(r'```json\s*|\s*```', '', content).strip()
-                    match = re.search(r'\{.*\}', content, re.DOTALL)
-                    if match:
-                        json_data = json.loads(match.group())
+                    
+                    json_data = self._robust_json_extract(content)
+                    if json_data:
                         return {
                             "success": True,
                             "recommendations": json_data["recommendations"],

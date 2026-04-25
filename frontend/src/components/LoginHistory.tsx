@@ -44,7 +44,7 @@ export default function LoginHistory({ userEmail }: LoginHistoryProps) {
       if (!userEmail) return;
       
       try {
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://starterscopebackend-git-master-ashish-sharmas-projects-7e8014b8.vercel.app';
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://starterscope-api.onrender.com';
         const response = await fetch(`${apiUrl}/api/users/${userEmail}/sessions?limit=10`);
         
         if (response.ok) {
