@@ -4,24 +4,71 @@ services:
     env: python
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
-    port: 10000
     envVars:
       - key: PYTHON_VERSION
         value: 3.12.3
       - key: DATABASE_URL
         sync: false
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ALGORITHM
+        value: HS256
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "30"
+      - key: LOG_LEVEL
+        value: INFO
+      - key: ALLOWED_ORIGINS
+        value: "http://localhost:3000,http://localhost:3002,https://starterscope.entrext.com,https://trend-ai-sand.vercel.app"
+      - key: FRONTEND_URL
+        value: "https://starterscope.entrext.com"
       - key: POLLINATION_API_KEY
         sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: CLAUDE_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: AIML_API_KEY
+        sync: false
+      - key: AIC_API_KEY
+        sync: false
+      - key: AIC_BASE_URL
+        value: "https://api.ai.cc/v1"
       - key: SERPAPI_API_KEY
         sync: false
-      - key: GEMINI_API_KEY
+      - key: APIFY_API_KEY
+        sync: false
+      - key: FIRECRAWL_API_KEY
+        sync: false
+      - key: TAVILY_API_KEY
+        sync: false
+      - key: EXA_API_KEY
+        sync: false
+      - key: SERPER_API_KEY
+        sync: false
+      - key: SEARCHAPI_API_KEY
+        sync: false
+      - key: ALPHA_VANTAGE_API_KEY
+        sync: false
+      - key: FRED_API_KEY
+        sync: false
+      - key: CSCAPI_KEY
+        sync: false
+      - key: REDDIT_USERNAME
+        sync: false
+      - key: REDDIT_PASSWORD
+        sync: false
+      - key: REDDIT_CLIENT_ID
+        sync: false
+      - key: REDDIT_CLIENT_SECRET
         sync: false
       - key: DODO_PAYMENTS_API_KEY
         sync: false
       - key: DODO_WEBHOOK_KEY
         sync: false
       - key: EMAIL_HOST
-        value: smtp.gmail.com
+        value: "smtp.gmail.com"
       - key: EMAIL_PORT
         value: "587"
       - key: EMAIL_USER

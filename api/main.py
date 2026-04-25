@@ -106,7 +106,7 @@ if os.getenv("VERCEL_URL"):
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
-    allow_origin_regex=r"^(https?://.*\.vercel\.app|https?://.*\.entrext\.com|https?://localhost(:\d+)?)$",
+    allow_origin_regex=r"^(https?://.*\.vercel\.app|https?://.*\.entrext\.com|https?://entrext\.com|https?://localhost(:\d+)?)$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
