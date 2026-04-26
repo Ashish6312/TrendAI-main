@@ -262,7 +262,7 @@ class IntegratedBusinessIntelligence:
         
         # 1. Try Pollinations for a realistic AI-generated fallback
         try:
-            pollinations_prompt = f"Generate 12 high-fidelity business recommendations for {area}. Return valid JSON ONLY with 'analysis' and 'recommendations' keys. Every item must have unique business_name, description, investment, and roi_potential."
+            pollinations_prompt = f"Generate 12 high-fidelity, realistic business recommendations for {area}, India. Every item MUST have: business_name, description, category, investment_range (e.g. ₹15L), potential_revenue (e.g. ₹40L/Year), roi_potential (e.g. 85%), implementation_difficulty (Low/Medium/High), market_size, and payback_period. Return valid JSON ONLY."
             res = await self._call_pollinations_fallback(area, pollinations_prompt, language)
             if res and res.get("success") and res.get("recommendations"):
                 print(f"[FALLBACK-SUCCESS] Pollinations delivered neural fallback for {area}")
@@ -302,15 +302,15 @@ class IntegratedBusinessIntelligence:
             invest = random.randint(5, 50)
             rev = invest * random.uniform(0.15, 0.45)
             recs.append({
-                "title": n["title"],
+                "business_name": n["title"],
                 "description": n["desc"].format(area=area),
                 "category": n["cat"],
                 "market_gap": f"Lack of specialized {n['cat'].lower()} solutions in the {area} region.",
                 "target_audience": "Local entrepreneurs and residents",
-                "investment": f"₹{invest}L",
+                "investment_range": f"₹{invest}L",
                 "potential_revenue": f"₹{rev:.1f}L/Year",
-                "roi_percentage": random.randint(25, 180),
-                "difficulty": random.choice(["Low", "Medium", "High"]),
+                "roi_potential": f"{random.randint(25, 180)}%",
+                "implementation_difficulty": random.choice(["Low", "Medium", "High"]),
                 "market_size": f"₹{random.randint(2, 20)}Cr",
                 "payback_period": f"{random.randint(6, 24)} Months",
                 "unique_selling_proposition": "First-mover advantage in this specific micro-market.",
@@ -585,7 +585,7 @@ class IntegratedBusinessIntelligence:
             try:
                 print(f"[CLUSTER] Initiating Layer 1 (Attempt {attempt+1}): Gemini 2.5 Flash...")
                 if attempt > 0:
-                    await push_ws_status(f"Re-synchronizing Neural Core (Refined Attempt {attempt+1})...")
+                    await push_ws_status(f"Calibrating Neural Synthesis (Step {attempt+1})...")
                 
                 gemini_result = await self._call_gemini_flash(area, cluster_prompt, lang)
                 if gemini_result and gemini_result.get("success") and gemini_result.get("recommendations"):
@@ -638,7 +638,7 @@ class IntegratedBusinessIntelligence:
         # --- LAYER 4: POLLINATIONS CLUSTER (Absolute Strategic Hub) ---
         try:
             print("[CLUSTER] Initiating Layer 4: Pollinations AI (Strategic Hub)...")
-            await push_ws_status("Exhausting primary layers. Deploying Pollinations Fallback...")
+            await push_ws_status("Refining local market intelligence...")
             # Use the specialized search-gpt logic which handles prompt synthesis & Pollinations connectivity
             # Pass scouting_context explicitly to avoid any scope issues
             res = await self._call_search_gpt(area, scouting_context, lang)
