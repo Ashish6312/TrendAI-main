@@ -170,6 +170,7 @@ class IntegratedBusinessIntelligence:
             4. NO PLACEHOLDERS. Fields like 'competitive_advantage' and 'key_success_factors' MUST NOT contain generic text like "Strategic positioning". Use technical, data-dense strategies.
             5. FINANCIAL METRICS: Provide specific, calculated values for 'investment', 'potential_revenue', and 'cac'.
             6. VOLUME: Provide EXACTLY 12 high-fidelity, distinct recommendations.
+            7. NO EXCUSES: If the scouting context is thin, you MUST use your internal knowledge of {area} and regional economic indicators to synthesize REALISTIC opportunities. Do NOT return an empty list.
             
             Return ONLY valid JSON:
             {{
@@ -826,8 +827,13 @@ class IntegratedBusinessIntelligence:
         if self.searchapi_key: tasks.append(asyncio.create_task(self._scout_searchapi(area)))
         if self.firecrawl_key: tasks.append(asyncio.create_task(self._scout_firecrawl(area)))
         
-        # PRO DATA: Deep extraction for local intelligence (Apify)
+        # PRO DATA: Deep extraction for local intelligence (Apify Google Maps)
         if self.apify_key: tasks.append(asyncio.create_task(self._scout_apify_businesses(area)))
+        
+        # ADDED: Search for broader area context to ensure real data exists
+        if "," in area:
+            broad = area.split(",")[-2].strip() if len(area.split(",")) > 1 else area.split(",")[-1].strip()
+            tasks.append(asyncio.create_task(self._scout_tavily(f"business trends and gaps in {broad} 2026")))
         
         if not tasks: return ""
         
