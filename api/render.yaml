@@ -18,7 +18,7 @@ services:
       - key: LOG_LEVEL
         value: INFO
       - key: ALLOWED_ORIGINS
-        value: "http://localhost:3000,http://localhost:3002,https://starterscope.entrext.com,https://trend-ai-sand.vercel.app"
+        value: "http://localhost:3000,http://localhost:3002,https://starterscope.entrext.com,https://trend-ai-sand.vercel.app,https://starterupscope.vercel.app"
       - key: FRONTEND_URL
         value: "https://starterscope.entrext.com"
       - key: POLLINATION_API_KEY

@@ -94,7 +94,8 @@ ALLOWED_ORIGINS = [
     "https://starterscope.entrext.com",
     "http://starterscope.entrext.com",
     "https://trend-ai-main.vercel.app",
-    "https://trend-ai-sand.vercel.app"
+    "https://trend-ai-sand.vercel.app",
+    "https://starterupscope.vercel.app"
 ]
 # Dynamic additions from env
 env_origins = os.getenv("ALLOWED_ORIGINS", "")
