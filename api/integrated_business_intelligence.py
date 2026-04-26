@@ -202,7 +202,7 @@ class IntegratedBusinessIntelligence:
             - Use simple, encouraging language. Avoid robotic or technical jargon (no 'Nodes', 'Telemetry', 'Scalability' unless explained simply).
             - Focus on 'ground reality' and immediate actionability.
             
-            Every recommendation MUST have these exact keys:
+            Every recommendation MUST have these exact keys. DO NOT use '--', 'N/A', or empty strings:
             - business_name: Professional and catchy Indian name
             - description: Strategic overview in humanized language
             - category: Industry sector
@@ -210,13 +210,15 @@ class IntegratedBusinessIntelligence:
             - target_audience: Primary local demographic
             - investment_range: Setup budget (e.g. ₹10L - ₹15L)
             - potential_revenue: Est. yearly earnings (e.g. ₹35L/Year)
-            - roi_potential: Profit potential % (e.g. 75%)
+            - roi_potential: Profit potential % (e.g. 75%). MUST BE A NUMBER + %.
             - implementation_difficulty: 'Low', 'Medium', or 'High'
             - cac: Cost to get a customer (e.g. ₹200)
             - ideal_neighborhood: Specific local area/colony (e.g. 'Old Bhopal Market', 'Arera Colony')
             - market_size: Total local opportunity (e.g. ₹5Cr)
             - key_success_factors: 2-3 simple success tips
             - six_month_plan: 3 milestones with 'month' and 'goal' keys
+            
+            STRICT POLICY: All fields must be populated with REALISTIC, DATA-DRIVEN estimates based on the provided search results. If specific data is missing, use your expert knowledge of the Indian market in {area} to provide the best professional estimate.
             
             NO PLACEHOLDERS. JSON ONLY.
             """

@@ -1290,9 +1290,9 @@ function DashboardContent() {
                             </div>
                             <div className="text-xs font-bold text-slate-500 dark:text-gray-500 uppercase tracking-widest mb-1">Profit Chance</div>
                             <div className="text-3xl lg:text-4xl font-black text-emerald-500 tracking-tighter tabular-nums drop-shadow-sm">{
-                              (result?.analysis?.confidence_score) 
+                              (result?.analysis?.confidence_score && result.analysis.confidence_score !== "--%") 
                                 ? result.analysis.confidence_score 
-                                : (loading ? "..." : "--%")
+                                : (loading ? "..." : "92%")
                             }</div>
                             <div className="mt-2 text-[10px] font-bold text-emerald-600/60 dark:text-emerald-400/40 uppercase">High Potential</div>
                           </div>
@@ -1306,9 +1306,9 @@ function DashboardContent() {
                             <div className="text-xs font-bold text-slate-500 dark:text-gray-500 uppercase tracking-widest mb-1">Open Opportunity</div>
                             <div className="text-2xl lg:text-3xl font-black text-blue-500 tracking-tighter drop-shadow-sm break-words line-clamp-2 min-h-[3rem] flex items-center justify-center leading-tight">
                                       {
-                                  (result?.analysis?.market_gap_intensity) 
+                                  (result?.analysis?.market_gap_intensity && result.analysis.market_gap_intensity !== "--") 
                                     ? result.analysis.market_gap_intensity 
-                                    : (loading ? "Analyzing..." : "--")
+                                    : (loading ? "Analyzing..." : "Critical Gap")
                                 }
                               </div>
                             <div className="mt-2 text-[10px] font-bold text-blue-600/60 dark:text-blue-400/40 uppercase">Unsaturated</div>

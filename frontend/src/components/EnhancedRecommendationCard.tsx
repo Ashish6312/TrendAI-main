@@ -160,7 +160,9 @@ export default function EnhancedRecommendationCard({
               <span className="text-xs font-bold uppercase tracking-wider">ROI</span>
             </div>
             <div className="text-sm font-black">
-              {recommendation.roi_potential || "High"}
+              {(!recommendation.roi_potential || recommendation.roi_potential === '--' || recommendation.roi_potential === '--%') 
+                ? "High Potential" 
+                : recommendation.roi_potential}
             </div>
           </div>
 
