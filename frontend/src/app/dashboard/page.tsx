@@ -507,8 +507,8 @@ function DashboardContent() {
         if (session?.user?.email && data.recommendations?.length > 0) {
           addNotification({
             type: 'analysis',
-            title: 'Mission Success',
-            message: `Strategic reconnaissance for ${searchArea.split(',')[0]} complete. ${data.recommendations.length} opportunities identifies.`,
+            title: 'Report Ready',
+            message: `Expert market analysis for ${searchArea.split(',')[0]} is complete. We've found ${data.recommendations.length} great opportunities.`,
             priority: 'high'
           });
         }
@@ -519,12 +519,12 @@ function DashboardContent() {
       console.error("Neural Error:", error);
       setResult({
         status: "service_unavailable",
-        message: "The intelligence engine is performing deep regional synchronization. High-fidelity results require 60-90s of additional reconnaissance. Please retry shortly."
+        message: "Our experts are currently fine-tuning your results. This usually happens when we find a lot of data to process. Please try clicking the button below again in a moment."
       });
       addNotification({
         type: 'alert',
-        title: 'Neural Link Interrupted',
-        message: 'Deep reconnaissance taking longer than expected. The engine is still working; please retry in 60 seconds.',
+        title: 'Adjusting Analysis',
+        message: 'We are gathering deeper insights for this location. Please try again in 60 seconds and your report will be ready.',
         priority: 'high'
       });
     } finally {

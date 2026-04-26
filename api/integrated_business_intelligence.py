@@ -224,7 +224,7 @@ class IntegratedBusinessIntelligence:
                      await push_ws_status(f"Looking into {broad_area} for even better results...")
                      return await self.generate_data_driven_recommendations(broad_area, email, language, phase)
                  
-                 return {"success": False, "message": "Analysis system temporarily unavailable."}
+                 return {"success": False, "message": "Our market experts are currently busy refining insights. Please try again in a few moments."}
 
             # --- STAGE 4: NEURAL REFINEMENT ---
             await push_ws_status("Polishing your final report...")
@@ -1216,7 +1216,7 @@ class IntegratedBusinessIntelligence:
             return {"success": True, "data": result}
             
         print(f"[ENRICHMENT FAIL] AI synthesis cluster failed for {title}")
-        return {"success": False, "message": "Neural financial enrichment failed."}
+        return {"success": False, "message": "We're currently gathering more precise financial data. Please check back shortly."}
 
     # Consistently use the robust implementation of call_ai_cluster_json defined at line 885
 
