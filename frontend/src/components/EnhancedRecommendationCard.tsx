@@ -140,51 +140,51 @@ export default function EnhancedRecommendationCard({
           )}
         </div>
 
-        {/* Key Metrics Row */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {/* Key Metrics Row - Strategic Layout with No Overlap */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
           {/* Investment Range */}
-          <div className="p-3 bg-slate-800/40 rounded-xl border border-slate-700/50">
-            <div className="flex items-center gap-2 mb-1">
-              <DollarSign size={14} className="text-emerald-500" />
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Investment</span>
+          <div className="p-2 sm:p-2.5 bg-slate-100 dark:bg-white/5 rounded-xl border border-slate-200 dark:border-white/5 flex flex-col justify-center min-h-[60px] overflow-hidden">
+            <div className="flex items-center gap-1 mb-1">
+              <DollarSign size={10} className="text-emerald-500" />
+              <span className="text-[8px] sm:text-[9px] font-black text-slate-500 dark:text-gray-500 uppercase tracking-widest">Inves</span>
             </div>
-            <div className="text-sm font-bold text-slate-200">
+            <div className="text-[11px] sm:text-xs font-black text-slate-900 dark:text-white truncate tracking-tight">
               {recommendation.investment_range}
             </div>
           </div>
 
           {/* ROI Potential */}
-          <div className={`p-3 rounded-xl border ${getRoiColor(recommendation.roi_potential)}`}>
-            <div className="flex items-center gap-2 mb-1">
-              <TrendingUp size={14} />
-              <span className="text-xs font-bold uppercase tracking-wider">ROI</span>
+          <div className={`p-2 sm:p-2.5 rounded-xl border flex flex-col justify-center min-h-[60px] overflow-hidden ${getRoiColor(recommendation.roi_potential)}`}>
+            <div className="flex items-center gap-1 mb-1">
+              <TrendingUp size={10} />
+              <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-widest">ROI</span>
             </div>
-            <div className="text-sm font-black">
+            <div className="text-[11px] sm:text-xs font-black truncate tracking-tight">
               {(!recommendation.roi_potential || recommendation.roi_potential === '--' || recommendation.roi_potential === '--%') 
-                ? "High Potential" 
+                ? "High" 
                 : recommendation.roi_potential}
             </div>
           </div>
 
           {/* Implementation Difficulty */}
-          <div className={`p-3 rounded-xl border ${getDifficultyColor(recommendation.implementation_difficulty)}`}>
-            <div className="flex items-center gap-2 mb-1">
+          <div className={`p-2 sm:p-2.5 rounded-xl border flex flex-col justify-center min-h-[60px] overflow-hidden ${getDifficultyColor(recommendation.implementation_difficulty)}`}>
+            <div className="flex items-center gap-1 mb-1">
               {getDifficultyIcon(recommendation.implementation_difficulty)}
-              <span className="text-xs font-bold uppercase tracking-wider">Difficulty</span>
+              <span className="text-[8px] sm:text-[9px] font-black uppercase tracking-widest">Diffic</span>
             </div>
-            <div className="text-sm font-black">
+            <div className="text-[11px] sm:text-xs font-black truncate tracking-tight">
               {recommendation.implementation_difficulty}
             </div>
           </div>
 
-          {/* Market Size / Neighborhood */}
-          <div className="p-3 bg-blue-500/5 rounded-xl border border-slate-700/50">
-            <div className="flex items-center gap-2 mb-1">
-              <BarChart3 size={14} className="text-blue-500" />
-              <span className="text-xs font-bold text-blue-400 uppercase tracking-wider">Prime Spot</span>
+          {/* Prime Spot */}
+          <div className="p-2 sm:p-2.5 bg-blue-50 dark:bg-blue-500/5 rounded-xl border border-blue-200 dark:border-blue-500/10 flex flex-col justify-center min-h-[60px] overflow-hidden">
+            <div className="flex items-center gap-1 mb-1">
+              <BarChart3 size={10} className="text-blue-500" />
+              <span className="text-[8px] sm:text-[9px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-widest">Spot</span>
             </div>
-            <div className="text-sm font-bold text-blue-300 truncate">
-              {recommendation.ideal_neighborhood || recommendation.market_size || 'Central Area'}
+            <div className="text-[11px] sm:text-xs font-black text-blue-700 dark:text-blue-300 truncate tracking-tight">
+              {recommendation.ideal_neighborhood || recommendation.market_size || 'Prime'}
             </div>
           </div>
         </div>

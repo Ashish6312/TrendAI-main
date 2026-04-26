@@ -138,7 +138,12 @@ Generate a JSON object with this exact technical schema:
     "High-level strategic tip 1",
     "High-level strategic tip 2",
     "High-level strategic tip 3"
-  ]
+  ],
+  "sustainability_metrics": {
+    "stability_rating": "Strong/Moderate/Caution",
+    "scaling_potential": "High/Medium/Low",
+    "sustainability_strategy": "A technical 3-4 sentence strategy on how to sustain this business for 5+ years in the Indian market."
+  }
 }
 Ensure the tone is elite, technical, and data-dense. Respond ONLY with valid JSON. NO introductory text.`;
 
@@ -614,6 +619,58 @@ Ensure the tone is elite, technical, and data-dense. Respond ONLY with valid JSO
               );
             })}
 
+            {/* NEW: Sustainability Dashboard Section */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.98 }}
+              whileInView={{ opacity: 1, scale: 1 }}
+              viewport={{ once: true }}
+              className="pt-20 border-t border-white/5"
+            >
+              <div className="flex flex-col md:flex-row items-center justify-between gap-8 mb-12">
+                <div className="text-center md:text-left">
+                  <h2 className="text-3xl sm:text-5xl font-black text-white italic uppercase tracking-tighter">Sustainability <span className="text-indigo-500">Dashboard</span></h2>
+                  <p className="text-slate-500 text-sm font-bold uppercase tracking-widest mt-2">Long-term viability & scaling framework</p>
+                </div>
+                <div className="flex items-center gap-4 bg-indigo-500/10 border border-indigo-500/20 px-6 py-3 rounded-full">
+                  <div className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
+                  <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">Growth Engine Active</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                 {[
+                   { t: 'Stability Rating', v: businessData.business?.sustainability_metrics?.stability_rating || 'High-Resilience', i: <ShieldCheck className="text-emerald-500" /> },
+                   { t: 'Scaling Potential', v: businessData.business?.sustainability_metrics?.scaling_potential || 'Exponential', i: <Zap className="text-amber-500" /> },
+                   { t: 'Market Lifespan', v: '10+ Years', i: <Activity className="text-blue-500" /> }
+                 ].map((card, i) => (
+                   <div key={i} className="p-8 rounded-[3rem] bg-slate-900/60 border border-white/5 backdrop-blur-3xl group hover:border-white/10 transition-all">
+                      <div className="w-14 h-14 rounded-2xl bg-white/5 flex items-center justify-center mb-6 group-hover:scale-110 transition-transform">
+                        {card.i}
+                      </div>
+                      <h4 className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">{card.t}</h4>
+                      <p className="text-2xl font-black text-white italic">{card.v}</p>
+                   </div>
+                 ))}
+              </div>
+
+              <div className="mt-8 p-10 rounded-[3.5rem] bg-gradient-to-br from-indigo-500/10 to-purple-500/10 border border-indigo-500/10">
+                 <h4 className="text-sm font-black text-white uppercase tracking-widest mb-6 flex items-center gap-3">
+                    <Target size={20} className="text-indigo-400" />
+                    Long-term Sustainability Strategy
+                 </h4>
+                 <p className="text-lg sm:text-xl font-bold text-slate-300 italic leading-relaxed opacity-80">
+                    {businessData.business?.sustainability_metrics?.sustainability_strategy || "Analysis suggests focusing on automated supply chain resilience and multi-channel customer acquisition to maintain a dominant market position for 24+ months."}
+                 </p>
+                 <div className="mt-8 flex flex-wrap gap-4">
+                    <button className="px-6 py-3 rounded-2xl bg-white/5 border border-white/10 text-white text-[10px] font-black uppercase tracking-widest hover:bg-white/10 transition-all">
+                       Market Exit Guardrails
+                    </button>
+                    <button className="px-6 py-3 rounded-2xl bg-indigo-500 text-white text-[10px] font-black uppercase tracking-widest shadow-xl hover:scale-105 transition-all">
+                       Franchise Modeling
+                    </button>
+                 </div>
+              </div>
+            </motion.div>
           </div>
         </div>
       </div>

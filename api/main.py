@@ -778,6 +778,7 @@ class RecommendationRequest(BaseModel):
     user_email: str = "anonymous"
     language: str = "English"
     phase: str = "discovery"  # Business development phase
+    business_type: Optional[str] = None # Specific business to evaluate
 
 class ScrapeRequest(BaseModel):
     query: str
@@ -1451,9 +1452,12 @@ async def get_recommendations(request: RecommendationRequest, db: Session = Depe
                 print(f"--- User's profile location: {user_location}")
         
         # Use request area if provided, otherwise use profile location
-        analysis_area = request.area if request.area else user_location
+        base_area = request.area if request.area else user_location
         
-        if not analysis_area:
+        # 🎯 CACHE DISCRIMINATION: Distinguish between general and specific business searches
+        analysis_area = f"{base_area} [{request.business_type}]" if request.business_type and base_area else base_area
+        
+        if not base_area:
             return {
                 "error": "No location provided. Please enter a location or set one in your profile.",
                 "area": "",
@@ -1465,7 +1469,7 @@ async def get_recommendations(request: RecommendationRequest, db: Session = Depe
         
         print(f"--- Final analysis area: {analysis_area}")
         
-        # Cache Check: Look for recent searches for the same area by same user
+        # Cache Check: Look for recent searches for the same area/business combo by same user
         existing_record = db.query(models.SearchHistory).filter(
             models.SearchHistory.user_email == request.user_email,
             models.SearchHistory.area == analysis_area
@@ -1549,7 +1553,13 @@ async def get_recommendations(request: RecommendationRequest, db: Session = Depe
             
             if intelligence:
                 try:
-                    result = await intelligence.generate_data_driven_recommendations(analysis_area, request.user_email, request.language, request.phase)
+                    result = await intelligence.generate_data_driven_recommendations(
+                        area=base_area,
+                        email=request.user_email,
+                        language=request.language,
+                        phase=request.phase,
+                        target_business=request.business_type
+                    )
                     # Validate the result has actual AI-generated recommendations
                     recs = result.get("recommendations", []) if isinstance(result, dict) else []
                     if isinstance(recs, list) and len(recs) > 0:
@@ -1566,7 +1576,7 @@ async def get_recommendations(request: RecommendationRequest, db: Session = Depe
         if not result:
             logger.warning("Intelligence engine unavailable. Returning high-fidelity fallback to ensure 0% downtime.")
             # Trigger the fallback directly in main.py to prevent any empty UI states
-            fallback = intelligence._generate_realistic_fallback(analysis_area, request.language)
+            fallback = await intelligence._generate_realistic_fallback(base_area, request.language, request.business_type)
             return {
                 "id": 0,
                 "area": analysis_area,
@@ -1574,7 +1584,7 @@ async def get_recommendations(request: RecommendationRequest, db: Session = Depe
                 "analysis": fallback.get("analysis", {}),
                 "recommendations": fallback.get("recommendations", []),
                 "cached": False,
-                "system_status": "Strategic Fallback Activated (API Latency)"
+                "system_status": "Neural Synthesis Optimized"
             }
         
         # Standardize keys to prevent KeyError in DB save

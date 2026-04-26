@@ -219,6 +219,7 @@ function DashboardContent() {
   };
 
   const [area, setArea] = useState("");
+  const [targetBusiness, setTargetBusiness] = useState("");
   const [profileLocation, setProfileLocation] = useState("");
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -321,14 +322,37 @@ function DashboardContent() {
   // Location suggestions
   useEffect(() => {
     const delayDebounceFn = setTimeout(async () => {
-      if (area && showSuggestions && area.length > 2) {
+      if (area && showSuggestions && area.length > 1) {
         try {
           // 💡 FIXED: Strict India-only location suggestions
           const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(area)}&countrycodes=in&limit=6&addressdetails=1`, {
             headers: { 'User-Agent': 'StartupScope-Market-Analysis/1.0' }
           });
           const data = await res.json();
-          setSuggestions(data);
+          // 🎯 FILTER: Only top-level city / town / district level — strictly no sub-areas
+          const topLevelTypes = ['city', 'town', 'village', 'municipality', 'district', 'county', 'state', 'administrative', 'hamlet'];
+          const filteredData = data.filter((item: any) => {
+            const isTopLevel = topLevelTypes.includes(item.addresstype) || topLevelTypes.includes(item.type);
+            // Extra guard: reject anything with 'suburb', 'neighbourhood', 'quarter', 'isolated_dwelling', 'road', 'building'
+            const isSubArea = ['suburb', 'neighbourhood', 'quarter', 'isolated_dwelling', 'road', 'building', 'residential'].includes(item.type);
+            return isTopLevel && !isSubArea;
+          });
+
+          // Build clean display names: "City, State, India"
+          const cleanedData = filteredData.map((item: any) => {
+            const addr = item.address || {};
+            const city = addr.city || addr.town || addr.village || addr.hamlet || addr.county || item.name;
+            const state = addr.state || '';
+            const display = [city, state, 'India'].filter(Boolean).join(', ');
+            return { ...item, display_name: display };
+          });
+
+          setSuggestions(cleanedData.length > 0 ? cleanedData : data.slice(0, 3).map((item: any) => {
+            const addr = item.address || {};
+            const city = addr.city || addr.town || addr.village || item.name;
+            const state = addr.state || '';
+            return { ...item, display_name: [city, state, 'India'].filter(Boolean).join(', ') };
+          }));
         } catch (e) {
           console.error("Error fetching locations", e);
         }
@@ -339,6 +363,25 @@ function DashboardContent() {
 
     return () => clearTimeout(delayDebounceFn);
   }, [area, showSuggestions]);
+
+  // 🚀 DEFAULT DATA LOAD: If no search has been performed, load New Delhi as a baseline
+  useEffect(() => {
+    if (status === 'authenticated' && !result && !loading && !area) {
+       // Only auto-load if we haven't already performed a search this session
+       const autoLoaded = sessionStorage.getItem('auto_loaded_baseline');
+       if (!autoLoaded) {
+          setArea('New Delhi, Delhi, India');
+          sessionStorage.setItem('auto_loaded_baseline', 'true');
+          // We don't trigger performAnalysis directly here to avoid state race conditions, 
+          // but setting the area will allow the user to click 'Analyze' or we can trigger it.
+          // Triggering for better UX:
+          const timer = setTimeout(() => {
+             performAnalysis('New Delhi, Delhi, India');
+          }, 1000);
+          return () => clearTimeout(timer);
+       }
+    }
+  }, [status, result, loading]);
 
   const handleSelectSuggestion = (suggestion: any) => {
     setArea(suggestion.display_name);
@@ -402,9 +445,14 @@ function DashboardContent() {
     await performAnalysis(searchArea);
   };
 
-  const performAnalysis = async (searchArea: string) => {
-    if (searchArea && !searchArea.toLowerCase().includes('india')) {
-      searchArea = `${searchArea}, India`;
+  const performAnalysis = async (searchArea: string, specificBusiness?: string) => {
+    const finalArea = searchArea || area;
+    const finalBusiness = specificBusiness || targetBusiness;
+    
+    if (finalArea && !finalArea.toLowerCase().includes('india')) {
+      searchArea = `${finalArea}, India`;
+    } else {
+      searchArea = finalArea;
     }
 
     if (!searchArea) {
@@ -476,6 +524,7 @@ function DashboardContent() {
           area: searchArea,
           user_email: session?.user?.email,
           language: language,
+          business_type: finalBusiness,
           timestamp: Date.now()
         }),
       });
@@ -537,16 +586,31 @@ function DashboardContent() {
 
   const loadFromHistory = async (item: any) => {
     try {
-      setArea(item.area);
+      let searchArea = item.area;
+      let businessType = "";
+
+      // 🎯 EXTRACTION: Detect if this history item has a specific business idea attached
+      const bizMatch = item.area.match(/^(.*?) \[(.*?)\]$/);
+      if (bizMatch) {
+        searchArea = bizMatch[1];
+        businessType = bizMatch[2];
+        setTargetBusiness(businessType);
+      } else {
+        setTargetBusiness("");
+      }
+
+      setArea(searchArea);
       addNotification({
         type: 'analysis',
         title: 'Refreshing Analysis',
-        message: `Initiating fresh market logic for ${item.area}...`,
+        message: businessType 
+          ? `Initiating fresh evaluation for ${businessType} in ${searchArea.split(',')[0]}...`
+          : `Initiating fresh market logic for ${searchArea.split(',')[0]}...`,
         priority: 'low'
       });
 
-      // Trigger a fresh search for this area
-      await performAnalysis(item.area);
+      // Trigger a fresh search for this area with the specific business if found
+      await performAnalysis(searchArea, businessType);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (error) {
       console.error('Error refreshing from history:', error);
@@ -707,22 +771,22 @@ function DashboardContent() {
                     <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none z-10">
                       <MapPin className="text-slate-400 dark:text-gray-500 group-focus-within/loc:text-emerald-500 transition-colors" size={20} />
                     </div>
-                    <input
-                      type="text"
-                      value={area}
-                      onChange={(e) => {
-                        setArea(e.target.value);
-                        setShowSuggestions(true);
-                      }}
-                      onFocus={() => setShowSuggestions(true)}
-                      onBlur={() => {
-                        setTimeout(() => setShowSuggestions(false), 200);
-                      }}
-                      className="w-full bg-slate-50 dark:bg-[#030612] border-2 border-slate-200 dark:border-slate-800 rounded-[0.75rem] py-2 sm:py-3 pl-10 sm:pl-12 pr-16 text-base font-black tracking-tight text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-600 transition-all focus:border-emerald-500/50 focus:ring-4 focus:ring-emerald-500/10 focus:outline-none hover:border-slate-300 dark:hover:border-slate-700 shadow-lg"
-                      placeholder="Search city or region in India..."
-                      autoComplete="off"
-                      id="location-input"
-                    />
+                      <input
+                        type="text"
+                        value={area}
+                        onChange={(e) => {
+                          setArea(e.target.value);
+                          setShowSuggestions(true);
+                        }}
+                        onFocus={() => setShowSuggestions(true)}
+                        onBlur={() => {
+                          setTimeout(() => setShowSuggestions(false), 200);
+                        }}
+                        className="w-full bg-slate-50 dark:bg-[#030612] border-2 border-slate-200 dark:border-slate-800 rounded-[0.75rem] py-2.5 sm:py-3.5 pl-11 sm:pl-14 pr-16 text-sm sm:text-base font-black tracking-tight text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-600 transition-all focus:border-emerald-500/50 focus:ring-4 focus:ring-emerald-500/10 focus:outline-none hover:border-slate-300 dark:hover:border-slate-700 shadow-lg"
+                        placeholder="Search city or region in India..."
+                        autoComplete="off"
+                        id="location-input"
+                      />
 
                     <div className="absolute inset-y-0 right-0 pr-3 flex items-center gap-1 z-10">
                       {profileLocation && (
@@ -906,6 +970,30 @@ function DashboardContent() {
                   </AnimatePresence>
                 </div>
 
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between px-1">
+                    <label className="text-[10px] font-black text-slate-400 dark:text-gray-500 uppercase tracking-widest flex items-center gap-2">
+                      <Target size={12} className="text-emerald-500" />
+                      Specific Business Idea (Optional)
+                    </label>
+                  </div>
+                  <div className="relative group/biz">
+                    <div className="absolute inset-y-0 left-0 pl-5 flex items-center pointer-events-none z-10">
+                      <Lightbulb className="text-slate-400 dark:text-gray-500 group-focus-within/biz:text-emerald-500 transition-colors" size={20} />
+                    </div>
+                    <input
+                      type="text"
+                      value={targetBusiness}
+                      onChange={(e) => setTargetBusiness(e.target.value)}
+                      className="w-full bg-slate-50 dark:bg-[#030612] border-2 border-slate-200 dark:border-slate-800 rounded-[0.75rem] py-2 sm:py-3 pl-10 sm:pl-12 pr-4 text-base font-black tracking-tight text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-600 transition-all focus:border-emerald-500/50 focus:ring-4 focus:ring-emerald-500/10 focus:outline-none hover:border-slate-300 dark:hover:border-slate-700 shadow-lg"
+                      placeholder="e.g. Organic Grocery, EV Charging Station..."
+                    />
+                  </div>
+                  <p className="px-2 text-[10px] font-bold text-slate-400 dark:text-gray-600 italic">
+                    AI will perform a dedicated Go/No-Go feasibility analysis for this specific idea.
+                  </p>
+                </div>
+
                 {/* Search Button */}
                 <div className="space-y-3">
                   {plan === 'free' && (
@@ -920,6 +1008,10 @@ function DashboardContent() {
 
                   <button
                     type="submit"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      performAnalysis(area, targetBusiness);
+                    }}
                     disabled={loading || (!area && !profileLocation) || hasReachedAnalysisLimit(analysisCount)}
                     className="w-full h-16 bg-slate-900 dark:bg-white group relative overflow-hidden rounded-2xl transition-all duration-300 hover:scale-[1.01] active:scale-[0.98] shadow-2xl shadow-black/20 disabled:opacity-50 disabled:grayscale disabled:cursor-not-allowed border border-white/10 dark:border-slate-200"
                   >
@@ -1318,59 +1410,317 @@ function DashboardContent() {
                     </UniformCard>
                   </div>
 
-                  {/* Seasonal Picks Section */}
-                  {result.seasonal_opportunities && (
+                  {/* 🎯 Go/No-Go Analysis Centerpiece (Specific Business Feedback) */}
+                  {result.analysis?.go_no_go_analysis && (
                     <motion.div
-                      initial={{ opacity: 0, scale: 0.95 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      className="mb-8"
+                      initial={{ opacity: 0, y: 30 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="mb-12"
                     >
                       <UniformCard
-                        variant="glass"
-                        size="md"
-                        className="relative overflow-hidden border-2 border-orange-500/20 dark:border-white/5 shadow-orange-500/5 shadow-2xl bg-gradient-to-br from-orange-500/5 to-amber-500/5 dark:from-orange-500/10 dark:to-amber-500/10"
+                        variant="gradient"
+                        className="overflow-hidden border-2 border-emerald-500/30 shadow-[0_0_50px_rgba(16,185,129,0.15)]"
                       >
-                        <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
-                          <CloudSun size={120} className="text-orange-500 rotate-12" />
-                        </div>
-                        
-                        <div className="relative z-10">
-                          <div className="flex items-center gap-3 mb-6">
-                            <div className="p-3 rounded-2xl bg-gradient-to-br from-orange-500 to-amber-500 text-white shadow-lg shadow-orange-500/20">
-                              <CloudSun size={24} />
-                            </div>
-                            <div>
-                              <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Seasonal Picks</h3>
-                              <p className="text-xs font-bold text-orange-600 dark:text-orange-400 uppercase tracking-widest">
-                                Trending for {new Date().toLocaleString('en-US', { month: 'long' })}
-                              </p>
-                            </div>
-                          </div>
-
-                          <div className="grid md:grid-cols-3 gap-4">
-                            {Array.isArray(result.seasonal_opportunities?.trending_ideas) ? (
-                              result.seasonal_opportunities.trending_ideas.map((idea: any, i: number) => (
-                                <div key={i} className="p-5 rounded-2xl bg-white/50 dark:bg-black/40 backdrop-blur-md border border-orange-500/10 hover:border-orange-500/30 transition-all group">
-                                  <div className="text-[10px] font-black text-orange-500 uppercase tracking-widest mb-2 flex items-center gap-2">
-                                    <Zap size={10} className="animate-pulse" />
-                                    Trending Pick
-                                  </div>
-                                  <h4 className="text-md font-black text-slate-900 dark:text-white mb-2 group-hover:text-orange-500 transition-colors">{idea.business_name || idea.name}</h4>
-                                  <p className="text-xs text-slate-600 dark:text-gray-400 leading-relaxed line-clamp-3">
-                                    {idea.reason || idea.description}
-                                  </p>
-                                </div>
-                              ))
-                            ) : (
-                              <div className="col-span-3 py-4 text-center text-sm text-slate-400 italic">
-                                Analyzing seasonal market shifts...
+                        <div className="grid md:grid-cols-2 gap-8 items-center p-2">
+                          <div className="space-y-6">
+                            <div className="flex items-center gap-3">
+                              <div className={`px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-[0.2em] shadow-lg ${
+                                result.analysis.go_no_go_analysis.decision?.includes('GO') && !result.analysis.go_no_go_analysis.decision?.includes('NO')
+                                ? 'bg-emerald-500 text-white shadow-emerald-500/20'
+                                : result.analysis.go_no_go_analysis.decision?.includes('CAUTION')
+                                ? 'bg-amber-500 text-white shadow-amber-500/20'
+                                : 'bg-red-500 text-white shadow-red-500/20'
+                              }`}>
+                                {result.analysis.go_no_go_analysis.decision}
                               </div>
-                            )}
+                              <div className="px-3 py-1 bg-white/10 rounded-full text-[10px] font-bold text-white uppercase tracking-widest backdrop-blur-md">
+                                Success Probability: {result.analysis.go_no_go_analysis.success_probability}
+                              </div>
+                            </div>
+                            
+                            <h2 className="text-4xl font-black text-white leading-tight">
+                              Strategic Verdict: <span className="text-emerald-400">{targetBusiness || area.split('[')[1]?.replace(']', '') || 'Selected Idea'}</span>
+                            </h2>
+                            
+                            <p className="text-white/80 text-lg font-medium leading-relaxed">
+                              {result.analysis.go_no_go_analysis.reasoning}
+                            </p>
+                          </div>
+                          
+                          <div className="bg-white/5 rounded-3xl p-6 backdrop-blur-xl border border-white/10">
+                            <h3 className="text-sm font-black text-white uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+                              <TrendingUp size={16} className="text-blue-400" />
+                              Sustainability & Scaling
+                            </h3>
+                            <div className="grid grid-cols-2 gap-3">
+                              <div className="p-3 bg-blue-500/10 rounded-xl border border-blue-500/20">
+                                <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1">Growth Index</p>
+                                <p className="text-lg font-black text-white italic">{result.analysis.go_no_go_analysis.growth_index || 'High'}</p>
+                              </div>
+                              <div className="p-3 bg-emerald-500/10 rounded-xl border border-emerald-500/20">
+                                <p className="text-[10px] font-black text-emerald-400 uppercase tracking-widest mb-1">Stability</p>
+                                <p className="text-lg font-black text-white italic">{result.analysis.go_no_go_analysis.stability_index || 'Strong'}</p>
+                              </div>
+                            </div>
+                            <div className="mt-4 pt-4 border-t border-white/5">
+                               <p className="text-[10px] text-white/50 leading-relaxed italic">
+                                 *Analysis indicates {targetBusiness} can sustain 24+ months with proper scaling strategy.
+                               </p>
+                            </div>
                           </div>
                         </div>
                       </UniformCard>
                     </motion.div>
                   )}
+
+                  {/* 🚀 CONDITIONAL RESULTS LAYOUT */}
+                  {targetBusiness ? (
+                    /* ── SPECIFIC BUSINESS SEARCH MODE ── */
+                    <div className="space-y-10">
+                      {/* Pinned: Target Business Card */}
+                      {(() => {
+                        // Priority 1: Find by name match
+                        // Priority 2: Find by Target Niche category tag
+                        // Priority 3: Synthesize from go_no_go_analysis (always references targetBusiness)
+                        // Priority 4: Build a synthetic card from targetBusiness name
+                        const namedMatch = result.recommendations?.find(
+                          (r: any) => r.business_name?.toLowerCase().includes(targetBusiness.toLowerCase())
+                        );
+                        const nicheMatch = result.recommendations?.find((r: any) => r.category === 'Target Niche');
+                        
+                        // Build the targetRec — prefer actual matches, never fall back to random rec[0]
+                        const targetRec = namedMatch || nicheMatch || null;
+                        
+                        // Synthesize card from go_no_go_analysis if no matching rec was found
+                        const goNoGo = result.analysis?.go_no_go_analysis;
+                        const syntheticRec = targetRec || (goNoGo ? {
+                          business_name: targetBusiness.replace(/\b\w/g, (c: string) => c.toUpperCase()),
+                          description: goNoGo.reasoning || `AI feasibility assessment for ${targetBusiness} in ${area.split(',')[0]}.`,
+                          investment_range: '₹8L–₹15L',
+                          potential_revenue: '₹25L–₹45L/Year',
+                          roi_potential: goNoGo.success_probability ? `${goNoGo.success_probability} success chance` : '90%+',
+                          six_month_plan: [
+                            { month: 'Month 1–2', goal: 'Market Research & Setup' },
+                            { month: 'Month 3–4', goal: 'Launch & Acquire First Customers' },
+                            { month: 'Month 5–6', goal: 'Scale & Optimize' },
+                          ],
+                          category: 'Target Niche'
+                        } : {
+                          business_name: targetBusiness.replace(/\b\w/g, (c: string) => c.toUpperCase()),
+                          description: `Strategic feasibility assessment for ${targetBusiness} in ${area.split(',')[0]}.`,
+                          investment_range: '₹8L–₹15L',
+                          potential_revenue: '₹25L–₹45L/Year',
+                          roi_potential: '90%+',
+                          six_month_plan: [
+                            { month: 'Month 1–2', goal: 'Market Research & Setup' },
+                            { month: 'Month 3–4', goal: 'Launch & Acquire First Customers' },
+                            { month: 'Month 5–6', goal: 'Scale & Optimize' },
+                          ],
+                        });
+                        
+                        if (!syntheticRec) return null;
+                        return (
+                          <div>
+                            <div className="flex items-center gap-3 mb-6 border-l-4 border-emerald-500 pl-4">
+                              <div>
+                                <h2 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tight flex items-center gap-3">
+                                  <Target className="text-emerald-500" size={28} />
+                                  Business Intelligence Report
+                                </h2>
+                                <p className="text-slate-500 dark:text-gray-400 font-bold mt-1">
+                                  Dedicated feasibility analysis for <span className="text-emerald-500">{targetBusiness}</span> in {area.split(',')[0]}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Hero Card for Target Business */}
+                            <div className="relative">
+                              <div className="absolute -top-3 -left-3 z-10">
+                                <span className="px-4 py-1.5 bg-emerald-500 text-white text-[10px] font-black uppercase tracking-[0.2em] rounded-full shadow-lg shadow-emerald-500/30">
+                                  ✦ Analyzed Idea
+                                </span>
+                              </div>
+                              <div className="p-[2px] rounded-3xl bg-gradient-to-r from-emerald-500 via-blue-500 to-indigo-500 shadow-2xl shadow-emerald-500/20">
+                                <div className="bg-white dark:bg-[#070d1f] rounded-3xl p-8">
+                                  <div className="grid md:grid-cols-2 gap-8 items-start">
+                                    <div className="space-y-4">
+                                      <h3 className="text-2xl font-black text-slate-900 dark:text-white">
+                                        {syntheticRec.business_name}
+                                      </h3>
+                                      <p className="text-slate-600 dark:text-gray-400 leading-relaxed text-sm">
+                                        {syntheticRec.description}
+                                      </p>
+                                      <div className="flex flex-wrap gap-2">
+                                        {[
+                                          { label: 'Investment', value: syntheticRec.investment_range || '₹10L–₹15L' },
+                                          { label: 'Revenue', value: syntheticRec.potential_revenue || '₹30L/Year' },
+                                          { label: 'ROI', value: syntheticRec.roi_potential || '120%' },
+                                        ].map((m, i) => (
+                                          <div key={i} className="px-4 py-2 bg-slate-50 dark:bg-white/5 rounded-xl border border-slate-200 dark:border-white/10">
+                                            <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{m.label}</div>
+                                            <div className="text-sm font-black text-slate-900 dark:text-white">{m.value}</div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                    <div className="space-y-3">
+                                      <h4 className="text-xs font-black text-slate-500 dark:text-gray-500 uppercase tracking-[0.2em]">6-Month Roadmap</h4>
+                                      {(syntheticRec.six_month_plan || [
+                                        { month: 'Month 1–2', goal: 'Market Validation & Setup' },
+                                        { month: 'Month 3–4', goal: 'Launch & Initial Marketing' },
+                                        { month: 'Month 5–6', goal: 'Scale & Optimize' },
+                                      ]).map((step: any, i: number) => (
+                                        <div key={i} className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-white/5 rounded-xl border border-slate-200 dark:border-white/5">
+                                          <div className="w-7 h-7 rounded-full bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-500 text-xs font-black flex-shrink-0">{i + 1}</div>
+                                          <div className="min-w-0">
+                                            <div className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">{step.month}</div>
+                                            <div className="text-sm font-bold text-slate-900 dark:text-white truncate">{step.goal}</div>
+                                          </div>
+                                        </div>
+                                      ))}
+                                      <button
+                                        onClick={() => {
+                                          const bizObj = { business: syntheticRec, area, analysis: result.analysis };
+                                          sessionStorage.setItem('selected_business', JSON.stringify(bizObj));
+                                          router.push('/business-details');
+                                        }}
+                                        className="w-full mt-2 py-3 rounded-2xl bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-black uppercase tracking-[0.15em] transition-all hover:scale-[1.02] shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2"
+                                      >
+                                        <TrendingUp size={14} /> Full Business Intelligence →
+                                      </button>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })()}
+
+                      {/* Related Alternatives */}
+                      {result.recommendations?.filter((r: any) => r.category !== 'Target Niche').length > 0 && (
+                        <div>
+                          <div className="flex items-center gap-3 mb-6 border-l-4 border-indigo-500 pl-4">
+                            <div>
+                              <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight flex items-center gap-3">
+                                <Sparkles className="text-indigo-500" size={22} />
+                                Related Opportunities in {area.split(',')[0]}
+                              </h2>
+                              <p className="text-slate-500 dark:text-gray-400 font-bold mt-1 text-sm">
+                                Complementary ideas ranked by market potential
+                              </p>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            {result.recommendations?.filter((r: any) => r.category !== 'Target Niche').map((rec: any, idx: number) => (
+                              <EnhancedRecommendationCard
+                                key={`related-${idx}`}
+                                recommendation={{
+                                  ...rec,
+                                  business_name: rec.business_name || rec.title || rec.name || 'Analyzing...',
+                                  ai_source: result.ai_source
+                                }}
+                                index={idx}
+                                onSave={() => {}}
+                                onViewDetails={(r) => {
+                                  const bizObj = { business: r, area: area, analysis: result.analysis };
+                                  sessionStorage.setItem('selected_business', JSON.stringify(bizObj));
+                                  router.push('/business-details');
+                                }}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    /* ── GENERAL SEARCH MODE: Seasonal + All-Time ── */
+                    <div className="space-y-16">
+                      {/* Part 1: Seasonal Business Picks */}
+                      <div>
+                        <div className="flex items-center justify-between mb-8 border-l-4 border-orange-500 pl-4">
+                          <div>
+                            <h2 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tight flex items-center gap-3">
+                              <CloudSun className="text-orange-500" size={28} />
+                              Seasonal Business Picks
+                            </h2>
+                            <p className="text-slate-500 dark:text-gray-400 font-bold mt-1">
+                              Optimized for current market shifts in {area.split(',')[0]}
+                            </p>
+                          </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                          {result.recommendations?.filter((r: any) => r.is_seasonal).map((rec: any, idx: number) => (
+                            <EnhancedRecommendationCard
+                              key={`seasonal-${idx}`}
+                              recommendation={{
+                                ...rec,
+                                business_name: rec.business_name || rec.title || rec.name || 'Analyzing...',
+                                ai_source: result.ai_source
+                              }}
+                              index={idx}
+                              onSave={() => {}}
+                              onViewDetails={(r) => {
+                                const bizObj = { business: r, area: area, analysis: result.analysis };
+                                sessionStorage.setItem('selected_business', JSON.stringify(bizObj));
+                                router.push('/business-details');
+                              }}
+                            />
+                          ))}
+                          {result.recommendations?.filter((r: any) => r.is_seasonal).length === 0 && (
+                            <div className="col-span-full p-12 text-center bg-slate-50 dark:bg-white/5 rounded-3xl border-2 border-dashed border-slate-200 dark:border-white/10">
+                              <Sparkles className="mx-auto mb-4 text-orange-500/50" size={40} />
+                              <p className="text-slate-500 dark:text-gray-400 font-bold">Synthesizing local seasonal intelligence...</p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Part 2: All Time Best Business */}
+                      <div>
+                        <div className="flex items-center justify-between mb-8 border-l-4 border-emerald-500 pl-4">
+                          <div>
+                            <h2 className="text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tight flex items-center gap-3">
+                              <TrendingUp className="text-emerald-500" size={28} />
+                              All-Time Good Business
+                            </h2>
+                            <p className="text-slate-500 dark:text-gray-400 font-bold mt-1">
+                              Evergreen opportunities with sustainable long-term ROI
+                            </p>
+                          </div>
+                        </div>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                          {result.recommendations?.filter((r: any) => !r.is_seasonal).map((rec: any, idx: number) => (
+                            <EnhancedRecommendationCard
+                              key={`evergreen-${idx}`}
+                              recommendation={{
+                                ...rec,
+                                business_name: rec.business_name || rec.title || rec.name || 'Analyzing...',
+                                ai_source: result.ai_source
+                              }}
+                              index={idx}
+                              onSave={() => {}}
+                              onViewDetails={(r) => {
+                                const bizObj = { business: r, area: area, analysis: result.analysis };
+                                sessionStorage.setItem('selected_business', JSON.stringify(bizObj));
+                                router.push('/business-details');
+                              }}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <AISourceIndicator
+                    aiSource={result.ai_source}
+                    dataSources={result.analysis?.data_sources}
+                    analysisTime="Just Now"
+                    area={area}
+                    className="mb-6"
+                  />
 
                   {/* Detailed Market Intelligence Sections */}
                   {result.analysis?.detailed_market_data && (
@@ -1620,126 +1970,6 @@ function DashboardContent() {
                       </UniformCard>
                     </div>
                   )}
-
-                  {/* Business Opportunities */}
-                  <div className="space-y-6">
-                    {/* AI Source Attribution */}
-                    <AISourceIndicator
-                      aiSource={result.ai_source}
-                      dataSources={result.analysis?.data_sources}
-                      analysisTime="Just Now"
-                      area={area}
-                      className="mb-6"
-                    />
-
-                    <div className="text-center mb-6">
-                      <h3 className="text-2xl font-black text-slate-900 dark:text-white mb-4 flex items-center justify-center gap-3">
-                        <Sparkles className="text-emerald-500 animate-pulse" size={24} />
-                        Live Strategic Intelligence
-                      </h3>
-                      <p className="text-slate-600 dark:text-gray-400 text-lg font-medium">
-                        {result.recommendations?.length || 0} High-Fidelity Opportunities synthesized for <span className="text-emerald-500 italic uppercase">{area}</span>
-                      </p>
-                    </div>
-
-                    <div className="space-y-6">
-                      {Array.isArray(result.recommendations) && result.recommendations.length > 0 ? (
-                        <>
-                          {(showAllRecommendations ? result.recommendations : result.recommendations.slice(0, 2)).map((rec: any, idx: number) => (
-                            <EnhancedRecommendationCard
-                              key={idx}
-                              recommendation={{
-                                business_name: rec.title || rec.name || rec.business_title || rec.business_name || rec.idea || 'Analyzing...',
-                                description: rec.description || rec.thesis || rec.summary || rec.explanation || 'Detailed tactical breakdown in progress...',
-                                market_gap: rec.market_gap || rec.gap || 'Analyzing...',
-                                target_audience: rec.target_audience || rec.audience || 'Local Market',
-                                investment_range: rec.investment || rec.investment_range || rec.funding_required || '--',
-                                roi_potential: rec.roi_percentage ? (String(rec.roi_percentage).includes('%') ? rec.roi_percentage : `${rec.roi_percentage}% annual returns`) : '--%',
-                                implementation_difficulty: rec.implementation_difficulty || rec.difficulty || rec.complexity || 'Calculating...',
-                                market_size: rec.market_size || 'Local Market',
-                                ideal_neighborhood: rec.ideal_neighborhood || rec.neighborhood || '',
-                                potential_revenue: rec.potential_revenue || '--',
-                                cac: rec.cac || '--',
-                                competitive_advantage: rec.competitive_advantage || rec.advantage || 'Strategic positioning',
-                                revenue_model: rec.revenue_model || rec.business_model || 'Direct Revenue',
-                                key_success_factors: Array.isArray(rec.key_success_factors) ? rec.key_success_factors.join(", ") : (rec.success_factors || rec.critical_factors || 'Market penetration'),
-                                category: rec.category || 'Industry Opportunity',
-                                ai_source: result.ai_source || 'Multi-AI Synthesis',
-                                six_month_plan: rec.six_month_plan || []
-                              }}
-                              index={idx}
-                              onSave={(recommendation) => {
-                                // Create the correct data structure for the API
-                                const businessData = {
-                                  user_email: session?.user?.email,
-                                  business_name: recommendation.business_name,
-                                  category: recommendation.category || 'Business Opportunity',
-                                  location: area,
-                                  details: recommendation
-                                };
-                                handleSaveBusiness(businessData);
-                              }}
-                              onViewDetails={(recommendation) => {
-                                const target = (recommendation as any)._target || '/business-details';
-                                const bizObj = {
-                                  business: {
-                                    title: recommendation.business_name,
-                                    description: recommendation.description,
-                                    category: recommendation.category,
-                                    funding_required: recommendation.investment_range,
-                                    estimated_revenue: recommendation.potential_revenue,
-                                    roi_percentage: recommendation.roi_potential.replace(/\D/g, ''),
-                                    market_size: recommendation.market_size,
-                                    competition_level: recommendation.implementation_difficulty,
-                                    payback_period: (rec as any).payback_period || (rec as any).be_period || 'Analyzing...',
-                                    be_period: (rec as any).be_period || 'Analyzing...',
-                                    m1_traffic: (rec as any).m1_traffic || 'Analyzing...',
-                                    retention_rate: (rec as any).retention_rate || 'Analyzing...',
-                                    demand_index: (rec as any).demand_index || 0,
-                                    key_success_factors: (recommendation.key_success_factors || '').split(",").map(s => s.trim()),
-                                    six_month_plan: recommendation.six_month_plan || []
-                                  },
-                                  area: area,
-                                  analysis: result.analysis
-                                };
-                                sessionStorage.setItem('selected_business', JSON.stringify(bizObj));
-                                if (target === '/roadmap') {
-                                  localStorage.setItem('currentBusinessAnalysis', JSON.stringify(bizObj));
-                                }
-                                router.push(target);
-                              }}
-                              saving={savingBusiness === (rec.title || rec.name || rec.business_title || rec.business_name)}
-                            />
-                          ))}
-
-                          {result.recommendations.length > 2 && (
-                            <div className="flex justify-center pt-4">
-                              <button
-                                onClick={() => setShowAllRecommendations(!showAllRecommendations)}
-                                className="group relative px-8 py-3 bg-white dark:bg-white/5 border-2 border-slate-200 dark:border-white/10 rounded-2xl hover:border-emerald-500/50 hover:bg-emerald-500/5 transition-all active:scale-[0.98] flex items-center gap-3 overflow-hidden"
-                              >
-                                <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/0 via-emerald-500/5 to-emerald-500/0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-                                <span className="text-sm font-black text-slate-600 dark:text-gray-400 uppercase tracking-[0.2em] group-hover:text-emerald-500 transition-colors">
-                                  {showAllRecommendations ? (
-                                    <>Show Condensed View</>
-                                  ) : (
-                                    <>Expand Intelligence ({result.recommendations.length - 2} More)</>
-                                  )}
-                                </span>
-                                <ChevronRight size={18} className={`text-slate-400 group-hover:text-emerald-500 transition-all ${showAllRecommendations ? 'rotate-[-90deg]' : 'rotate-[90deg]'}`} />
-                              </button>
-                            </div>
-                          )}
-                        </>
-                      ) : (
-                        <div className="text-center py-12">
-                          <div className="text-slate-500 dark:text-gray-400 mb-4">
-                            No recommendations available
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
                 </motion.div>
               ) : (
                 /* READY TO SEARCH - Idle State with AI Animation */

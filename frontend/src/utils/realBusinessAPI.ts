@@ -424,13 +424,15 @@ class RealBusinessAPI {
     
     const count = 5;
     const businesses: RealBusiness[] = [];
-    const seed = location.length + businessType.length;
+    const safeLocation = (location || 'City').toString();
+    const safeType = (businessType || 'Business').toString();
+    const seed = safeLocation.length + safeType.length;
     
     for (let i = 0; i < count; i++) {
       const names = [
-        `Bharat ${businessType}`, `Shree Ganesha ${businessType}`, 
-        `Apna ${businessType}`, `Local ${businessType} Hub`, 
-        `Premium ${businessType} ${location.split(',')[0]}`
+        `Bharat ${safeType}`, `Shree Ganesha ${safeType}`, 
+        `Apna ${safeType}`, `Local ${safeType} Hub`, 
+        `Premium ${safeType} ${safeLocation.split(',')[0]}`
       ];
       
       businesses.push({

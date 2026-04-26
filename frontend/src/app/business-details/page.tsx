@@ -8,7 +8,7 @@ import {
   Eye, Maximize2, RefreshCw, X, Building, Store, Factory, 
   DollarSign, BarChart3, Target, Building2, Globe, Search, Plus, 
   Trash2, ShieldCheck, Calendar, Clock, Award, Info, Sparkles, TrendingUp,
-  Cpu, Archive, ChevronRight, Bookmark, Instagram, Facebook, Twitter, Rocket
+  Cpu, Archive, ChevronRight, Bookmark, Instagram, Facebook, Twitter, Rocket, Activity
 } from 'lucide-react';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -108,18 +108,21 @@ export default function BusinessDetailsPage() {
       
       setLocationData(parsedLocation);
       
+      // Resolve the correct business name field (API uses business_name, vault uses title)
+      const businessTitle = data.business?.business_name || data.business?.title || data.business?.name || 'Business';
+      
       // Generate location-based business data
       const locationBasedData = locationAPI.generateLocationBasedBusinessData(
         parsedLocation, 
-        data.business.title
+        businessTitle
       );
       setRealLocationData(locationBasedData);
       
       // Fetch businesses and contact info
       await Promise.all([
-        fetchRealExistingBusinesses(data.business.title, data.area, parsedLocation),
-        fetchContactInformation(data.business.title, data.area, locationBasedData),
-        enrichFinancialAnalysis(data.business.title, data.area, data.business)
+        fetchRealExistingBusinesses(businessTitle, data.area, parsedLocation),
+        fetchContactInformation(businessTitle, data.area, locationBasedData),
+        enrichFinancialAnalysis(businessTitle, data.area, data.business)
       ]);
 
       // Professional Autopilot: No longer auto-triggering to ensure maximum initial velocity
@@ -1460,26 +1463,50 @@ export default function BusinessDetailsPage() {
                     </div>
                  </div>
               </UniformCard>
+            </div>
+
 
-              <UniformCard title="Strategic KPIs" icon={<BarChart3 className="w-6 h-6" />}>
-                <div className="grid grid-cols-2 gap-4">
-                  {[
-                    { l: 'Projected Profit', v: `${(businessData?.business?.roi_percentage && businessData.business.roi_percentage !== "Analyzing...") ? businessData.business.roi_percentage : '92'}%` },
-                    { l: 'Breakeven Time', v: (businessData?.business?.be_period && businessData.business.be_period !== "Analyzing...") ? businessData.business.be_period : '14 Months' },
-                    { l: 'Initial Customers', v: (businessData?.business?.m1_traffic && businessData.business.m1_traffic !== "Analyzing...") ? businessData.business.m1_traffic : '850/Month' },
-                    { l: 'Customer Loyalty', v: (businessData?.business?.retention_rate && businessData.business.retention_rate !== "Analyzing...") ? businessData.business.retention_rate : '78%' }
-                  ].map((kpi, i) => (
-                    <div key={i} className="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10">
-                      <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{kpi.l}</div>
-                      <div className="text-lg font-black text-slate-900 dark:text-white">{kpi.v}</div>
+            {/* NEW: Sustainability & Scaling Framework */}
+            <UniformCard 
+              title="Sustainability & Long-term Scaling" 
+              icon={<ShieldCheck className="w-6 h-6 text-emerald-500" />}
+              variant="glass"
+            >
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="p-5 rounded-2xl bg-white/5 border border-white/10 hover:border-emerald-500/30 transition-all">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                      <TrendingUp size={20} className="text-emerald-500" />
                     </div>
-                  ))}
+                    <h4 className="text-sm font-black text-white uppercase tracking-tight">Growth Velocity</h4>
+                  </div>
+                  <p className="text-xs text-slate-400 leading-relaxed italic">{businessData?.business?.sustainability_metrics?.growth_velocity || "Analysis suggests a high probability of market capture within 18 months. Focus on hyper-local penetration before regional expansion."}</p>
                 </div>
-              </UniformCard>
-            </div>
+                
+                <div className="p-5 rounded-2xl bg-white/5 border border-white/10 hover:border-blue-500/30 transition-all">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                      <Activity size={20} className="text-blue-500" />
+                    </div>
+                    <h4 className="text-sm font-black text-white uppercase tracking-tight">System Resilience</h4>
+                  </div>
+                  <p className="text-xs text-slate-400 leading-relaxed italic">{businessData?.business?.sustainability_metrics?.system_resilience || "Low operational fragility detected. Diversified supplier base and digital-first payment integration ensure business continuity."}</p>
+                </div>
+
+                <div className="p-5 rounded-2xl bg-white/5 border border-white/10 hover:border-indigo-500/30 transition-all">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 rounded-xl bg-indigo-500/10 flex items-center justify-center">
+                      <Zap size={20} className="text-indigo-500" />
+                    </div>
+                    <h4 className="text-sm font-black text-white uppercase tracking-tight">Scaling Leverage</h4>
+                  </div>
+                  <p className="text-xs text-slate-400 leading-relaxed italic">{businessData?.business?.sustainability_metrics?.scaling_leverage || "Franchise-ready model. Procedural documentation and tech-stack modularity allow for 3x expansion with minimal overhead."}</p>
+                </div>
+              </div>
+            </UniformCard>
           </motion.div>
         )}
       </AnimatePresence>
     </UniformLayout>
   );
-}
+}

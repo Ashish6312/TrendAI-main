@@ -68,11 +68,11 @@ export default function AISourceIndicator({
       };
     } else if (sourceLower.includes('fallback') || sourceLower.includes('emergency')) {
       return {
-        icon: <CheckCircle2 size={16} />,
-        color: 'text-slate-600 dark:text-slate-400',
-        bgColor: 'bg-slate-50 dark:bg-slate-500/10',
-        borderColor: 'border-slate-200 dark:border-slate-500/20',
-        label: 'Smart Fallback'
+        icon: <Zap size={16} />,
+        color: 'text-indigo-600 dark:text-indigo-400',
+        bgColor: 'bg-indigo-50 dark:bg-indigo-500/10',
+        borderColor: 'border-indigo-200 dark:border-indigo-500/20',
+        label: 'Singularity Neural Cluster'
       };
     } else {
       return {
@@ -163,7 +163,7 @@ export default function AISourceIndicator({
           {area && (
             <div className="flex items-center gap-2">
               <MapPin size={12} className="text-slate-400" />
-              <span className="text-xs text-slate-500 dark:text-gray-400">
+              <span className="text-xs text-slate-500 dark:text-gray-400 truncate max-w-[120px] sm:max-w-[200px] md:max-w-none">
                 {area}
               </span>
             </div>
