@@ -165,12 +165,15 @@ class IntegratedBusinessIntelligence:
             else: season = "Winter (Wedding season, cool weather)"
 
             cluster_prompt = f"""
-            Analyze the market in {area} for business opportunities.
+            Analyze the market in {area} for business opportunities using the provided search intelligence.
             Current Month: {current_month} ({season})
             
+            MARKET INTELLIGENCE (RAG DATA):
+            {scouting_context[:5000] if scouting_context else "No specific search data available. Use your general knowledge of " + area + ", India."}
+            
             Return a JSON object with three main keys:
-            1. 'recommendations': 12-15 high-fidelity business ideas.
-            2. 'seasonal_analysis': {{
+            1. 'recommendations': 12-15 high-fidelity business ideas that an entrepreneur could start today.
+            2. 'seasonal_opportunities': {{
                 "current_season": "{season}",
                 "trending_ideas": [
                     {{ "business_name": "...", "reason": "why it's trending now" }},
@@ -182,45 +185,86 @@ class IntegratedBusinessIntelligence:
                 "confidence_score": "e.g. 94%",
                 "market_gap_intensity": "e.g. High / Critical / Growing",
                 "regional_stability": "Low/Medium/High",
-                "summary": "One sentence overview of the market health"
+                "summary": "One sentence overview of the market health based on actual data",
+                "detailed_market_data": true,
+                "data_sources": ["Google Trends", "Local Search", "FRED", "Web Trends"],
+                "live_economic_indicators": {{
+                    "gdp_growth": "e.g. 7.2%",
+                    "investment_inflow": "High",
+                    "business_registrations": "e.g. +12% YoY",
+                    "consumer_confidence": "e.g. 85/100",
+                    "digital_adoption": "e.g. High"
+                }},
+                "market_trends_analysis": {{
+                   "emerging_sectors": [
+                       {{"sector": "e.g. Agri-Tech", "growth_rate": "15%", "market_size": "₹20Cr", "opportunity_level": "High"}}
+                   ],
+                   "consumer_behavior": {{
+                       "online_adoption": "High",
+                       "mobile_first": "80%"
+                   }}
+                }},
+                "investment_climate": {{
+                    "funding_landscape": {{"angel_investors": "Active", "vc_presence": "Moderate"}},
+                    "investment_sectors": [
+                        {{"sector": "Retail", "funding_available": "Lakhs", "investor_interest": "High"}}
+                    ],
+                    "success_metrics": {{
+                        "business_survival_rate": "75%",
+                        "average_breakeven": "14 Months"
+                    }}
+                }},
+                "competitive_landscape": {{
+                    "competition_intensity": {{"overall_level": "Moderate", "new_entrant_threat": "Low"}},
+                    "market_leaders": [
+                        {{"category": "Retail", "market_share": "40%", "differentiation_opportunity": "High"}}
+                    ],
+                    "market_gaps": ["Clean Water Delivery", "Senior Care", "Hyper-local logistics"]
+                }},
+                "consumer_insights": {{
+                    "demographics": {{"median_age": "28", "household_income": "₹5L - ₹10L"}},
+                    "spending_patterns": {{"online_spending": "Increasing", "local_business_preference": "High", "premium_willingness": "Moderate"}},
+                    "behavior_trends": [
+                        {{"trend": "Eco-friendly products", "adoption_rate": "High"}}
+                    ]
+                }}
             }}
             
-            CRITICAL - INDIAN LOCALIZATION & NAMES: 
-            - Use catch, RELATABLE local names (e.g., 'Bhopal Cold-Pressed Oils', 'Shree Ganesha Cooling', 'Monsoon-Magic Cafes').
-            - Every business name MUST sound like a real local shop or service in {area}.
-            - Use local neighborhood context (Chowks, Mandis, specific colonies if available).
+            CRITICAL - REAL BUSINESS NAMES & RAG VERIFICATION: 
+            - Use PROPER, CATCHY, AND ACTIONABLE business names that a real entrepreneur would use for a startup.
+            - DO NOT use generic category names like 'Retail Shop' or 'Cafe'.
+            - Every business name MUST be a specific, brandable entity (e.g., 'Bharat-Pure Cold Pressed Oils' instead of just 'Oil Mill').
+            - VERIFY the market gap against the RAG DATA provided. If the data shows a lack of a certain service, prioritize that.
+            - Every business name MUST sound like a real local shop or service that can be opened in {area}.
+            - Use local neighborhood context (Chowks, Mandis, specific colonies like Arera Colony, New Market, etc.).
             
             SEASONAL SECTION REQUIREMENTS:
             - Identify 3 business ideas that are PERFECT for the current {season} season in {area}.
-            - Explain WHY they are trending right now (e.g., 'April heat is driving demand for air cooler rentals').
-            - Use easy, catchy, and relatable Indian names (e.g., 'Bhopal Agri-Hub', 'Desi-Delight Snacks', 'Shree Ganesha Logistics', 'Apna Kirana').
-            - Consider local Indian factors: neighborhood types (Mandi, Chowk, IT Park), local festivals, and regional consumer habits.
+            - Use easy, catchy, and relatable Indian names.
+            - Consider local Indian factors: neighborhood types, local festivals, and regional consumer habits.
             - Currency: Use ₹ (INR) and express large numbers in Lakhs (L) and Crores (Cr).
             
             HUMANIZATION: 
-            - Write like a seasoned Indian business uncle/expert who is friendly and practical.
-            - Use simple, encouraging language. Avoid robotic or technical jargon (no 'Nodes', 'Telemetry', 'Scalability' unless explained simply).
-            - Focus on 'ground reality' and immediate actionability.
+            - Write like a seasoned Indian business expert who is friendly and practical.
+            - Avoid robotic or technical jargon. Focus on 'ground reality'.
             
             Every recommendation MUST have these exact keys. DO NOT use '--', 'N/A', or empty strings:
-            - business_name: Professional and catchy Indian name
+            - business_name: Professional and catchy entrepreneurial name
             - description: Strategic overview in humanized language
             - category: Industry sector
-            - market_gap: Specific localized gap found in {area} (e.g., 'Lack of clean drinking water delivery in New Market area')
+            - market_gap: Specific localized gap found in {area} (e.g., 'Lack of organic spice processing in Berasia region')
             - target_audience: Primary local demographic
-            - investment_range: Setup budget (e.g. ₹10L - ₹15L)
-            - potential_revenue: Est. yearly earnings (e.g. ₹35L/Year)
+            - investment_range: Setup budget (e.g. ₹5L - ₹8L)
+            - potential_revenue: Est. yearly earnings (e.g. ₹15L/Year)
             - roi_potential: Profit potential % (e.g. 75%). MUST BE A NUMBER + %.
             - implementation_difficulty: 'Low', 'Medium', or 'High'
-            - cac: Cost to get a customer (e.g. ₹200)
-            - ideal_neighborhood: Specific local area/colony (e.g. 'Old Bhopal Market', 'Arera Colony')
-            - market_size: Total local opportunity (e.g. ₹5Cr)
+            - cac: Cost to get a customer (e.g. ₹150)
+            - ideal_neighborhood: Specific local area/colony
+            - market_size: Total local opportunity (e.g. ₹2Cr)
             - key_success_factors: 2-3 simple success tips
             - six_month_plan: 3 milestones with 'month' and 'goal' keys
             
-            STRICT POLICY: All fields must be populated with REALISTIC, DATA-DRIVEN estimates based on the provided search results. If specific data is missing, use your expert knowledge of the Indian market in {area} to provide the best professional estimate.
-            
-            NO PLACEHOLDERS. JSON ONLY.
+            STRICT POLICY: All fields must be populated with REALISTIC, DATA-DRIVEN estimates. NO PLACEHOLDERS. JSON ONLY.
             """
             
             final_insights = await self._run_analysis_cluster(cluster_prompt, area, language, scouting_context)
@@ -254,7 +298,7 @@ class IntegratedBusinessIntelligence:
                 "success": True,
                 "area": display_area,
                 "recommendations": polished_recs,
-                "seasonal_opportunities": final_insights.get("seasonal_analysis", {}),
+                "seasonal_opportunities": final_insights.get("seasonal_opportunities", {}),
                 "analysis": final_insights.get("analysis", {}),
                 "timestamp": datetime.now().isoformat(),
                 "ai_source": final_insights.get("ai_source", "Tiered-Cluster V4.2"),
