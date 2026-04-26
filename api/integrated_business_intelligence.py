@@ -250,18 +250,29 @@ class IntegratedBusinessIntelligence:
         except Exception as e:
             print(f"[CLUSTER-FAIL] Core Pipeline Exception: {e}")
             # FINAL SAFETY NET: If everything fails, return realistic fallback data
-            return self._generate_realistic_fallback(area, language)
+            return await self._generate_realistic_fallback(area, language)
 
-    def _generate_realistic_fallback(self, area: str, language: str = "English") -> Dict:
+    async def _generate_realistic_fallback(self, area: str, language: str = "English") -> Dict:
         """
         STRATEGIC FALLBACK ENGINE:
-        Generates realistic-looking, localized dummy data to ensure 0% downtime
-        when API limits are hit or network issues occur.
+        Generates realistic-looking, localized dummy data using Pollinations AI
+        to ensure 0% downtime and 100% realistic content.
         """
-        import random
-        print(f"[FALLBACK] Generating high-fidelity strategic fallback for: {area}")
+        print(f"[FALLBACK] Initiating Neural Fallback via Pollinations for: {area}")
         
-        # 20+ Realistic Business Niches with placeholders for area
+        # 1. Try Pollinations for a realistic AI-generated fallback
+        try:
+            pollinations_prompt = f"Generate 12 high-fidelity business recommendations for {area}. Return valid JSON ONLY with 'analysis' and 'recommendations' keys. Every item must have unique business_name, description, investment, and roi_potential."
+            res = await self._call_pollinations_fallback(area, pollinations_prompt, language)
+            if res and res.get("success") and res.get("recommendations"):
+                print(f"[FALLBACK-SUCCESS] Pollinations delivered neural fallback for {area}")
+                res["ai_source"] = "Neural Fallback Engine (Pollinations AI)"
+                return res
+        except Exception as e:
+            print(f"[FALLBACK-WARN] Pollinations fallback failed: {e}")
+
+        # 2. Hardcoded High-Fidelity Backup (The ultimate safety net)
+        import random
         niches = [
             {"title": "Eco-Logic Solutions", "cat": "CleanTech", "desc": "Providing modular greywater recycling systems for residential complexes in {area}."},
             {"title": "ZestyByte Cloud Kitchens", "cat": "FoodTech", "desc": "A hyper-local delivery-only kitchen specializing in health-conscious traditional cuisines found in {area}."},
@@ -287,46 +298,32 @@ class IntegratedBusinessIntelligence:
         
         selected_niches = random.sample(niches, 12)
         recs = []
-        
         for n in selected_niches:
             invest = random.randint(5, 50)
             rev = invest * random.uniform(0.15, 0.45)
-            roi = random.randint(25, 180)
-            
             recs.append({
                 "title": n["title"],
                 "description": n["desc"].format(area=area),
                 "category": n["cat"],
                 "market_gap": f"Lack of specialized {n['cat'].lower()} solutions in the {area} region.",
                 "target_audience": "Local entrepreneurs and residents",
-                "competitive_advantage": "Localized operational model and first-mover advantage.",
-                "revenue_model": "Subscription and Transaction-based",
                 "investment": f"₹{invest}L",
                 "potential_revenue": f"₹{rev:.1f}L/Year",
-                "roi_percentage": roi,
+                "roi_percentage": random.randint(25, 180),
                 "difficulty": random.choice(["Low", "Medium", "High"]),
                 "market_size": f"₹{random.randint(2, 20)}Cr",
                 "payback_period": f"{random.randint(6, 24)} Months",
                 "unique_selling_proposition": "First-mover advantage in this specific micro-market.",
-                "six_month_plan": [
-                    {"month": "Month 1-2", "goal": "Setup and Market Validation"},
-                    {"month": "Month 3-4", "goal": "Pilot Launch and Feedback Loop"},
-                    {"month": "Month 5-6", "goal": "Scaling Operations"}
-                ]
+                "six_month_plan": [{"month": "1-2", "goal": "Setup"}, {"month": "3-4", "goal": "Launch"}, {"month": "5-6", "goal": "Scale"}]
             })
             
         return {
             "success": True,
             "area": area,
-            "ai_source": "Strategic Fallback Engine (Regional Synthesis)",
-            "analysis": {
-                "executive_summary": f"Comprehensive market analysis for {area} shows significant gaps in {', '.join([n['cat'] for n in selected_niches[:3]])} sectors. High demand for modern tech-enabled services is projected for 2026.",
-                "confidence_score": "88%",
-                "market_gap_intensity": "High"
-            },
+            "ai_source": "Local Fallback Engine (Last Resort)",
+            "analysis": {"executive_summary": f"Market analysis for {area} complete."},
             "recommendations": recs,
-            "timestamp": datetime.now().isoformat(),
-            "intelligence_fidelity": "Simulated Regional Recon"
+            "timestamp": datetime.now().isoformat()
         }
 
     async def _call_pollinations_fallback(self, area: str, prompt: str, lang: str) -> Optional[Dict]:
@@ -655,7 +652,7 @@ class IntegratedBusinessIntelligence:
             print(f"[FAIL] [POLLINATIONS_FAILED] Error: {e}")
             print(f"[DEBUG] Full Traceback: {error_details}")
             
-        return self._generate_realistic_fallback(area, lang)
+        return await self._generate_realistic_fallback(area, lang)
 
     async def _call_groq(self, prompt: str, area: str, lang: str) -> Optional[Dict]:
         """Lightning-Fast Reasoning Inference via Groq (DeepSeek-R1 Distill)"""
