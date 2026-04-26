@@ -961,17 +961,27 @@ class IntegratedBusinessIntelligence:
                 from simple_recommendations import parse_real_location_data
                 location_info = parse_real_location_data(area)
                 if location_info and 'coordinates' in location_info:
-                    lat = location_info['coordinates'].get('lat')
-                    lng = location_info['coordinates'].get('lng')
-                    print(f"📍 [GEOLOCATION] Explicitly locked scouting to: {lat}, {lng} for {area}")
+                    clat = location_info['coordinates'].get('lat')
+                    clng = location_info['coordinates'].get('lng')
+                    # Only lock if we have valid non-zero coordinates
+                    if clat and clng and (clat != 0 or clng != 0):
+                        lat, lng = clat, clng
+                        print(f"📍 [GEOLOCATION] Explicitly locked scouting to: {lat}, {lng} for {area}")
+                    else:
+                        print(f"📍 [GEOLOCATION] Coordinates for {area} are baseline. Letting scraper auto-resolve location.")
             except Exception as geode_err:
                 print(f"⚠️ Geo-lock failed: {geode_err}")
 
             # Wrap blocking call in thread - Optimization: Disable reviews/contacts for speed/memory efficiency
             def _scrape():
+                # BROADER SEARCH: If area is very specific, use city for geolocation
+                search_loc = area
+                if "," in area:
+                    search_loc = area.split(",")[-2].strip() if len(area.split(",")) > 1 else area.split(",")[-1].strip()
+                
                 return scrape_google_maps_contacts(
                     search_queries=[query], 
-                    location=area, 
+                    location=search_loc, 
                     max_results=5,
                     scrape_reviews=False, # Save massive memory
                     scrape_contacts=False, # Save massive memory
