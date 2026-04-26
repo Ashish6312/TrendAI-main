@@ -773,9 +773,9 @@ function DashboardContent() {
                       </div>
                     )}
                   </div>
-                  {/* Location Suggestions Dropdown - Ultra Professional Redesign */}
+                  {/* Location Suggestions Dropdown - Only show when there are actual suggestions or input */}
                   <AnimatePresence>
-                    {showSuggestions && (
+                    {showSuggestions && (suggestions.length > 0 || area.length > 0) && (
                       <motion.div
                         initial={{ opacity: 0, scale: 0.98, y: 10 }}
                         animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -797,7 +797,7 @@ function DashboardContent() {
                               </>
                             )}
                           </div>
-                          <div className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-[9px] font-black text-emerald-500 uppercase tracking-widest border border-emerald-500/20">India Only</div>
+                          <div className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-[9px] font-black text-emerald-500 uppercase tracking-widest border border-emerald-500/20">Market Verified</div>
                         </div>
 
                         <div className="overflow-y-auto p-2 scrollbar-hide">
