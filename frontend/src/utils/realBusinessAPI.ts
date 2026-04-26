@@ -95,7 +95,7 @@ class RealBusinessAPI {
         body: JSON.stringify({
           query,
           location,
-          max_results: 50,
+          max_results: 20,
           email
         }),
       });

@@ -808,8 +808,13 @@ async def scrape_businesses(payload: ScrapeRequest, db: Session = Depends(get_db
             pass
     
     try:
-        # Apify call (Wait for actor to finish)
-        raw_items = scrape_google_maps_contacts([payload.query], payload.location, max_results=payload.max_results)
+        # Apify call (Wait for actor to finish - Optimized with Threading)
+        raw_items = await asyncio.to_thread(
+            scrape_google_maps_contacts, 
+            [payload.query], 
+            payload.location, 
+            max_results=payload.max_results
+        )
         
         if not raw_items:
             return {

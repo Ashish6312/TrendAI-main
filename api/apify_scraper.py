@@ -39,7 +39,9 @@ def scrape_google_maps_contacts(search_queries: List[str], location: Optional[st
         "includeOpeningHours": True,
         "scrapeWebsite": scrape_contacts,
         "language": "en",
-        "zoom": 12 
+        "zoom": 12,
+        "maxParallelRequests": 20, # Accelerate scraping
+        "decompress": True
     }
     
     # Explicit Geolocation: Manual fix for start coordinates if available
