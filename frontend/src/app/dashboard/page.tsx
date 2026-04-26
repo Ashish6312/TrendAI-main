@@ -324,7 +324,9 @@ function DashboardContent() {
       if (area && showSuggestions && area.length > 2) {
         try {
           // 💡 FIXED: Strict India-only location suggestions
-          const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(area)}&countrycodes=in&limit=5`);
+          const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(area)}&countrycodes=in&limit=6&addressdetails=1`, {
+            headers: { 'User-Agent': 'StartupScope-Market-Analysis/1.0' }
+          });
           const data = await res.json();
           setSuggestions(data);
         } catch (e) {
