@@ -155,56 +155,28 @@ class IntegratedBusinessIntelligence:
             # --- STAGE 3: CONSTRUCT NEURAL PROMPT & RUN CLUSTER ---
             await push_ws_status("Neural Cluster activated. Reasoning...")
             
+            # 💡 UPGRADED: High-fidelity prompt ensuring 100% data population for all dashboard boxes
             cluster_prompt = f"""
-            Role: Lead Business Intelligence Architect (TrendAI Neural Core)
-            Target Region: {area} for the 2026 Fiscal Year.
-            Language: {language}
+            Analyze the market in {area} for business opportunities.
+            Return 12-15 high-fidelity recommendations in JSON format.
             
-            Market Intelligence Context (RAG):
-            {scouting_context if scouting_context else "Synthesize market gaps based on general geographic trends."}
+            Every recommendation MUST have these exact keys:
+            - business_name: Professional name of the business
+            - description: Strategic overview
+            - category: Industry sector
+            - market_gap: Specific localized gap found in {area}
+            - target_audience: Primary demographic
+            - investment_range: Estimated startup cost (e.g. ₹15L)
+            - potential_revenue: Estimated annual revenue (e.g. ₹45L/Year)
+            - roi_potential: Annual ROI as percentage (e.g. 85%)
+            - implementation_difficulty: 'Low', 'Medium', or 'High'
+            - cac: Estimated Customer Acquisition Cost (e.g. ₹250)
+            - market_size: Estimated regional market value
+            - key_success_factors: 2-3 critical success pillars
+            - six_month_plan: 3 milestones with 'month' and 'goal' keys
             
-            STRICT FIDELITY REQUIREMENTS:
-            1. NO GENERIC NAMES. Never return names like "Delhi Digital Marketing Agency". Use creative, branded identities (e.g. "PulseFlow Digital", "ZestyBite Logistics").
-            2. LOCALIZED ZONES: Specify a specific neighborhood or district in {area} (e.g. "Hauz Khas Village", "Indiranagar 100ft Rd").
-            3. EVIDENCE-BASED: The 'description' for at least 3 recommendations MUST mention a specific trend or existing competitor/landmark found in the SCOUTING CONTEXT above to prove authenticity.
-            4. NO PLACEHOLDERS. Fields like 'competitive_advantage' and 'key_success_factors' MUST NOT contain generic text like "Strategic positioning". Use technical, data-dense strategies.
-            5. FINANCIAL METRICS: Provide specific, calculated values for 'investment', 'potential_revenue', and 'cac'.
-            6. VOLUME: Provide EXACTLY 12 high-fidelity, distinct recommendations.
-            7. NO EXCUSES: If the scouting context is thin, you MUST use your internal knowledge of {area} and regional economic indicators to synthesize REALISTIC opportunities. Do NOT return an empty list.
-            
-            Return ONLY valid JSON:
-            {{
-                "analysis": {{
-                    "executive_summary": "Hyper-local market outlook for {area} in 2026 based on real-time scouting of establishments and economic telemetry.",
-                    "confidence_score": "X%",
-                    "market_gap_intensity": "Low/Medium/High"
-                }},
-                "recommendations": [
-                    {{
-                        "business_name": "Unique Branded Name",
-                        "description": "Tactical thesis referencing local context (e.g. 'Closing the gap left by [Scouted Business] in [Neighborhood]')",
-                        "category": "Sector",
-                        "market_gap": "Underserved micro-niche in {area}",
-                        "ideal_neighborhood": "Specific area within {area}",
-                        "target_audience": "Specific demographics",
-                        "investment": "Specific amount (e.g. ₹12.5L)",
-                        "potential_revenue": "Specific annual revenue",
-                        "cac": "Estimated CAC",
-                        "roi_percentage": number,
-                        "roi_potential": "Projected annual returns",
-                        "be_period": "Break-even target",
-                        "m1_traffic": "Projected M1 volume",
-                        "retention_rate": "Target retention",
-                        "implementation_difficulty": "Low/Medium/High",
-                        "competition_level": "Low/Medium/High",
-                        "competitive_advantage": "Technical or operational edge",
-                        "key_success_factors": "3 specific factors",
-                        "revenue_model": "Specific monetization",
-                        "demand_index": "Numerical index",
-                        "six_month_plan": [{{ "month": "1-2", "goal": "..." }}, {{ "month": "3-4", "goal": "..." }}, {{ "month": "5-6", "goal": "..." }}]
-                    }}
-                ]
-            }}
+            NO PLACEHOLDERS. Use unique, realistic data for {area}.
+            JSON ONLY.
             """
             
             final_insights = await self._run_analysis_cluster(cluster_prompt, area, language, scouting_context)
@@ -276,45 +248,43 @@ class IntegratedBusinessIntelligence:
         niches = [
             {"title": "Eco-Logic Solutions", "cat": "CleanTech", "desc": "Providing modular greywater recycling systems for residential complexes in {area}."},
             {"title": "ZestyByte Cloud Kitchens", "cat": "FoodTech", "desc": "A hyper-local delivery-only kitchen specializing in health-conscious traditional cuisines found in {area}."},
-            {"title": "PulseFlow Logistics", "cat": "E-commerce", "desc": "Last-mile drone and e-bike delivery fleet optimized for the specific terrain and traffic of {area}."},
+            {"title": "PulseFlow Logistics", "cat": "E-commerce", "desc": "Last-mile delivery fleet optimized for the specific terrain and traffic of {area}."},
             {"title": "UrbanRoot Hydroponics", "cat": "AgriTech", "desc": "Automated vertical farming containers designed for urban rooftops and vacant lots in {area}."},
-            {"title": "SwiftStaffing AI", "cat": "HR Tech", "desc": "AI-powered recruitment portal connecting blue-collar workers in {area} to verified industrial and retail roles."},
-            {"title": "NomadHub Co-living", "cat": "Real Estate", "desc": "Curated co-living spaces with fiber-optic connectivity for the growing remote workforce in {area}."},
-            {"title": "SafeGuard Personal Security", "cat": "Security", "desc": "An app-based personal protection and emergency response service tailored for the {area} metropolitan region."},
-            {"title": "Lumina Solar Lease", "cat": "Energy", "desc": "Zero-investment solar panel leasing program for small businesses and residential societies in {area}."},
-            {"title": "Aura Wellness Pods", "cat": "Health", "desc": "Smart meditation and stress-recovery pods placed in high-traffic corporate hubs across {area}."},
-            {"title": "RetroFit EV Conversion", "cat": "Automotive", "desc": "Cost-effective electric vehicle conversion kits for existing two-wheelers and commercial autos in {area}."},
-            {"title": "KiddoQuest Learning Labs", "cat": "EdTech", "desc": "Hands-on STEM learning centers for K-12 students, filling the practical education gap in {area}."},
-            {"title": "FlavorFoundry Spices", "cat": "CPG", "desc": "Direct-to-consumer artisanal spice blends sourced from farmers near {area}, using blockchain for traceability."},
-            {"title": "CleanSweep Industrial Robots", "cat": "Robotics", "desc": "Providing robotic cleaning solutions for warehouses and manufacturing units in the {area} industrial belt."},
-            {"title": "MedLink Express", "cat": "Healthcare", "desc": "24/7 prescription medicine delivery and remote diagnostic consultation service for {area} residents."},
-            {"title": "PetPals Social Club", "cat": "Pet Care", "desc": "Premium pet daycare and social grooming facility, serving the affluent pet-owner demographic in {area}."},
-            {"title": "VibeCheck Digital Marketing", "cat": "Media", "desc": "Micro-influencer agency connecting local brands in {area} with neighborhood-level content creators."},
-            {"title": "AquaPure Smart Vending", "cat": "Water", "desc": "IoT-enabled alkaline water vending machines with subscription models for high-density areas in {area}."},
-            {"title": "FinFlex Micro-lending", "cat": "FinTech", "desc": "Low-interest micro-loans for street vendors and micro-entrepreneurs in {area}'s local markets."},
-            {"title": "GreenWrap Packaging", "cat": "Packaging", "desc": "Manufacturing biodegradable packaging materials for the booming restaurant and retail sector in {area}."},
-            {"title": "StyleStream Wardrobe", "cat": "Fashion", "desc": "Subscription-based premium clothing rental for weddings and professional events in {area}."}
+            {"title": "SwiftStaffing AI", "cat": "HR Tech", "desc": "AI-powered recruitment portal connecting blue-collar workers in {area} to verified roles."},
+            {"title": "NomadHub Co-living", "cat": "Real Estate", "desc": "Curated co-living spaces for the growing remote workforce in {area}."},
+            {"title": "SafeGuard Security", "cat": "Security", "desc": "App-based personal protection service tailored for the {area} metropolitan region."},
+            {"title": "Lumina Solar Lease", "cat": "Energy", "desc": "Solar panel leasing program for small businesses and residential societies in {area}."},
+            {"title": "Aura Wellness Pods", "cat": "Health", "desc": "Smart meditation pods placed in high-traffic corporate hubs across {area}."},
+            {"title": "RetroFit EV Conversion", "cat": "Automotive", "desc": "Cost-effective electric vehicle conversion kits for commercial autos in {area}."},
+            {"title": "KiddoQuest Learning Labs", "cat": "EdTech", "desc": "Hands-on STEM learning centers filling the practical education gap in {area}."},
+            {"title": "FlavorFoundry Spices", "cat": "CPG", "desc": "Artisanal spice blends sourced from farmers near {area}."}
         ]
         
-        selected_niches = random.sample(niches, 12)
+        selected_niches = random.sample(niches, min(len(niches), 12))
         recs = []
         for n in selected_niches:
             invest = random.randint(5, 50)
-            rev = invest * random.uniform(0.15, 0.45)
+            rev = invest * random.uniform(1.5, 3.5)
+            roi = random.randint(45, 185)
             recs.append({
                 "business_name": n["title"],
                 "description": n["desc"].format(area=area),
                 "category": n["cat"],
-                "market_gap": f"Lack of specialized {n['cat'].lower()} solutions in the {area} region.",
+                "market_gap": f"Unserved demand for {n['cat'].lower()} in {area}.",
                 "target_audience": "Local entrepreneurs and residents",
                 "investment_range": f"₹{invest}L",
                 "potential_revenue": f"₹{rev:.1f}L/Year",
-                "roi_potential": f"{random.randint(25, 180)}%",
+                "roi_potential": f"{roi}%",
                 "implementation_difficulty": random.choice(["Low", "Medium", "High"]),
-                "market_size": f"₹{random.randint(2, 20)}Cr",
-                "payback_period": f"{random.randint(6, 24)} Months",
-                "unique_selling_proposition": "First-mover advantage in this specific micro-market.",
-                "six_month_plan": [{"month": "1-2", "goal": "Setup"}, {"month": "3-4", "goal": "Launch"}, {"month": "5-6", "goal": "Scale"}]
+                "cac": f"₹{random.randint(150, 800)}",
+                "market_size": f"₹{random.randint(5, 25)}Cr",
+                "payback_period": f"{random.randint(8, 24)} Months",
+                "key_success_factors": ["Hyper-local targeting", "Operational efficiency", "Quality assurance"],
+                "six_month_plan": [
+                    {"month": "Month 1-2", "goal": "Infrastructure Setup"},
+                    {"month": "Month 3-4", "goal": "Beta Launch"},
+                    {"month": "Month 5-6", "goal": "Scaling Ops"}
+                ]
             })
             
         return {
@@ -522,20 +492,20 @@ class IntegratedBusinessIntelligence:
             }},
             "recommendations": [
                 {{
-                    "title": "Business Name",
-                    "description": "Tactical summary",
-                    "category": "Sector",
-                    "market_gap": "Specific underserved need in {area}",
-                    "target_audience": "Specific demographics interested",
-                    "competitive_advantage": "Calculated edge over status quo",
-                    "revenue_model": "Detailed revenue stream analysis",
-                    "funding_required": "Calculated capital (e.g. ₹2.5L-₹4L or ₹65L-₹80L)",
-                    "estimated_profit": "Calculated monthly profit",
-                    "roi_percentage": number,
-                    "difficulty": "Low/Medium/High",
-                    "market_size": "Actual market scope",
-                    "payback_period": "Months to recoup",
-                    "unique_selling_proposition": "USP",
+                    "business_name": "...",
+                    "description": "...",
+                    "category": "...",
+                    "market_gap": "...",
+                    "target_audience": "...",
+                    "competitive_advantage": "...",
+                    "revenue_model": "...",
+                    "investment_range": "...",
+                    "potential_revenue": "...",
+                    "roi_potential": "...",
+                    "implementation_difficulty": "...",
+                    "cac": "...",
+                    "market_size": "...",
+                    "key_success_factors": "...",
                     "six_month_plan": [
                         {"month": "Month 1-2", "goal": "..."},
                         {"month": "Month 3-4", "goal": "..."},
@@ -750,14 +720,16 @@ class IntegratedBusinessIntelligence:
            {{"recommendations": [{{ 
                "business_name": "...", 
                "description": "...", 
+               "category": "...",
                "market_gap": "...", 
                "target_audience": "...",
-               "competitive_advantage": "...",
-               "revenue_model": "...",
-               "investment_range": "UNQ_AMT", 
-               "roi_potential": "UNQ_PERCENT (e.g. 85%)", 
+               "investment_range": "e.g. ₹15L", 
+               "roi_potential": "e.g. 85%", 
                "implementation_difficulty": "Low/Medium/High", 
-               "market_size": "UNQ_MKT", 
+               "potential_revenue": "e.g. ₹40L/Year",
+               "cac": "e.g. ₹300",
+               "market_size": "...", 
+               "key_success_factors": "...",
                "six_month_plan": [
                    {"month": "Month 1-2", "goal": "..."},
                    {"month": "Month 3-4", "goal": "..."},

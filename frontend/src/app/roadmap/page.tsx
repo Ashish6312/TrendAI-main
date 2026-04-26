@@ -150,13 +150,8 @@ Ensure the tone is elite, technical, and data-dense. Respond ONLY with valid JSO
       const jsonMatch = text.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         jsonStr = jsonMatch[0];
-      } else {
-        // Aggressive search for any JSON-like structure
-        const firstCurly = text.indexOf('{');
-        const lastCurly = text.lastIndexOf('}');
-        if (firstCurly !== -1 && lastCurly !== -1) {
-          jsonStr = text.substring(firstCurly, lastCurly + 1);
-        }
+        // Neural Repair: Fix common trailing comma or unclosed bracket issues
+        jsonStr = jsonStr.replace(/,\s*([\}\]])/g, '$1'); 
       }
 
       if (!jsonStr) {
@@ -657,9 +652,9 @@ Ensure the tone is elite, technical, and data-dense. Respond ONLY with valid JSO
                            </div>
                         </div>
                         <h2 className="text-2xl sm:text-4xl font-black text-white italic uppercase tracking-tighter leading-tight mb-1 truncate">
-                           {activeGuideStep.title.replace(/Month \d+/i, '').trim() || activeGuideStep.title}
+                           {(activeGuideStep.title || 'Phase Analysis').replace(/Month \d+/i, '').trim()}
                         </h2>
-                        <p className="text-emerald-400/60 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest truncate">{activeGuideStep.description}</p>
+                        <p className="text-emerald-400/60 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest truncate">{activeGuideStep.description || 'Strategic Overview'}</p>
                      </div>
                      <button onClick={() => setActiveGuideStep(null)} className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-slate-400 hover:text-white transition-colors flex-shrink-0">
                         <X size={20} />
