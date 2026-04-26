@@ -204,7 +204,7 @@ export default function EnhancedRecommendationCard({
                 <div className="space-y-3">
                   <div className="flex items-center gap-2">
                     <Target size={16} className="text-emerald-500" />
-                    <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">Market Gap</h4>
+                    <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">What's Missing</h4>
                   </div>
                   <p className="text-sm text-slate-600 dark:text-gray-300 leading-relaxed pl-6">
                     {recommendation.market_gap}
@@ -214,7 +214,7 @@ export default function EnhancedRecommendationCard({
                 <div className="space-y-3">
                   <div className="flex items-center gap-2">
                     <Users size={16} className="text-blue-500" />
-                    <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">Target Audience</h4>
+                    <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">Your Customers</h4>
                   </div>
                   <p className="text-sm text-slate-600 dark:text-gray-300 leading-relaxed pl-6">
                     {recommendation.target_audience}
@@ -227,7 +227,7 @@ export default function EnhancedRecommendationCard({
                 <div className="space-y-3">
                   <div className="flex items-center gap-2">
                     <Zap size={16} className="text-purple-500" />
-                    <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">Competitive Advantage</h4>
+                    <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">Why You'll Win</h4>
                   </div>
                   <p className="text-sm text-slate-600 dark:text-gray-300 leading-relaxed pl-6">
                     {recommendation.competitive_advantage}
@@ -241,7 +241,7 @@ export default function EnhancedRecommendationCard({
                   <div className="space-y-3">
                     <div className="flex items-center gap-2">
                       <DollarSign size={16} className="text-emerald-500" />
-                      <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">Monetization Strategy</h4>
+                      <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">How you'll make money</h4>
                     </div>
                     <div className="p-4 rounded-2xl bg-white dark:bg-slate-800/30 border border-slate-200 dark:border-white/5">
                       <p className="text-sm text-slate-600 dark:text-gray-300 leading-relaxed">
@@ -261,11 +261,11 @@ export default function EnhancedRecommendationCard({
                   <div className="space-y-3">
                     <div className="flex items-center gap-2">
                       <TrendingUp size={16} className="text-blue-500" />
-                      <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">Unit Economics</h4>
+                      <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">Costs & Profits</h4>
                     </div>
                     <div className="p-4 rounded-2xl bg-white dark:bg-slate-800/30 border border-slate-200 dark:border-white/5">
                       <div className="flex justify-between items-center mb-2">
-                        <span className="text-xs font-medium text-slate-500">Avg. Customer Acquisition</span>
+                        <span className="text-xs font-medium text-slate-500">Cost to get a customer</span>
                         <span className="text-xs font-black text-blue-500">{recommendation.cac}</span>
                       </div>
                       <div className="text-[10px] text-slate-400 italic">
@@ -281,7 +281,7 @@ export default function EnhancedRecommendationCard({
                 <div className="space-y-4 pt-4 border-t border-slate-200 dark:border-white/10">
                   <div className="flex items-center gap-2">
                     <CalendarIcon size={16} className="text-blue-500" />
-                    <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">Tactical Roadmap Preview</h4>
+                    <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">First 6 Months Plan</h4>
                   </div>
                   <div className="grid gap-3 sm:grid-cols-3">
                     {recommendation.six_month_plan.map((step, sIdx) => {
@@ -306,7 +306,7 @@ export default function EnhancedRecommendationCard({
                 <div className="space-y-3">
                   <div className="flex items-center gap-2">
                     <Rocket size={16} className="text-orange-500" />
-                    <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">Key Success Factors</h4>
+                    <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">How to Succeed</h4>
                   </div>
                   <p className="text-sm text-slate-600 dark:text-gray-300 leading-relaxed pl-6">
                     {recommendation.key_success_factors}
@@ -322,7 +322,7 @@ export default function EnhancedRecommendationCard({
                     className="flex-1 py-3.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-lg text-[10px] uppercase tracking-[0.15em] border border-slate-700 hover:border-slate-500 shadow-none transition-all flex items-center justify-center gap-2"
                   >
                     <Rocket size={14} className="text-emerald-500" />
-                    Market Report
+                    View Full Report
                   </button>
                   <button
                     onClick={() => {
@@ -335,7 +335,7 @@ export default function EnhancedRecommendationCard({
                     className="flex-1 py-3.5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-lg text-[10px] uppercase tracking-[0.15em] border border-slate-700 hover:border-slate-500 shadow-none transition-all flex items-center justify-center gap-2"
                   >
                     <CalendarIcon size={14} className="text-blue-500" />
-                    Roadmap
+                    Launch Strategy
                   </button>
                 </div>
               )}

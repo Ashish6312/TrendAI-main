@@ -1494,7 +1494,7 @@ async def get_recommendations(request: RecommendationRequest, db: Session = Depe
             cache_str = str(cached_recs)
             # Detect old-style generic fallbacks or placeholder data
             is_generic_placeholder = "Strategic Market Opportunity" in cache_str or "₹5L-₹15L" in cache_str
-            is_generic_template = any(t in cache_str for t in ["Local Digital Solutions", "Hyper-Local Logistics", "Eco-Smart Retail Hub", "Solar-Powered Cold Storage"])
+            is_generic_template = any(t in cache_str for t in ["Local Digital Solutions", "Hyper-Local Logistics", "Eco-Smart Retail Hub", "Solar-Powered Cold Storage", "Ventures", "Pulseflow", "Zestybite", "Industries", "Franchise", "Startup", "Digital"])
             
             # Punjab Force-Refresh Policy:
             is_punjab_validation = "punjab" in analysis_area.lower()

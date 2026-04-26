@@ -655,7 +655,7 @@ export default function BusinessDetailsPage() {
                        <Building size={14} className="text-purple-500" /> Ops Scale
                     </span>
                     <span className="text-slate-900 dark:text-white font-black italic">
-                      {businessData.business.initial_team_size ? `${businessData.business.initial_team_size} Nodes` : 'N/A'}
+                      {businessData.business.initial_team_size ? `${businessData.business.initial_team_size} Team Members` : 'N/A'}
                     </span>
                   </div>
                 </div>
@@ -1464,10 +1464,10 @@ export default function BusinessDetailsPage() {
               <UniformCard title="Strategic KPIs" icon={<BarChart3 className="w-6 h-6" />}>
                 <div className="grid grid-cols-2 gap-4">
                   {[
-                    { l: 'Target ROI', v: `${businessData?.business?.roi_percentage || 'Analyzing...'}%` },
-                    { l: 'BEP Period', v: businessData?.business?.be_period || 'Analyzing...' },
-                    { l: 'M1 Traffic', v: businessData?.business?.m1_traffic || 'Analyzing...' },
-                    { l: 'Retention', v: businessData?.business?.retention_rate || 'Analyzing...' }
+                    { l: 'Projected Profit', v: `${businessData?.business?.roi_percentage || 'Analyzing...'}%` },
+                    { l: 'Breakeven Time', v: businessData?.business?.be_period || 'Analyzing...' },
+                    { l: 'Initial Customers', v: businessData?.business?.m1_traffic || 'Analyzing...' },
+                    { l: 'Customer Loyalty', v: businessData?.business?.retention_rate || 'Analyzing...' }
                   ].map((kpi, i) => (
                     <div key={i} className="p-4 rounded-2xl bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/10">
                       <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{kpi.l}</div>

@@ -222,6 +222,16 @@ def generate_ai_recommendations(area: str, location_info: Dict[str, Any], langua
     
     TASK: Provide EXACTLY 15 unique, high-fidelity business ideas based on the LIVE data provided above.
     
+    CRITICAL - INDIAN LOCALIZATION & NAMES: 
+    - Use easy, catchy, and RELATABLE Indian names (e.g., 'Bhopal Cold-Pressed Oils', 'Shree Ganesha Logistics', 'Desi-Delight Snacks', 'Apna Kirana').
+    - Every business name MUST sound like a real local shop or service in {area}.
+    - Use local neighborhood context (Chowks, Mandis, specific colonies if available).
+    
+    HUMANIZATION: 
+    - Write like a seasoned Indian business uncle/expert who is friendly and practical.
+    - Use simple, encouraging language. Avoid technical jargon.
+    - Focus on 'ground reality' and immediate actionability.
+    
     CONSTRAINTS:
     - NO generic ideas.
     - NO hardcoded templates.

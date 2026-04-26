@@ -9,7 +9,7 @@ import {
   Target, BarChart3, Lightbulb,
   ArrowRight, FileText, Clock, ChevronRight,
   Cpu, Download, Share2, Play, CheckCircle2, AlertCircle, Sparkles, Bookmark,
-  Shield, Activity, Globe
+  Shield, Activity, Globe, CloudSun, Zap
 } from "lucide-react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
@@ -1288,7 +1288,7 @@ function DashboardContent() {
                                 <Target className="w-6 h-6" />
                               </div>
                             </div>
-                            <div className="text-xs font-bold text-slate-500 dark:text-gray-500 uppercase tracking-widest mb-1">Success Rate</div>
+                            <div className="text-xs font-bold text-slate-500 dark:text-gray-500 uppercase tracking-widest mb-1">Profit Chance</div>
                             <div className="text-3xl lg:text-4xl font-black text-emerald-500 tracking-tighter tabular-nums drop-shadow-sm">{
                               (result?.analysis?.confidence_score) 
                                 ? result.analysis.confidence_score 
@@ -1303,7 +1303,7 @@ function DashboardContent() {
                                 <TrendingUp className="w-6 h-6" />
                               </div>
                             </div>
-                            <div className="text-xs font-bold text-slate-500 dark:text-gray-500 uppercase tracking-widest mb-1">Market Gap</div>
+                            <div className="text-xs font-bold text-slate-500 dark:text-gray-500 uppercase tracking-widest mb-1">Open Opportunity</div>
                             <div className="text-2xl lg:text-3xl font-black text-blue-500 tracking-tighter drop-shadow-sm break-words line-clamp-2 min-h-[3rem] flex items-center justify-center leading-tight">
                                       {
                                   (result?.analysis?.market_gap_intensity) 
@@ -1318,12 +1318,66 @@ function DashboardContent() {
                     </UniformCard>
                   </div>
 
+                  {/* Seasonal Picks Section */}
+                  {result.seasonal_opportunities && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="mb-8"
+                    >
+                      <UniformCard
+                        variant="glass"
+                        size="md"
+                        className="relative overflow-hidden border-2 border-orange-500/20 dark:border-white/5 shadow-orange-500/5 shadow-2xl bg-gradient-to-br from-orange-500/5 to-amber-500/5 dark:from-orange-500/10 dark:to-amber-500/10"
+                      >
+                        <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
+                          <CloudSun size={120} className="text-orange-500 rotate-12" />
+                        </div>
+                        
+                        <div className="relative z-10">
+                          <div className="flex items-center gap-3 mb-6">
+                            <div className="p-3 rounded-2xl bg-gradient-to-br from-orange-500 to-amber-500 text-white shadow-lg shadow-orange-500/20">
+                              <CloudSun size={24} />
+                            </div>
+                            <div>
+                              <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Seasonal Picks</h3>
+                              <p className="text-xs font-bold text-orange-600 dark:text-orange-400 uppercase tracking-widest">
+                                Trending for {new Date().toLocaleString('en-US', { month: 'long' })}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="grid md:grid-cols-3 gap-4">
+                            {Array.isArray(result.seasonal_opportunities?.trending_ideas) ? (
+                              result.seasonal_opportunities.trending_ideas.map((idea: any, i: number) => (
+                                <div key={i} className="p-5 rounded-2xl bg-white/50 dark:bg-black/40 backdrop-blur-md border border-orange-500/10 hover:border-orange-500/30 transition-all group">
+                                  <div className="text-[10px] font-black text-orange-500 uppercase tracking-widest mb-2 flex items-center gap-2">
+                                    <Zap size={10} className="animate-pulse" />
+                                    Trending Pick
+                                  </div>
+                                  <h4 className="text-md font-black text-slate-900 dark:text-white mb-2 group-hover:text-orange-500 transition-colors">{idea.business_name || idea.name}</h4>
+                                  <p className="text-xs text-slate-600 dark:text-gray-400 leading-relaxed line-clamp-3">
+                                    {idea.reason || idea.description}
+                                  </p>
+                                </div>
+                              ))
+                            ) : (
+                              <div className="col-span-3 py-4 text-center text-sm text-slate-400 italic">
+                                Analyzing seasonal market shifts...
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </UniformCard>
+                    </motion.div>
+                  )}
+
                   {/* Detailed Market Intelligence Sections */}
                   {result.analysis?.detailed_market_data && (
                     <div className="grid lg:grid-cols-3 gap-6 mb-8">
                       {/* Economic Indicators */}
                       <UniformCard
-                        title="Economic Indicators"
+                        title="Local Market Health"
                         variant="glass"
                         size="md"
                         className="shadow-lg border-2 border-slate-200/50 dark:border-white/10"
@@ -1333,11 +1387,11 @@ function DashboardContent() {
                             <>
                               <div className="grid grid-cols-2 gap-4">
                                 <div className="text-center p-3 bg-green-50 dark:bg-green-500/10 rounded-lg border border-green-200 dark:border-green-500/20">
-                                  <div className="text-xs font-bold text-green-600 dark:text-green-400 uppercase tracking-wider mb-1">GDP Growth</div>
+                                  <div className="text-xs font-bold text-green-600 dark:text-green-400 uppercase tracking-wider mb-1">Market Growth</div>
                                   <div className="text-lg font-black text-green-700 dark:text-green-300">{result.analysis.live_economic_indicators.gdp_growth}</div>
                                 </div>
                                 <div className="text-center p-3 bg-blue-50 dark:bg-blue-500/10 rounded-lg border border-blue-200 dark:border-blue-500/20">
-                                  <div className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider mb-1">Investment</div>
+                                  <div className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider mb-1">Money Inflow</div>
                                   <div className="text-lg font-black text-blue-700 dark:text-blue-300">{result.analysis.live_economic_indicators.investment_inflow}</div>
                                 </div>
                               </div>

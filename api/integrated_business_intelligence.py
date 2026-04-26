@@ -72,7 +72,7 @@ class IntegratedBusinessIntelligence:
         self.reddit_password = os.getenv("REDDIT_PASSWORD")
         
         # System State
-        self._logic_version = "v6.4_high_fidelity_synthesis"
+        self._logic_version = "v6.6_humanized_indian"
         self._final_recommendations_cache = {}
         self._cache_expiry = 3600
         
@@ -156,27 +156,62 @@ class IntegratedBusinessIntelligence:
             await push_ws_status("Neural Cluster activated. Reasoning...")
             
             # 💡 UPGRADED: High-fidelity prompt ensuring 100% data population for all dashboard boxes
+            current_month = datetime.now().strftime("%B")
+            # Determine Indian season
+            month_num = datetime.now().month
+            if 3 <= month_num <= 6: season = "Summer (Peak heat, vacations)"
+            elif 7 <= month_num <= 9: season = "Monsoon (Heavy rain, humidity)"
+            elif 10 <= month_num <= 11: season = "Post-Monsoon (Festive season: Diwali, Dussehra)"
+            else: season = "Winter (Wedding season, cool weather)"
+
             cluster_prompt = f"""
             Analyze the market in {area} for business opportunities.
-            Return 12-15 high-fidelity recommendations in JSON format.
+            Current Month: {current_month} ({season})
+            
+            Return a JSON object with two main keys:
+            1. 'recommendations': 12-15 high-fidelity business ideas.
+            2. 'seasonal_analysis': {{
+                "current_season": "{season}",
+                "trending_ideas": [
+                    {{ "business_name": "...", "reason": "why it's trending now" }},
+                    {{ "business_name": "...", "reason": "why it's trending now" }},
+                    {{ "business_name": "...", "reason": "why it's trending now" }}
+                ]
+            }}
+            
+            CRITICAL - INDIAN LOCALIZATION & NAMES: 
+            - Use catch, RELATABLE local names (e.g., 'Bhopal Cold-Pressed Oils', 'Shree Ganesha Cooling', 'Monsoon-Magic Cafes').
+            - Every business name MUST sound like a real local shop or service in {area}.
+            - Use local neighborhood context (Chowks, Mandis, specific colonies if available).
+            
+            SEASONAL SECTION REQUIREMENTS:
+            - Identify 3 business ideas that are PERFECT for the current {season} season in {area}.
+            - Explain WHY they are trending right now (e.g., 'April heat is driving demand for air cooler rentals').
+            - Use easy, catchy, and relatable Indian names (e.g., 'Bhopal Agri-Hub', 'Desi-Delight Snacks', 'Shree Ganesha Logistics', 'Apna Kirana').
+            - Consider local Indian factors: neighborhood types (Mandi, Chowk, IT Park), local festivals, and regional consumer habits.
+            - Currency: Use ₹ (INR) and express large numbers in Lakhs (L) and Crores (Cr).
+            
+            HUMANIZATION: 
+            - Write like a seasoned Indian business uncle/expert who is friendly and practical.
+            - Use simple, encouraging language. Avoid robotic or technical jargon (no 'Nodes', 'Telemetry', 'Scalability' unless explained simply).
+            - Focus on 'ground reality' and immediate actionability.
             
             Every recommendation MUST have these exact keys:
-            - business_name: Professional name of the business
-            - description: Strategic overview
+            - business_name: Professional and catchy Indian name
+            - description: Strategic overview in humanized language
             - category: Industry sector
-            - market_gap: Specific localized gap found in {area}
-            - target_audience: Primary demographic
-            - investment_range: Estimated startup cost (e.g. ₹15L)
-            - potential_revenue: Estimated annual revenue (e.g. ₹45L/Year)
-            - roi_potential: Annual ROI as percentage (e.g. 85%)
+            - market_gap: Specific localized gap found in {area} (e.g., 'Lack of clean drinking water delivery in New Market area')
+            - target_audience: Primary local demographic
+            - investment_range: Setup budget (e.g. ₹10L - ₹15L)
+            - potential_revenue: Est. yearly earnings (e.g. ₹35L/Year)
+            - roi_potential: Profit potential % (e.g. 75%)
             - implementation_difficulty: 'Low', 'Medium', or 'High'
-            - cac: Estimated Customer Acquisition Cost (e.g. ₹250)
-            - market_size: Estimated regional market value
-            - key_success_factors: 2-3 critical success pillars
+            - cac: Cost to get a customer (e.g. ₹200)
+            - market_size: Total local opportunity
+            - key_success_factors: 2-3 simple success tips
             - six_month_plan: 3 milestones with 'month' and 'goal' keys
             
-            NO PLACEHOLDERS. Use unique, realistic data for {area}.
-            JSON ONLY.
+            NO PLACEHOLDERS. JSON ONLY.
             """
             
             final_insights = await self._run_analysis_cluster(cluster_prompt, area, language, scouting_context)
@@ -210,6 +245,7 @@ class IntegratedBusinessIntelligence:
                 "success": True,
                 "area": display_area,
                 "recommendations": polished_recs,
+                "seasonal_opportunities": final_insights.get("seasonal_analysis", {}),
                 "analysis": final_insights.get("analysis", {}),
                 "timestamp": datetime.now().isoformat(),
                 "ai_source": final_insights.get("ai_source", "Tiered-Cluster V4.2"),
@@ -234,7 +270,7 @@ class IntegratedBusinessIntelligence:
         
         # 1. Try Pollinations for a realistic AI-generated fallback
         try:
-            pollinations_prompt = f"Generate 12 high-fidelity, realistic business recommendations for {area}, India. Every item MUST have: business_name, description, category, investment_range (e.g. ₹15L), potential_revenue (e.g. ₹40L/Year), roi_potential (e.g. 85%), implementation_difficulty (Low/Medium/High), market_size, and payback_period. Return valid JSON ONLY."
+            pollinations_prompt = f"Generate 12 high-fidelity, realistic business recommendations for {area}, India. Use catchy and professional Indian business names (e.g., 'Bharat Mart', 'Kisan Seva', 'Apna Tech'). Every item MUST have: business_name, description, category, investment_range (e.g. ₹15L), potential_revenue (e.g. ₹40L/Year), roi_potential (e.g. 85%), implementation_difficulty (Low/Medium/High), market_size, and payback_period. Return valid JSON ONLY."
             res = await self._call_pollinations_fallback(area, pollinations_prompt, language)
             if res and res.get("success") and res.get("recommendations"):
                 print(f"[FALLBACK-SUCCESS] Pollinations delivered neural fallback for {area}")
@@ -246,18 +282,18 @@ class IntegratedBusinessIntelligence:
         # 2. Hardcoded High-Fidelity Backup (The ultimate safety net)
         import random
         niches = [
-            {"title": "Eco-Logic Solutions", "cat": "CleanTech", "desc": "Providing modular greywater recycling systems for residential complexes in {area}."},
-            {"title": "ZestyByte Cloud Kitchens", "cat": "FoodTech", "desc": "A hyper-local delivery-only kitchen specializing in health-conscious traditional cuisines found in {area}."},
-            {"title": "PulseFlow Logistics", "cat": "E-commerce", "desc": "Last-mile delivery fleet optimized for the specific terrain and traffic of {area}."},
-            {"title": "UrbanRoot Hydroponics", "cat": "AgriTech", "desc": "Automated vertical farming containers designed for urban rooftops and vacant lots in {area}."},
-            {"title": "SwiftStaffing AI", "cat": "HR Tech", "desc": "AI-powered recruitment portal connecting blue-collar workers in {area} to verified roles."},
-            {"title": "NomadHub Co-living", "cat": "Real Estate", "desc": "Curated co-living spaces for the growing remote workforce in {area}."},
-            {"title": "SafeGuard Security", "cat": "Security", "desc": "App-based personal protection service tailored for the {area} metropolitan region."},
-            {"title": "Lumina Solar Lease", "cat": "Energy", "desc": "Solar panel leasing program for small businesses and residential societies in {area}."},
-            {"title": "Aura Wellness Pods", "cat": "Health", "desc": "Smart meditation pods placed in high-traffic corporate hubs across {area}."},
-            {"title": "RetroFit EV Conversion", "cat": "Automotive", "desc": "Cost-effective electric vehicle conversion kits for commercial autos in {area}."},
-            {"title": "KiddoQuest Learning Labs", "cat": "EdTech", "desc": "Hands-on STEM learning centers filling the practical education gap in {area}."},
-            {"title": "FlavorFoundry Spices", "cat": "CPG", "desc": "Artisanal spice blends sourced from farmers near {area}."}
+            {"title": "Nirmal Jal Solutions", "cat": "CleanTech", "desc": "Providing modular greywater recycling systems for residential complexes in {area}."},
+            {"title": "Swad-Seva Cloud Kitchens", "cat": "FoodTech", "desc": "A hyper-local delivery-only kitchen specializing in health-conscious traditional cuisines found in {area}."},
+            {"title": "Bharat-Gati Logistics", "cat": "E-commerce", "desc": "Last-mile delivery fleet optimized for the specific terrain and traffic of {area}."},
+            {"title": "Kisan-Mitra Hydroponics", "cat": "AgriTech", "desc": "Automated vertical farming containers designed for urban rooftops and vacant lots in {area}."},
+            {"title": "Rozgar-Setu AI", "cat": "HR Tech", "desc": "AI-powered recruitment portal connecting blue-collar workers in {area} to verified roles."},
+            {"title": "Apna-Ghar Co-living", "cat": "Real Estate", "desc": "Curated co-living spaces for the growing remote workforce in {area}."},
+            {"title": "Kavach Security", "cat": "Security", "desc": "App-based personal protection service tailored for the {area} metropolitan region."},
+            {"title": "Surya-Shakti Solar", "cat": "Energy", "desc": "Solar panel leasing program for small businesses and residential societies in {area}."},
+            {"title": "Shanti Wellness Pods", "cat": "Health", "desc": "Smart meditation pods placed in high-traffic corporate hubs across {area}."},
+            {"title": "Gati-Electric EV Conversion", "cat": "Automotive", "desc": "Cost-effective electric vehicle conversion kits for commercial autos in {area}."},
+            {"title": "Shiksha-Kendram Labs", "cat": "EdTech", "desc": "Hands-on STEM learning centers filling the practical education gap in {area}."},
+            {"title": "Desi-Masala Spices", "cat": "CPG", "desc": "Artisanal spice blends sourced from farmers near {area}."}
         ]
         
         selected_niches = random.sample(niches, min(len(niches), 12))
@@ -435,6 +471,10 @@ class IntegratedBusinessIntelligence:
         prompt = f"""
         Role: Senior Strategic Market Analyst
         Objective: Generate 12-15 high-fidelity business opportunities for {area}.
+        
+        CRITICAL: Use catchy, easy-to-pronounce, and professional Indian business names. 
+        Avoid generic 'Ventures' or 'Solutions'. Use names that sound like real Indian small-to-medium businesses 
+        (e.g., 'Vidisha Agri-Services', 'Bharat Logistics', 'Apna Cafe', 'Kisan Seva Kendra', 'Shree Ganesha Industries').
         
         Market Intelligence Data: {context[:context_limit] if context else "Generic market research needed."}
         
@@ -715,6 +755,10 @@ class IntegratedBusinessIntelligence:
         Analyze current market conditions and generate 12-15 specific, actionable business opportunities for {area}.
         Market Context: {context[:context_limit] if context else "Analyze area for emerging business opportunities."}
         
+        CRITICAL: Use catchy, easy-to-pronounce, and professional Indian business names. 
+        Avoid generic 'Ventures' or 'Solutions'. Use names that sound like real Indian small-to-medium businesses 
+        (e.g., 'Vidisha Agri-Services', 'Bharat Logistics', 'Apna Cafe', 'Kisan Seva Kendra', 'Shree Ganesha Industries').
+        
         Requirements:
         1. Return ONLY valid JSON matching the structure: 
            {{"recommendations": [{{ 
@@ -892,7 +936,8 @@ class IntegratedBusinessIntelligence:
                 resp = await client.post("https://api.firecrawl.dev/v1/extract", 
                     headers={"Authorization": f"Bearer {self.firecrawl_key}", "Content-Type": "application/json"}, 
                     json={
-                        "urls": [f"https://www.google.com/search?q=business+opportunities+and+economic+gaps+in+{area}+2026"],
+                        "urls": [f"https://www.google.com/search?q=business+opportunities+and+economic+gaps+in+{area}+2026+India"],
+                        "prompt": f"Extract the most promising business opportunities and market gaps in {area}, India for 2026. Use humanized, easy-to-understand language. Identify localized Indian business names and terms.",
                         "schema": {
                             "type": "object",
                             "properties": {
@@ -1025,7 +1070,7 @@ class IntegratedBusinessIntelligence:
             return "\n".join([r.get('body', '') for r in results])
         except: return ""
 
-    async def call_ai_cluster_json(self, prompt: str, system_prompt: str = "You are a strategic business analyst. Respond in valid JSON format ONLY.") -> Optional[Dict]:
+    async def call_ai_cluster_json(self, prompt: str, system_prompt: str = "You are a friendly Indian business consultant. Speak in simple, expert language. Respond in valid JSON format ONLY.") -> Optional[Dict]:
         """A generic method to get JSON from the cluster with fallbacks (Upgraded to V2.0)"""
         # Try Gemini 2.0 Flash first
         if self.gemini_key:
@@ -1076,18 +1121,20 @@ class IntegratedBusinessIntelligence:
         """Generate high-fidelity implementation details for a roadmap step using the cluster"""
         await push_ws_status(f"Generating guide: {step_title}...")
         prompt = f"""
-        Technical deep-dive for roadmap step: '{step_title}'
-        Venture: {business_type} in {location}
-        Description: {step_description}
+        Provide a simple, step-by-step guide for: '{step_title}'
+        Business: {business_type} in {location}
+        Context: {step_description}
+        
+        Write in friendly, expert Indian English. Avoid technical jargon.
         
         Provide:
-        - action_items: list of 5 specific tasks
-        - resources_needed: list of 3 items
-        - estimated_cost: string (localized)
-        - risk_assessment: string
-        - pro_tip: string
+        - action_items: 5 specific, easy tasks
+        - resource_requirements: list of 3 items needed (use local Indian terms if applicable)
+        - tactical_tips: 3 'pro tips' for the Indian market
+        - timeline_estimate: e.g. 2 weeks
+        - budget_estimate: setup cost in INR (Lakhs)
         
-        Respond in valid JSON.
+        Return valid JSON ONLY.
         """
         return await self.call_ai_cluster_json(prompt)
 
@@ -1095,9 +1142,15 @@ class IntegratedBusinessIntelligence:
         """Generate a 6-month high-fidelity strategic roadmap"""
         await push_ws_status(f"Synthesizing strategic roadmap for {title}...")
         prompt = f"""
-        Generate a tactical 6-month roadmap for starting '{title}' in {area}.
+        Generate a simple 6-month growth plan for starting '{title}' in {area}.
+        Write in friendly, expert Indian English.
         Respond in valid JSON with a 'steps' key containing 6 objects.
-        Each object: 'title' (Phase Name), 'description' (Tactical Goal), 'milestones' (List of 3 items).
+        Each object: 
+        - title: Name of the phase (e.g. Month 1: Setting Up)
+        - description: Simple goal for this phase
+        - milestones: 3 clear things to do (e.g. Find a small shop, Buy equipment, Print flyers)
+        
+        HUMANIZATION: Use zero technical jargon. No 'Nodes', 'KPIs', or 'ROI' here. Just plain, helpful advice.
         """
         result = await self.call_ai_cluster_json(prompt)
         if result and "steps" in result:
@@ -1118,42 +1171,41 @@ class IntegratedBusinessIntelligence:
             
         # 2. Sequential Synthesis
         prompt = f"""
-        Role: Senior Strategic Market Analyst (Neural Intelligence Engine)
-        Target Business Venture: {title}
-        Sector/Category: {category}
-        Target Location Geospatial Context: {area}
-        Real-time Market Scouting Data: {tavily_data[:3500]}
+        Role: Expert Indian Business Advisor (Friendly & Practical)
+        Target Business: {title}
+        Category: {category}
+        Location: {area}
+        Local Market Intel: {tavily_data[:3500]}
         
-        TASK: Generate a high-fidelity, non-generic financial and operational drill-down for this SPECIFIC opportunity in {area} for the 2026 fiscal year.
+        TASK: Give me a simple, honest financial breakdown for this business in {area}.
         
-        STRICT FIDELITY RULES:
-        1. NO GENERIC PLACEHOLDERS. Do not use '₹5L-₹15L' unless it actually makes sense for the scale. 
-        2. CONSIDER SPECIALIZED INFRASTRUCTURE. If this is Biotech, consider lab equipment costs, safety certifications, and specialized HVAC.
-        3. REALISTIC REVENUE. Base monthly revenue on local demand and niche premium pricing.
-        4. LOCALIZED CONTEXT. Use the 'Scouting Context' to identify real local competitors and market gaps.
+        STRICT RULES:
+        1. INDIAN LOCALIZATION: Use INR (₹) and Lakhs/Crores. Be realistic about Indian city rents and labor costs.
+        2. NO ROBOTIC JARGON: Instead of 'staff nodes', use 'Team Members'. Instead of 'monetization', use 'How to make money'.
+        3. GROUND REALITY: Consider local factors like proximity to markets, local festivals, and typical customer behavior in an Indian city.
         
         Return ONLY valid JSON:
         {{
-            "funding_required": "realistic localized currency range (e.g. ₹45L - ₹1.2Cr)",
-            "estimated_revenue": "realistic localized monthly yield (e.g. ₹8L - ₹15L)",
-            "roi_percentage": number (annualized, e.g. 145), 
-            "payback_period": "e.g. 14-18 Months",
+            "funding_required": "budget needed (e.g. ₹10L - ₹15L)",
+            "estimated_revenue": "estimated monthly earnings (e.g. ₹2L - ₹4L)",
+            "roi_percentage": number (annual profit potential, e.g. 60), 
+            "payback_period": "time to get money back (e.g. 12-15 Months)",
             "startup_difficulty": "Low/Medium/Hard",
-            "initial_team_size": "e.g. 4-6 specialized staff",
-            "market_size": "Specific market reach or cap description",
-            "competition_level": "Low/High/Moderate based on scraped results",
+            "initial_team_size": "number of people needed (e.g. 3-4 helpers)",
+            "market_size": "simple description of local opportunity",
+            "competition_level": "Low/High/Medium",
             "demand_index": number (0-100),
             "profit_niches": [
-                {{"niche": "specific micro-niche name", "yield": percentage_number}}
+                {{"niche": "specific way to make extra profit", "yield": percentage_number}}
             ],
             "strategic_recommendations": [
-                {{"title": "Actionable Title", "description": "Strategic rationale based on market data"}}
+                {{"title": "Easy Next Step", "description": "Practical advice on what to do first"}}
             ],
-            "be_period": "Break-even month estimate",
-            "m1_traffic": "Est. Month 1 Footfall/Traffic",
-            "retention_rate": "Est. Customer Retention %",
+            "be_period": "Months until breakeven",
+            "m1_traffic": "Est. Month 1 Customers",
+            "retention_rate": "Est. Customer Loyalty %",
             "six_month_plan": ["Phase 1...", "Phase 2...", "Phase 3...", "Phase 4...", "Phase 5...", "Phase 6..."],
-            "key_success_factors": ["High-fidelity factor 1", "High-fidelity factor 2", "High-fidelity factor 3"]
+            "key_success_factors": ["Success Tip 1", "Success Tip 2", "Success Tip 3"]
         }}
         """
         
