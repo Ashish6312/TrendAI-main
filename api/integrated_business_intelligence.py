@@ -110,11 +110,11 @@ class IntegratedBusinessIntelligence:
                 print(f"[CACHE] Tiered Hit for {area}.")
                 return data
 
-        await push_ws_status("Initializing AI Analysis Engine...")
+        await push_ws_status("Starting our expert market scan...")
         
         try:
             # --- STAGE 1: MULTI-SOURCE RAG SCOUTING ---
-            await push_ws_status("Deploying Scouting Swarm drones...")
+            await push_ws_status("Connecting to local market data...")
             
             # 🧠 CHECK PERSISTENT SCOUTING CACHE
             if area_key in self._scouting_cache:
@@ -122,7 +122,7 @@ class IntegratedBusinessIntelligence:
                 print(f"[SCOUTING CACHE] Instant retrieval of market intelligence for {area}.")
                 scouting_context = self._scouting_cache[area_key]
             else:
-                await push_ws_status("Engaging Deep Extraction Layer (Apify + Firecrawl)...")
+                await push_ws_status("Scanning local business gaps...")
                 try:
                     # DEEP MODE: Restoration of 300s window for high-efficiency reconnaissance
                     scouting = await asyncio.wait_for(asyncio.gather(
@@ -137,14 +137,14 @@ class IntegratedBusinessIntelligence:
                     print(f"[SCOUTING-DEEP-TIMEOUT] Moving to high-fidelity synthesis for {area} after 300s sweep.")
                     scouting = [None, None, None, None]
                 
-                await push_ws_status("Vectorizing market intelligence...")
+                await push_ws_status("Organizing local insights...")
                 g_data = scouting[0] if not isinstance(scouting[0], Exception) and scouting[0] else ""
                 r_data = scouting[1] if not isinstance(scouting[1], Exception) and scouting[1] else ""
                 w_data = scouting[2] if not isinstance(scouting[2], Exception) and scouting[2] else ""
                 f_data = scouting[3] if not isinstance(scouting[3], Exception) and scouting[3] else ""
                 
                 # --- STAGE 2: RAG CONTEXT COMPILATION ---
-                await push_ws_status("Synthesizing Semantic RAG blocks...")
+                await push_ws_status("Building your business profile...")
                 scouting_context = self._compile_rag_block(g_data, r_data, w_data, f_data)
                 
                 # 💾 SAVE TO PERSISTENT CACHE
@@ -153,7 +153,7 @@ class IntegratedBusinessIntelligence:
                     self._save_scouting_cache()
             
             # --- STAGE 3: CONSTRUCT NEURAL PROMPT & RUN CLUSTER ---
-            await push_ws_status("Neural Cluster activated. Reasoning...")
+            await push_ws_status("Reasoning through the best opportunities...")
             
             # 💡 UPGRADED: High-fidelity prompt ensuring 100% data population for all dashboard boxes
             current_month = datetime.now().strftime("%B")
@@ -221,13 +221,13 @@ class IntegratedBusinessIntelligence:
                  if "," in area:
                      broad_area = area.split(",")[-2].strip() if len(area.split(",")) > 1 else area.split(",")[-1].strip()
                      print(f"[RECON-BROADEN] Specific search failed. Retrying with broad area: {broad_area}")
-                     await push_ws_status(f"Broadening search to {broad_area} for better data...")
+                     await push_ws_status(f"Looking into {broad_area} for even better results...")
                      return await self.generate_data_driven_recommendations(broad_area, email, language, phase)
                  
                  return {"success": False, "message": "Analysis system temporarily unavailable."}
 
             # --- STAGE 4: NEURAL REFINEMENT ---
-            await push_ws_status("Finalizing recommendations...")
+            await push_ws_status("Polishing your final report...")
             polished_recs = self._polish_identities(final_insights.get("recommendations", []), area)
             
             # NEW: Use geolocated official name if available for professional display
@@ -954,7 +954,7 @@ class IntegratedBusinessIntelligence:
                     return f"FIRECRAWL_EXTRACT: {json.dumps(data)}"
                 elif resp.status_code == 402:
                     logger.warning(f"[FIRECRAWL] Credit threshold reached (402) for {area}. Attempting high-fidelity fallback...")
-                    await push_ws_status("Firecrawl Credits exhausted. Re-routing to Search-GPT cluster...")
+                    await push_ws_status("Expanding search to deeper market sources...")
                     # Fallback to a broader search drone since Firecrawl is exhausted
                     return "FIRECRAWL: (Credit Exhausted) Re-routing telemetry to SearchAPI/Tavily cluster."
                 return f"FIRECRAWL_ERROR: Status {resp.status_code}"
@@ -1119,7 +1119,7 @@ class IntegratedBusinessIntelligence:
 
     async def generate_implementation_guide(self, step_title: str, step_description: str, business_type: str, location: str) -> Dict:
         """Generate high-fidelity implementation details for a roadmap step using the cluster"""
-        await push_ws_status(f"Generating guide: {step_title}...")
+        await push_ws_status(f"Creating your guide for {step_title}...")
         prompt = f"""
         Provide a simple, step-by-step guide for: '{step_title}'
         Business: {business_type} in {location}
@@ -1140,7 +1140,7 @@ class IntegratedBusinessIntelligence:
 
     async def generate_strategic_roadmap(self, title: str, area: str) -> Dict:
         """Generate a 6-month high-fidelity strategic roadmap"""
-        await push_ws_status(f"Synthesizing strategic roadmap for {title}...")
+        await push_ws_status(f"Planning your 6-month journey for {title}...")
         prompt = f"""
         Generate a simple 6-month growth plan for starting '{title}' in {area}.
         Write in friendly, expert Indian English.
