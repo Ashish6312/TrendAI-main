@@ -160,7 +160,7 @@ export default function EnhancedRecommendationCard({
               <span className="text-xs font-bold uppercase tracking-wider">ROI</span>
             </div>
             <div className="text-sm font-black">
-              {recommendation.roi_potential}
+              {recommendation.roi_potential || "High"}
             </div>
           </div>
 
@@ -179,10 +179,10 @@ export default function EnhancedRecommendationCard({
           <div className="p-3 bg-blue-500/5 rounded-xl border border-slate-700/50">
             <div className="flex items-center gap-2 mb-1">
               <BarChart3 size={14} className="text-blue-500" />
-              <span className="text-xs font-bold text-blue-400 uppercase tracking-wider">Location</span>
+              <span className="text-xs font-bold text-blue-400 uppercase tracking-wider">Prime Spot</span>
             </div>
             <div className="text-sm font-bold text-blue-300 truncate">
-              {recommendation.ideal_neighborhood || recommendation.market_size || 'Regional'}
+              {recommendation.ideal_neighborhood || recommendation.market_size || 'Central Area'}
             </div>
           </div>
         </div>

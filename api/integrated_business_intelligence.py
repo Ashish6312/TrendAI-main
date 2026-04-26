@@ -168,7 +168,7 @@ class IntegratedBusinessIntelligence:
             Analyze the market in {area} for business opportunities.
             Current Month: {current_month} ({season})
             
-            Return a JSON object with two main keys:
+            Return a JSON object with three main keys:
             1. 'recommendations': 12-15 high-fidelity business ideas.
             2. 'seasonal_analysis': {{
                 "current_season": "{season}",
@@ -177,6 +177,12 @@ class IntegratedBusinessIntelligence:
                     {{ "business_name": "...", "reason": "why it's trending now" }},
                     {{ "business_name": "...", "reason": "why it's trending now" }}
                 ]
+            }}
+            3. 'analysis': {{
+                "confidence_score": "e.g. 94%",
+                "market_gap_intensity": "e.g. High / Critical / Growing",
+                "regional_stability": "Low/Medium/High",
+                "summary": "One sentence overview of the market health"
             }}
             
             CRITICAL - INDIAN LOCALIZATION & NAMES: 
@@ -207,7 +213,8 @@ class IntegratedBusinessIntelligence:
             - roi_potential: Profit potential % (e.g. 75%)
             - implementation_difficulty: 'Low', 'Medium', or 'High'
             - cac: Cost to get a customer (e.g. ₹200)
-            - market_size: Total local opportunity
+            - ideal_neighborhood: Specific local area/colony (e.g. 'Old Bhopal Market', 'Arera Colony')
+            - market_size: Total local opportunity (e.g. ₹5Cr)
             - key_success_factors: 2-3 simple success tips
             - six_month_plan: 3 milestones with 'month' and 'goal' keys
             
