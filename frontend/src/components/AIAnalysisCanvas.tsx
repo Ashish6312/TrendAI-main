@@ -17,7 +17,8 @@ const Scene = () => {
     // Silence THREE.Clock deprecation warnings in the console
     const originalWarn = console.warn;
     console.warn = (...args) => {
-      if (args[0]?.includes?.('THREE.Clock') || args[0]?.includes?.('THREE.Timer')) return;
+      const msg = args[0];
+      if (typeof msg === 'string' && (msg.includes('Clock') || msg.includes('Timer') || msg.includes('THREE.'))) return;
       originalWarn(...args);
     };
     

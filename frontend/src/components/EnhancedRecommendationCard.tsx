@@ -59,19 +59,19 @@ export default function EnhancedRecommendationCard({
   const [isExpanded, setIsExpanded] = useState(false);
 
   // Parse ROI potential
-  const getRoiColor = (roi: string) => {
-    const roiLower = roi.toLowerCase();
-    if (roiLower.includes('high') || roiLower.includes('60%') || roiLower.includes('70%')) {
+  const getRoiColor = (roi: any) => {
+    const roiStr = String(roi || '').toLowerCase();
+    if (roiStr.includes('high') || roiStr.includes('60%') || roiStr.includes('70%')) {
       return 'text-emerald-500 bg-emerald-500/5 border-slate-700/50';
-    } else if (roiLower.includes('medium') || roiLower.includes('30%') || roiLower.includes('40%')) {
+    } else if (roiStr.includes('medium') || roiStr.includes('30%') || roiStr.includes('40%')) {
       return 'text-blue-500 bg-blue-500/5 border-slate-700/50';
     }
     return 'text-slate-400 bg-slate-800 border-slate-700/50';
   };
 
   // Parse difficulty level
-  const getDifficultyColor = (difficulty: string) => {
-    const diffLower = difficulty.toLowerCase();
+  const getDifficultyColor = (difficulty: any) => {
+    const diffLower = String(difficulty || '').toLowerCase();
     if (diffLower.includes('low')) {
       return 'text-emerald-500 bg-emerald-500/5 border-slate-700/50';
     } else if (diffLower.includes('medium')) {
@@ -83,8 +83,8 @@ export default function EnhancedRecommendationCard({
   };
 
   // Get difficulty icon
-  const getDifficultyIcon = (difficulty: string) => {
-    const diffLower = difficulty.toLowerCase();
+  const getDifficultyIcon = (difficulty: any) => {
+    const diffLower = String(difficulty || '').toLowerCase();
     if (diffLower.includes('low')) return <CheckCircle2 size={14} />;
     if (diffLower.includes('medium')) return <AlertCircle size={14} />;
     if (diffLower.includes('high')) return <Shield size={14} />;

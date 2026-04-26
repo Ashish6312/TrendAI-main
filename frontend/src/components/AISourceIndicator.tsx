@@ -31,8 +31,8 @@ export default function AISourceIndicator({
 }: AISourceIndicatorProps) {
   
   // Get AI source icon and color
-  const getAISourceInfo = (source: string) => {
-    const sourceLower = source.toLowerCase();
+  const getAISourceInfo = (source: any) => {
+    const sourceLower = String(source || '').toLowerCase();
     
     if (sourceLower.includes('pollinations')) {
       return {
@@ -86,8 +86,8 @@ export default function AISourceIndicator({
   };
 
   // Get data source icons
-  const getDataSourceIcon = (source: string) => {
-    const sourceLower = source.toLowerCase();
+  const getDataSourceIcon = (source: any) => {
+    const sourceLower = String(source || '').toLowerCase();
     
     if (sourceLower.includes('tavily')) return <Search size={12} className="text-blue-500" />;
     if (sourceLower.includes('exa')) return <Globe size={12} className="text-green-500" />;

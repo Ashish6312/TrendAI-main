@@ -1459,7 +1459,7 @@ function DashboardContent() {
                         // Priority 3: Synthesize from go_no_go_analysis (always references targetBusiness)
                         // Priority 4: Build a synthetic card from targetBusiness name
                         const namedMatch = result.recommendations?.find(
-                          (r: any) => r.business_name?.toLowerCase().includes(targetBusiness.toLowerCase())
+                          (r: any) => String(r.business_name || '').toLowerCase().includes(String(targetBusiness || '').toLowerCase())
                         );
                         const nicheMatch = result.recommendations?.find((r: any) => r.category === 'Target Niche');
                         

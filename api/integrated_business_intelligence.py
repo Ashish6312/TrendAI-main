@@ -48,7 +48,7 @@ class IntegratedBusinessIntelligence:
         # AI CORE KEYS (Elite Model Cluster)
         self.gemini_key = os.getenv("GEMINI_API_KEY")
         self.claude_key = os.getenv("CLAUDE_API_KEY")
-        self.pollinations_key = os.getenv("POLLINATION_API_KEY")
+        self.pollinations_key = os.getenv("POLLINATIONS_API_KEY") or os.getenv("POLLINATION_API_KEY")
         self.fred_key = os.getenv("FRED_API_KEY")
         self.aic_key = os.getenv("AIC_API_KEY")
         self.aic_base = os.getenv("AIC_BASE_URL", "https://api.ai.cc/v1")
@@ -348,7 +348,8 @@ class IntegratedBusinessIntelligence:
                 res["ai_source"] = "Neural Fallback Engine (Pollinations AI)"
                 
                 # Add specific go/no-go if target_business exists
-                if target_business and "analysis" in res:
+                # Add specific go/no-go if target_business exists and analysis is a dict
+                if target_business and isinstance(res.get("analysis"), dict):
                     res["analysis"]["go_no_go_analysis"] = {
                         "decision": "PROCEED WITH CAUTION",
                         "reasoning": f"Initial market scouting for {target_business} in {area} shows moderate competition. High startup cost but strong long-term ROI potential as the sector matures.",
@@ -1270,7 +1271,7 @@ class IntegratedBusinessIntelligence:
         # Try Gemini 2.0 Flash first
         if self.gemini_key:
             try:
-                gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={self.gemini_key}"
+                gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={self.gemini_key}"
                 async with httpx.AsyncClient(timeout=30.0) as client:
                     resp = await client.post(gemini_url, json={
                         "contents": [{"parts": [{"text": f"{system_prompt}\n\n{prompt}"}]}],
@@ -1383,33 +1384,38 @@ class IntegratedBusinessIntelligence:
         {{
             "funding_required": "budget needed (e.g. ₹10L - ₹15L)",
             "estimated_revenue": "estimated monthly earnings (e.g. ₹2L - ₹4L)",
-            "roi_percentage": number (annual profit potential, e.g. 60), 
-            "payback_period": "time to get money back (e.g. 12-15 Months)",
+            "roi_potential": "85%",
+            "roi_percentage": 85,
+            "payback_period": "12-15 Months",
             "startup_difficulty": "Low/Medium/Hard",
-            "initial_team_size": "number of people needed (e.g. 3-4 helpers)",
+            "initial_team_size": "3-4 helpers",
             "market_size": "simple description of local opportunity",
             "competition_level": "Low/High/Medium",
-            "demand_index": number (0-100),
+            "demand_index": 85,
             "profit_niches": [
-                {{"niche": "specific way to make extra profit", "yield": percentage_number}}
+                {{"niche": "specific way to make extra profit", "yield": 20}}
             ],
             "strategic_recommendations": [
                 {{"title": "Easy Next Step", "description": "Practical advice on what to do first"}}
             ],
-            "be_period": "Months until breakeven",
-            "m1_traffic": "Est. Month 1 Customers",
-            "retention_rate": "Est. Customer Loyalty %",
-            "six_month_plan": ["Phase 1...", "Phase 2...", "Phase 3...", "Phase 4...", "Phase 5...", "Phase 6..."],
+            "be_period": "12 Months",
+            "m1_traffic": "500+",
+            "retention_rate": "75%",
+            "six_month_plan": [
+                {{"month": "Month 1-2", "goal": "Setup & Licensing"}},
+                {{"month": "Month 3-4", "goal": "Marketing & Pilot"}},
+                {{"month": "Month 5-6", "goal": "Growth & Scale"}}
+            ],
             "key_success_factors": ["Success Tip 1", "Success Tip 2", "Success Tip 3"],
-            "sustainability_metrics": {
-                "growth_velocity": "e.g. High probability of market capture within 18 months...",
-                "system_resilience": "e.g. Low operational fragility detected due to...",
-                "scaling_leverage": "e.g. Franchise-ready model with procedural documentation...",
-                "stability_rating": "e.g. High-Resilience",
-                "scaling_potential": "e.g. Exponential",
-                "sustainability_strategy": "e.g. Analysis suggests focusing on automated supply chain..."
-            }
-        }
+            "sustainability_metrics": {{
+                "growth_velocity": "High",
+                "system_resilience": "Medium",
+                "scaling_leverage": "High",
+                "stability_rating": "Strong",
+                "scaling_potential": "Exponential",
+                "sustainability_strategy": "Analysis suggests focusing on automated supply chain..."
+            }}
+        }}
         """
         
         # Try Flash first for speed
@@ -1452,7 +1458,15 @@ class IntegratedBusinessIntelligence:
                 if city.lower() != target_city and t.lower().startswith(city.lower()):
                     t = re.sub(rf"(?i)^{city}\s*", "", t)
             
-            r["title"] = t.strip().title()
+            r["business_name"] = t.strip().title()
+            r["title"] = r["business_name"]
+            
+            # Ensure critical fields have safe string types for frontend compatibility
+            if "roi_potential" in r:
+                r["roi_potential"] = str(r["roi_potential"])
+            if "implementation_difficulty" in r:
+                r["implementation_difficulty"] = str(r["implementation_difficulty"])
+                
             p.append(r)
         return p
 
