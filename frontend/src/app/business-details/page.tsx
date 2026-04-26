@@ -138,7 +138,11 @@ export default function BusinessDetailsPage() {
     const needsEnrichment = !business.funding_required || 
                            business.funding_required === "Analysis pending..." ||
                            !business.estimated_revenue ||
-                           business.estimated_revenue === "Analysis pending...";
+                           business.estimated_revenue === "Analysis pending..." ||
+                           !business.be_period ||
+                           business.be_period === "Analyzing..." ||
+                           !business.m1_traffic ||
+                           business.m1_traffic === "Analyzing...";
     
     if (!needsEnrichment) return;
 
@@ -1285,7 +1289,7 @@ export default function BusinessDetailsPage() {
                              <div className="p-6 bg-slate-900 dark:bg-white/5 rounded-3xl border border-slate-800 dark:border-white/10 relative overflow-hidden">
                                 <div className="relative z-10">
                                    <div className="text-4xl font-black text-white italic tracking-tighter mb-2">
-                                     {businessData.business.demand_index || 'Analyzing...'}
+                                     {businessData?.business?.demand_index !== undefined ? businessData.business.demand_index : 'Analyzing...'}
                                    </div>
                                    <div className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Optimized Entrance Vector</div>
                                 </div>
