@@ -81,7 +81,7 @@ except ImportError:
 
 
 # Initialize FastAPI app
-app = FastAPI(title="StarterScope Business Intelligence API", version="2.2")
+app = FastAPI(title="Startup Scope Business Intelligence API", version="2.2")
 
 # Combined CORS Configuration for Local & Production
 ALLOWED_ORIGINS = [

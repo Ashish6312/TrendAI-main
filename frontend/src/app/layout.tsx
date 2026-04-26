@@ -8,7 +8,7 @@ import ScrollToTop from "@/components/ScrollToTop";
 const outfit = Outfit({ subsets: ["latin"], weight: ["300", "400", "500", "600", "700", "800", "900"] });
 
 export const metadata: Metadata = {
-  title: "StarterScope | AI-Powered Business Intelligence",
+  title: "Startup Scope | AI-Powered Business Intelligence",
   description: "Using AI to analyze global trends and community feedback to help you build successful businesses.",
   manifest: "/manifest.json",
   icons: {

@@ -80,12 +80,12 @@ export default function Navbar() {
               <img 
                 src="/brand-logo-v3.png" 
                 className="w-full h-full object-contain" 
-                alt="StarterScope" 
+                alt="Startup Scope" 
               />
             </div>
             <div className="flex flex-col">
               <span className="text-lg sm:text-2xl lg:text-3xl font-extrabold tracking-tight leading-none">
-                <span className="text-slate-900 dark:text-white">Starter</span>
+                <span className="text-slate-900 dark:text-white">Startup</span>
                 <span className="text-teal-400 dark:text-[#2dd4bf] drop-shadow-[0_0_15px_rgba(45,212,191,0.3)]">Scope</span>
               </span>
               {plan !== 'free' && (

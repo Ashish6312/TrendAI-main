@@ -1,4 +1,4 @@
-# StarterScope | Strategic Business Intelligence Platform
+# Startup Scope | Strategic Business Intelligence Platform
 
 A high-fidelity business intelligence engine that provides AI-powered market analysis, hyper-local business recommendations, and neural strategic planning tools.
 

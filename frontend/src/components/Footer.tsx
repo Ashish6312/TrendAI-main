@@ -27,11 +27,11 @@ export default function Footer() {
                 <img 
                   src="/brand-logo-v3.png" 
                   className="w-full h-full object-contain" 
-                  alt="StarterScope" 
+                  alt="Startup Scope" 
                 />
               </div>
               <span className="text-2xl font-extrabold tracking-tight leading-none">
-                <span className="text-slate-900 dark:text-white">Starter</span>
+                <span className="text-slate-900 dark:text-white">Startup</span>
                 <span className="text-teal-500 dark:text-teal-400">Scope</span>
               </span>
             </Link>
@@ -107,7 +107,7 @@ export default function Footer() {
           <div className="flex flex-col md:flex-row justify-between items-center gap-6">
             <div className="flex flex-col md:flex-row items-center gap-4">
               <span className="text-sm font-bold text-slate-400 dark:text-gray-600 uppercase tracking-wider">
-                © 2026 StarterScope. {t('foot_all_rights')}.
+                © 2026 Startup Scope. {t('foot_all_rights')}.
               </span>
               <div className="h-4 w-px bg-slate-300 dark:bg-gray-800 hidden md:block"></div>
               <a 
