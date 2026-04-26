@@ -4,7 +4,7 @@ import CredentialsProvider from "next-auth/providers/credentials"
 import { getApiUrl } from "@/config/api"
 
 const handler = NextAuth({
-  debug: process.env.NODE_ENV === 'development', // Only enable debug in development
+  debug: true,
   pages: {
     signIn: '/auth',
     error: '/auth', // Redirect errors back to auth page
@@ -138,26 +138,8 @@ const handler = NextAuth({
   secret: process.env.NEXTAUTH_SECRET,
   callbacks: {
     async signIn({ user, account, profile }) {
-      // Simplified sign-in callback - remove heavy operations
-      if (user.email) {
-        // Only do basic user sync, don't wait for it to complete
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://starterupscope.onrender.com';
-        
-        // Fire and forget - don't await this to speed up login
-        fetch(`${apiUrl}/api/users/sync`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ 
-            email: user.email, 
-            name: user.name || 'User',
-            image_url: user.image 
-          }),
-          signal: AbortSignal.timeout(30000) // Increased to 30s
-        }).catch(error => {
-          console.error('Failed to sync user (non-blocking):', error);
-        });
-      }
-      return true;
+      console.log("🔐 SIGNIN ATTEMPT:", user.email);
+      return true; // Simplified to rule out backend sync issues
     },
     
     async jwt({ token, user, account }) {
