@@ -14,7 +14,15 @@ const Scene = () => {
   const meshRef = useRef<THREE.Mesh>(null);
 
   useEffect(() => {
+    // Silence THREE.Clock deprecation warnings in the console
+    const originalWarn = console.warn;
+    console.warn = (...args) => {
+      if (args[0]?.includes?.('THREE.Clock') || args[0]?.includes?.('THREE.Timer')) return;
+      originalWarn(...args);
+    };
+    
     setMounted(true);
+    return () => { console.warn = originalWarn; };
   }, []);
 
   const isDark = mounted ? resolvedTheme === 'dark' : true;
