@@ -208,7 +208,8 @@ class IntegratedBusinessIntelligence:
             """
             
             final_insights = await self._run_analysis_cluster(cluster_prompt, area, language, scouting_context)
-            if not final_insights or not final_insights.get("success"):
+            recs = final_insights.get("recommendations", [])
+            if not final_insights or not final_insights.get("success") or not recs:
                  # BROADENING ATTEMPT: If hyper-local fails, try broader area
                  if "," in area:
                      broad_area = area.split(",")[-2].strip() if len(area.split(",")) > 1 else area.split(",")[-1].strip()
@@ -590,7 +591,7 @@ class IntegratedBusinessIntelligence:
                     await push_ws_status(f"Re-synchronizing Neural Core (Refined Attempt {attempt+1})...")
                 
                 gemini_result = await self._call_gemini_flash(area, cluster_prompt, lang)
-                if gemini_result and gemini_result.get("success"):
+                if gemini_result and gemini_result.get("success") and gemini_result.get("recommendations"):
                     return gemini_result
             except Exception as e:
                 print(f"[WARN] Layer 1 Attempt {attempt+1} Failure: {e}")
@@ -601,7 +602,7 @@ class IntegratedBusinessIntelligence:
         try:
             print("[CLUSTER] Initiating Layer 2: Groq / DeepSeek-R1 Distill...")
             groq_result = await self._call_groq(cluster_prompt, area, lang)
-            if groq_result and groq_result.get("success"):
+            if groq_result and groq_result.get("success") and groq_result.get("recommendations"):
                 return groq_result
         except Exception as e:
             print(f"[WARN] Layer 2 Failure: {e}")
