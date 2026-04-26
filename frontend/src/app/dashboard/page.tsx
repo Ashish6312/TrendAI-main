@@ -239,13 +239,6 @@ function DashboardContent() {
 
   const [paymentDetails, setPaymentDetails] = useState<any>(null);
 
-  // Auto-persistence logic: Hydrate from global context on mount
-  useEffect(() => {
-    if (lastResult && !result) {
-       setResult(lastResult);
-       if (lastArea) setArea(lastArea);
-    }
-  }, [lastResult, lastArea, result]);
 
   // Save result to localStorage when it changes
   useEffect(() => {
@@ -364,24 +357,6 @@ function DashboardContent() {
     return () => clearTimeout(delayDebounceFn);
   }, [area, showSuggestions]);
 
-  // 🚀 DEFAULT DATA LOAD: If no search has been performed, load New Delhi as a baseline
-  useEffect(() => {
-    if (status === 'authenticated' && !result && !loading && !area) {
-       // Only auto-load if we haven't already performed a search this session
-       const autoLoaded = sessionStorage.getItem('auto_loaded_baseline');
-       if (!autoLoaded) {
-          setArea('New Delhi, Delhi, India');
-          sessionStorage.setItem('auto_loaded_baseline', 'true');
-          // We don't trigger performAnalysis directly here to avoid state race conditions, 
-          // but setting the area will allow the user to click 'Analyze' or we can trigger it.
-          // Triggering for better UX:
-          const timer = setTimeout(() => {
-             performAnalysis('New Delhi, Delhi, India');
-          }, 1000);
-          return () => clearTimeout(timer);
-       }
-    }
-  }, [status, result, loading]);
 
   const handleSelectSuggestion = (suggestion: any) => {
     setArea(suggestion.display_name);

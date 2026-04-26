@@ -272,8 +272,8 @@ def generate_ai_recommendations(area: str, location_info: Dict[str, Any], langua
         ]
     }}
     *RULE: NO PLACEHOLDERS. Every field must be a specific calculated prediction for {area}.*
-    *CRITICAL RULE: NO GENERIC PLACEHOLDERS like '₹5L-₹15L' or 'Regional market'. Every single business item MUST have its own unique, realistic numbers based on current 2026 economic data for {area}. If you return the same investment range or ROI for different items, the analysis is CONSIDERED FAILED.*
-    *MUST RETURN 15 HIGH-FIDELITY ITEMS IN 'recommendations' list.*
+    *CRITICAL RULE: NO GENERIC PLACEHOLDERS like '₹5L-₹15L' or 'Regional market'. Every single business item MUST have its own unique, realistic numbers based on current 2026 economic data for {area}. ROIs should be grounded in reality (typically 15% to 50% for established models). If you return the same investment range or ROI for different items, the analysis is CONSIDERED FAILED.*
+    *MUST RETURN 12-15 HIGH-FIDELITY ITEMS IN 'recommendations' list.*
     """
 
     try:
