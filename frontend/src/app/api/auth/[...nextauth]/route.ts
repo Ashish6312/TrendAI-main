@@ -138,8 +138,22 @@ const handler = NextAuth({
   secret: process.env.NEXTAUTH_SECRET,
   callbacks: {
     async signIn({ user, account, profile }) {
-      console.log("🔐 SIGNIN ATTEMPT:", user.email);
-      return true; // Simplified to rule out backend sync issues
+      if (user.email) {
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://starterupscope.onrender.com';
+        fetch(`${apiUrl}/api/users/sync`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            email: user.email, 
+            name: user.name || 'User',
+            image_url: user.image 
+          }),
+          signal: AbortSignal.timeout(30000)
+        }).catch(error => {
+          console.error('Failed to sync user (non-blocking):', error);
+        });
+      }
+      return true;
     },
     
     async jwt({ token, user, account }) {
