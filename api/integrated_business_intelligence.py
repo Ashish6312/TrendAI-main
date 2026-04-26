@@ -236,7 +236,8 @@ class IntegratedBusinessIntelligence:
             - Every business name MUST be a specific, brandable entity (e.g., 'Bharat-Pure Cold Pressed Oils' instead of just 'Oil Mill').
             - VERIFY the market gap against the RAG DATA provided. If the data shows a lack of a certain service, prioritize that.
             - Every business name MUST sound like a real local shop or service that can be opened in {area}.
-            - Use local neighborhood context (Chowks, Mandis, specific colonies like Arera Colony, New Market, etc.).
+            - Use local neighborhood context from {area} (Chowks, Mandis, or specific colonies found in the search data).
+            - CITY INTEGRITY POLICY: Strictly DO NOT include names of other cities (like 'Bhopal' or 'Mumbai') in the business names if you are analyzing {area}. Every recommendation must be 100% native to {area}.
             
             SEASONAL SECTION REQUIREMENTS:
             - Identify 3 business ideas that are PERFECT for the current {season} season in {area}.
@@ -1284,11 +1285,24 @@ class IntegratedBusinessIntelligence:
     def _polish_identities(self, recs: List[Dict], area: str) -> List[Dict]:
         p = []
         a_low = area.lower()
+        # Extract main city name from area string (e.g. "Bhopal, Madhya Pradesh" -> "Bhopal")
+        target_city = area.split(',')[0].strip().lower()
+        
         for r in recs:
             if not isinstance(r, dict): continue
             t = r.get("title") or r.get("business_name") or "Strategic Opportunity"
+            
+            # 1. Standard cleaning
             t = re.sub(rf"(?i)\s+(for|in|at|near|of|area)\s+{re.escape(a_low)}.*", "", t)
             t = re.sub(r"(?i)\bIndia\b", "", t)
+            
+            # 2. CITY INTEGRITY ENFORCEMENT: Strip other city names if they appear as prefixes
+            # If the title starts with a city name that is NOT our target city, strip it.
+            forbidden_cities = ["Bhopal", "Indore", "Mumbai", "Delhi", "Pune", "Bangalore"]
+            for city in forbidden_cities:
+                if city.lower() != target_city and t.lower().startswith(city.lower()):
+                    t = re.sub(rf"(?i)^{city}\s*", "", t)
+            
             r["title"] = t.strip().title()
             p.append(r)
         return p
