@@ -1533,8 +1533,8 @@ async def get_recommendations(request: RecommendationRequest, db: Session = Depe
                 db.delete(existing_record)
                 db.commit()
 
-        # REMOVED: LOCKING WARNING (Ensuring instant data delivery instead of 'Warming Up' screen)
-        
+        # Define search key for tracking active searches
+        search_key = f"{analysis_area.lower()}:{request.user_email.lower()}"
         _ACTIVE_SEARCHES.add(search_key)
         try:
             print("[SUCCESS] No cache found. Calling fresh REAL-TIME intelligence engine...")
